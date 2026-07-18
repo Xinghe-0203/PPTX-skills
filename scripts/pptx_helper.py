@@ -651,16 +651,22 @@ def layout_full_image(prs, theme, ctx):
         _rect(slide, 0, SLIDE_H * 0.45, SLIDE_W, SLIDE_H * 0.55,
               fill=theme["dark"])
         _set_alpha_last(slide, 0.7)
+        # 有图时标题压在深色蒙层上，用白色保证可读
+        title_color = theme["white"]
+        sub_color = theme["text_muted"] if theme.get("on_dark") else _text_on(theme["dark"], light=theme["white"])
     else:
+        # 无图时背景为 theme["bg"]（可能为浅色），用 _text_on 根据亮度选色
         _set_bg(slide, theme["bg"])
+        title_color = _text_on(theme["bg"])
+        sub_color = theme["text_muted"]
     # 标题叠加在底部
     tf = _textbox(slide, MARGIN_X, SLIDE_H * 0.55, CONTENT_W, 1.5,
                   anchor=MSO_ANCHOR.TOP)
     _add_para(tf, ctx.get("title", ""), first=True, size=Pt(42),
-              color=theme["white"], bold=True, name=FONT_CN, line_spacing=1.1)
+              color=title_color, bold=True, name=FONT_CN, line_spacing=1.1)
     sub = ctx.get("subtitle") or ctx.get("kicker")
     if sub:
-        _add_para(tf, sub, size=Pt(18), color=theme["text_muted"],
+        _add_para(tf, sub, size=Pt(18), color=sub_color,
                   name=FONT_CN, space_before=8)
     # 底部小装饰线
     _rect(slide, MARGIN_X, SLIDE_H * 0.55 - 0.15, 1.0, 0.06,
@@ -1063,7 +1069,9 @@ def choose_layout(section: dict, position: int, total: int) -> str:
     智能版式选择器：根据章节内容特征自动挑选最佳版式。
 
     决策逻辑（优先级从高到低）：
-    1. 特殊位置：首页→cover, 末页→end, 第二页→toc
+    1. 特殊位置：首页→cover, 末页→end
+       （toc 目录页由 auto_generate_ppt 主流程单独生成，不在此处强制触发，
+        以免占用用户传入的第一个内容章节）
     2. 内容特征信号：
        - 有 metrics → dashboard
        - 有 events/timeline → timeline
@@ -1076,7 +1084,9 @@ def choose_layout(section: dict, position: int, total: int) -> str:
        - 有 1 image + 无 bullets → full_image
        - 有 bullets (3-7) → bullets
        - 无 bullets → section (章节分隔)
-    3. 防重复：如果连续 2 页用了同一版式，自动切换到 bullets 或 text_image
+
+    注：连续 2 页同版式的防重复切换逻辑由 auto_generate_ppt 主循环负责，
+        不在本函数内实现。
 
     参数:
         section: 章节数据 dict
@@ -1086,12 +1096,12 @@ def choose_layout(section: dict, position: int, total: int) -> str:
         版式名称字符串
     """
     # 1. 特殊位置
+    # 注：toc 不在此处强制触发，由 auto_generate_ppt 主流程单独生成目录页，
+    #    避免占用用户传入的第一个内容章节。
     if position == 0:
         return "cover"
     if position == total - 1:
         return "end"
-    if position == 1 and total > 3:
-        return "toc"
 
     # 2. 内容特征信号 (兼容 dict 和 Section dataclass)
     def _get(obj, key, default=None):
@@ -1221,6 +1231,18 @@ def auto_generate_ppt(
     resolve_layout("cover", layout_cover)(prs, theme, cover_ctx)
     used_layouts.append("cover")
 
+    # 目录页：当章节数较多时（>3），在封面后单独生成目录页，
+    # 使用各章节标题作为目录项，不占用用户传入的内容章节。
+    if len(parsed) > 3:
+        toc_ctx = {
+            "title": "目录",
+            "kicker": "CONTENTS",
+            "toc_items": [s.title for s in parsed if s.title],
+            "layout_opts": template_layout_opts,
+        }
+        resolve_layout("toc", layout_toc)(prs, theme, toc_ctx)
+        used_layouts.append("toc")
+
     for i, sec in enumerate(parsed):
         ctx = {
             "title": sec.title, "subtitle": sec.subtitle,
@@ -1288,7 +1310,9 @@ def auto_generate_ppt(
     return abs_path
 
 
-def _auto_search_images(sections, image_dir, lang):
+def _load_pixabay_search():
+    """延迟加载同目录下的 pixabay_search 模块，返回 search_and_download 函数。
+    加载失败时返回 None。两个调用方（_auto_search_images / _search_cover_image）共用此函数。"""
     try:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
@@ -1297,9 +1321,15 @@ def _auto_search_images(sections, image_dir, lang):
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        search_and_download = mod.search_and_download
+        return mod.search_and_download
     except Exception as e:
         print(f"  [警告] 无法加载 pixabay_search: {e}")
+        return None
+
+
+def _auto_search_images(sections, image_dir, lang):
+    search_and_download = _load_pixabay_search()
+    if search_and_download is None:
         return
     os.makedirs(image_dir, exist_ok=True)
     for sec in sections:
@@ -1311,7 +1341,7 @@ def _auto_search_images(sections, image_dir, lang):
         try:
             paths = _retry_search(
                 search_and_download, query,
-                count=2, output_dir=image_dir,
+                count=3, output_dir=image_dir,
                 orientation="horizontal", lang=lang,
                 size="large", min_width=1280,
             )
@@ -1341,16 +1371,8 @@ def _retry_search(search_and_download_fn, query, max_retries=3, **kwargs):
 
 def _search_cover_image(title, image_dir, lang):
     """为封面单独搜索一张高质量背景图。"""
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "pixabay_search",
-            os.path.join(os.path.dirname(__file__), "pixabay_search.py"),
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        search_and_download = mod.search_and_download
-    except Exception:
+    search_and_download = _load_pixabay_search()
+    if search_and_download is None:
         return None
     os.makedirs(image_dir, exist_ok=True)
     # 用标题关键词搜索

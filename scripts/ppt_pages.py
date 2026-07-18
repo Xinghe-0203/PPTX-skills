@@ -34,6 +34,26 @@ def _position(index: int, length: int, allow_end: bool = False) -> int:
     return position
 
 
+def _load_section_arg(value: str | Path) -> dict:
+    """从 CLI 参数加载章节定义。
+
+    支持两种形式：
+    - 指向 JSON 文件的路径
+    - 内联的 JSON 字符串
+
+    统一处理 JSONDecodeError 抛出错信息提示用户，而不是裸异常崩溃。
+    """
+    section_path = Path(value)
+    try:
+        if section_path.exists():
+            return json.loads(section_path.read_text(encoding="utf-8"))
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"--section 参数既不是有效文件也不是合法 JSON: {exc}"
+        ) from exc
+
+
 def _move_id(prs: Presentation, old_position: int, new_position: int) -> None:
     slide_ids = prs.slides._sldIdLst
     element = slide_ids[old_position]
@@ -107,9 +127,12 @@ def insert_slide(
     prs = Presentation(str(path))
     position = _position(index, len(prs.slides), allow_end=True)
     theme = _theme_for_existing(path, theme_key)
+    image_dir = path.parent / "ppt_images"
+    # 显式创建图片目录，避免 auto_search_images 关闭时下游访问不存在的目录。
+    image_dir.mkdir(exist_ok=True)
     _insert_into_prs(
         prs, section_dict, position, theme, layout,
-        path.parent / "ppt_images", auto_search_images,
+        image_dir, auto_search_images,
     )
     create_backup(path)
     prs.save(str(path))
@@ -173,9 +196,11 @@ def replace_layout(
     old_slide = prs.slides[position]
     content = section_dict or _extract_basic_section(old_slide)
     theme = _theme_for_existing(path, theme_key)
+    image_dir = path.parent / "ppt_images"
+    image_dir.mkdir(exist_ok=True)
     _insert_into_prs(
         prs, content, position, theme, new_layout,
-        path.parent / "ppt_images", False,
+        image_dir, False,
     )
     _remove_slide(prs, old_slide)
     create_backup(path)
@@ -211,11 +236,7 @@ def main() -> int:
     replace.add_argument("--theme")
     args = parser.parse_args()
     if args.command == "insert":
-        section_path = Path(args.section)
-        if section_path.exists():
-            section = json.loads(section_path.read_text(encoding="utf-8"))
-        else:
-            section = json.loads(args.section)
+        section = _load_section_arg(args.section)
         result = insert_slide(
             args.pptx, args.index, section, args.layout, args.theme,
             not args.no_image_search,
@@ -228,13 +249,7 @@ def main() -> int:
     elif args.command == "duplicate":
         result = duplicate_slide(args.pptx, args.source, args.target)
     else:
-        section = None
-        if args.section:
-            section_path = Path(args.section)
-            if section_path.exists():
-                section = json.loads(section_path.read_text(encoding="utf-8"))
-            else:
-                section = json.loads(args.section)
+        section = _load_section_arg(args.section) if args.section else None
         replace_layout(args.pptx, args.index, args.layout, section, args.theme)
         result = True
     print(json.dumps(result, ensure_ascii=False))

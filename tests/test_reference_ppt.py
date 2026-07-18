@@ -28,7 +28,7 @@ class ReferencePptTests(unittest.TestCase):
             directory = Path(tmp)
             reference = self._make_reference(directory)
             analysis = analyze_presentation(reference)
-            self.assertEqual(analysis["slide_count"], 8)
+            self.assertEqual(analysis["slide_count"], 9)
             self.assertEqual(analysis["recommended_mode"], "clone")
 
             reference_deck = Presentation(str(reference))
@@ -50,7 +50,7 @@ class ReferencePptTests(unittest.TestCase):
                         cover_text_shapes[0].name: {"text": "全新标题"},
                         cover_text_shapes[1].name: {"text": "严格沿用参考设计"}
                     }},
-                    {"source_slide": 8, "replacements": {
+                    {"source_slide": 9, "replacements": {
                         end_text_shapes[0].name: {"text": "完成"}
                     }}
                 ]

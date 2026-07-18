@@ -287,7 +287,10 @@ def register_template_profile(
 def generate_template_preview(profile: dict, output_path: str | Path) -> str:
     """Create an editable gallery deck that demonstrates a template profile."""
     validate_template_profile(profile)
-    from .pptx_helper import auto_generate_ppt
+    try:
+        from .pptx_helper import auto_generate_ppt
+    except ImportError:
+        from pptx_helper import auto_generate_ppt
 
     sections = [
         {"title": "内容结构", "bullets": ["结论先行", "信息分组", "视觉证据"]},

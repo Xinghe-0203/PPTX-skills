@@ -114,10 +114,10 @@ def _shape_record(shape: Any, slide_w: int, slide_h: int, index: int) -> dict:
         "shape_type": _enum_name(shape.shape_type),
         "placeholder_type": placeholder_type,
         "placeholder_idx": placeholder_idx,
-        "x": round(shape.left / slide_w, 5),
-        "y": round(shape.top / slide_h, 5),
-        "w": round(shape.width / slide_w, 5),
-        "h": round(shape.height / slide_h, 5),
+        "x": round(shape.left / slide_w, 5) if slide_w else 0.0,
+        "y": round(shape.top / slide_h, 5) if slide_h else 0.0,
+        "w": round(shape.width / slide_w, 5) if slide_w else 0.0,
+        "h": round(shape.height / slide_h, 5) if slide_h else 0.0,
         "text": text,
         "fill": _fill_hex(shape),
         "line": _line_hex(shape),
@@ -165,10 +165,10 @@ def _layout_record(layout: Any, slide_w: int, slide_h: int, index: int) -> dict:
             "idx": placeholder.placeholder_format.idx,
             "type": _enum_name(placeholder.placeholder_format.type),
             "name": placeholder.name,
-            "x": round(placeholder.left / slide_w, 5),
-            "y": round(placeholder.top / slide_h, 5),
-            "w": round(placeholder.width / slide_w, 5),
-            "h": round(placeholder.height / slide_h, 5),
+            "x": round(placeholder.left / slide_w, 5) if slide_w else 0.0,
+            "y": round(placeholder.top / slide_h, 5) if slide_h else 0.0,
+            "w": round(placeholder.width / slide_w, 5) if slide_w else 0.0,
+            "h": round(placeholder.height / slide_h, 5) if slide_h else 0.0,
         })
     return {"index": index, "name": layout.name, "placeholders": placeholders}
 
@@ -539,8 +539,15 @@ def auto_bind_slide(slide: Any, content: dict) -> set[str]:
 
 
 def _clear_unmapped_text(slide: Any, touched: set[str]) -> None:
+    # 用 shape_id（int，唯一）而非 shape.name（可重复）追踪已处理的形状，
+    # 避免同名 shape 互相误伤。
+    touched_ids: set[int] = set()
+    # 先从 touched 中的名字反向定位 shape_id（调用方按 name 传入）
     for shape in slide.shapes:
-        if shape.name in touched or not getattr(shape, "has_text_frame", False):
+        if shape.name in touched:
+            touched_ids.add(shape.shape_id)
+    for shape in slide.shapes:
+        if shape.shape_id in touched_ids or not getattr(shape, "has_text_frame", False):
             continue
         text = shape.text.strip()
         if not text:

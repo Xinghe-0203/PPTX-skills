@@ -195,7 +195,10 @@ def regenerate(project: dict, output_path: str | Path | None = None) -> str:
 
     layouts = payload.get("layouts", [])
     sections = payload.get("sections", [])
-    content_layouts = layouts[1:-1] if len(layouts) >= len(sections) + 2 else []
+    content_layouts = [
+        layout for layout in layouts
+        if layout not in {"cover", "toc", "end"}
+    ]
     for section, layout in zip(sections, content_layouts):
         section.setdefault("layout", layout)
     return auto_generate_ppt(
