@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pptx-skill"
+version = "2.0.0"
+description = "PPTX generation and editing skill for agent workflows"
+readme = "SKILL.md"
+requires-python = ">=3.12,<3.13"
+authors = [
+    {name = "Xinghe"},
+]
+dependencies = [
+    "python-pptx>=1.0,<2",
+    "Pillow>=12,<13",
+]
+
+[project.optional-dependencies]
+adaptive = ["kiwisolver>=1.4,<2"]
+schema = ["pydantic>=2,<3"]
+qa-image = ["numpy>=2,<3", "scikit-image>=0.25,<1"]
+qa-cv = ["opencv-python-headless>=4.10,<5"]
+qa-geometry = ["shapely>=2,<3"]
+qa-ocr = ["pytesseract>=0.3,<1"]
+text-complex = ["fonttools>=4,<5", "uharfbuzz>=0.50,<1"]
+render-pdf = ["PyMuPDF>=1.28,<2"]
+render-pdf-poppler = ["pdf2image>=1.17,<2"]
+render-com = ["pywin32>=306,<400; platform_system == 'Windows'"]
+test = ["pytest>=8,<10", "hypothesis>=6,<7"]
+
+[project.urls]
+Homepage = "https://github.com/Xinghe-0203/pptx-skill"
+Issues = "https://github.com/Xinghe-0203/pptx-skill/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pptx_skill*"]

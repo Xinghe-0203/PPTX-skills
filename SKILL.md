@@ -27,10 +27,22 @@ description: |
 
 ## 前置检查
 
+从项目根目录安装为可编辑包（推荐）：
+
+```powershell
+python -m pip install -e .
+```
+
+然后检查当前环境能力：
+
+```powershell
+python -m pptx_skill.capability
+```
+
 确认以下依赖可用：
 
 ```powershell
-python -m pip show python-pptx Pillow PyMuPDF
+python -m pip show python-pptx Pillow
 python scripts/render_slides.py --help
 ```
 
@@ -95,7 +107,22 @@ python scripts/reference_ppt.py analyze reference.pptx `
 
 ### 4. 生成演示文稿
 
-新建演示文稿时调用 `auto_generate_ppt()`，按内容特征选择版式：
+新建演示文稿时调用 `auto_generate_ppt()`（也可从 `pptx_skill` 包导入），按内容特征选择版式：
+
+```python
+from pptx_skill import auto_generate_ppt
+
+auto_generate_ppt(
+    title="汇报标题",
+    subtitle="副标题",
+    sections=sections,
+    output_path="output/report.pptx",
+    template_key="strategy-consulting",
+    auto_search_images=False,
+)
+```
+
+版式选择规则：
 
 - 指标 → `dashboard`
 - 时间节点 → `timeline`
@@ -107,20 +134,7 @@ python scripts/reference_ppt.py analyze reference.pptx `
 - 图文 → `text_image`
 - 普通要点 → `bullets`
 
-使用已有模板档案：
-
-```python
-auto_generate_ppt(
-    title="汇报标题",
-    subtitle="副标题",
-    sections=sections,
-    output_path="output/report.pptx",
-    template_key="strategy-consulting",
-    auto_search_images=False,
-)
-```
-
-使用用户参考稿自动绑定：
+脚本入口仍可用：
 
 ```powershell
 python scripts/reference_ppt.py generate reference.pptx `
@@ -154,11 +168,20 @@ python scripts/render_slides.py output/report.pptx `
 
 ## 修改已有 PPT
 
-- 对本 Skill 生成的文件，优先读取内嵌 manifest，通过 `ppt_project.py` 修改 Section 后重放生成。
-- 对外部文件，使用 `ppt_edit.py` 定点换字、换图或换色。
-- 使用 `ppt_pages.py` 增页、删页、移动、复制或重画单页。
+- 对本 Skill 生成的文件，优先读取内嵌 manifest：
+  - `from pptx_skill import load_project, edit_section, regenerate`
+  - 改 Section 后调用 `regenerate(project, output_path)` 重画。
+- 对外部文件，使用 `pptx_skill.ppt_edit` 定点换字、换图或换色：
+  - `edit_text` / `edit_text_by_role` / `swap_image` / `recolor` / `swap_theme`。
+- 使用 `pptx_skill.ppt_pages` 增页、删页、移动、复制或重画单页：
+  - `insert_slide` / `delete_slide` / `move_slide` / `duplicate_slide` / `replace_layout`。
 - 所有写操作自动生成最近一次 `.bak.pptx` 备份；修改失败时调用 `restore_backup()`。
 - 复杂页面先分析形状名称，再用 shape-level plan 或显式 Section 数据，不依赖模糊角色猜测。
+
+## 研发状态（PR0 完成）
+
+- PR0 已落地：unittest 基线恢复、`pptx_skill` 包壳、`pyproject.toml`、渲染器隔离、运行能力报告。
+- 后续 PR（V2 数据模型、自适应排版、视觉 QA、模板引擎 V2）将按蓝图逐步实现。
 
 ## 版式与视觉原则
 
