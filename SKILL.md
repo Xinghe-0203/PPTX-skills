@@ -216,8 +216,9 @@ print(manifest.manifest_schema_version)  # 3
 ## 研发状态
 
 - PR0 已落地：unittest 基线恢复、`pptx_skill` 包壳、`pyproject.toml`、渲染器隔离、运行能力报告。
-- PR1 已落地：核心数据模型（ContentSpec/SlideSpec/ElementSpec）、稳定 ID、Manifest V3、legacy v2 内存迁移、`api.py` 兼容 facade、22 个新增 unittest（总计 30/30 通过）。
-- 后续 PR（自适应排版、视觉 QA、模板引擎 V2）将按蓝图逐步实现。
+- PR1 已落地：核心数据模型（ContentSpec/SlideSpec/ElementSpec）、稳定 ID、Manifest V3、legacy v2 内存迁移、`api.py` 兼容 facade。
+- PR2 已落地：preview_renderer 适配器（结构化 PreviewRenderResult）、image_crop（contain/cover/smart crop + 真实 crop fractions）、adaptive pptx_renderer 基础（text/image/shape 节点 + RenderTrace）。unittest 基线 40/40 通过。
+- 后续 PR（文字度量与语义 QA、约束求解自适应排版、生成式模板引擎 V2、参考稿模式）将按蓝图逐步实现。
 
 ## 版式与视觉原则
 

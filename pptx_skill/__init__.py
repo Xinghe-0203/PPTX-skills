@@ -91,6 +91,12 @@ from pptx_skill.content_model import (  # noqa: E402
     canvas_from_name,
     make_namespace,
 )
+from pptx_skill.image_crop import (  # noqa: E402
+    CropResult,
+    crop_contain,
+    crop_cover,
+    crop_smart,
+)
 from pptx_skill.manifest import (  # noqa: E402
     ManifestV3,
     ManifestError,
@@ -102,6 +108,13 @@ from pptx_skill.manifest import (  # noqa: E402
     set_current_content,
     set_current_plans,
     set_current_trace,
+)
+from pptx_skill.pptx_renderer import (  # noqa: E402
+    AdaptiveRendererError,
+    PreviewRenderResult,
+    RenderResult,
+    RenderTraceEntry,
+    render_layout_plan,
 )
 from pptx_skill.visual_qa import (  # noqa: E402
     CheckOutcome,
@@ -130,6 +143,7 @@ __all__ = [
     "CanvasSpec",
     "CheckOutcome",
     "ContentSpec",
+    "CropResult",
     "DeckPlanResult",
     "ElementSpec",
     "GenerationResult",
@@ -140,10 +154,13 @@ __all__ = [
     "ManifestError",
     "ManifestV3",
     "PlannedNode",
+    "PreviewRenderResult",
     "PresentationQualityError",
     "QAReport",
     "QACheckResult",
     "QAIssue",
+    "RenderResult",
+    "RenderTraceEntry",
     "SafeInsets",
     "Section",
     "Severity",
@@ -162,6 +179,9 @@ __all__ = [
     "choose_theme",
     "compose_from_reference",
     "create_backup",
+    "crop_contain",
+    "crop_cover",
+    "crop_smart",
     "delete_slide",
     "duplicate_slide",
     "edit_kicker",
@@ -187,6 +207,7 @@ __all__ = [
     "recolor",
     "regenerate",
     "register_template_profile",
+    "render_layout_plan",
     "render_preview",
     "render_slides",
     "replace_layout",
