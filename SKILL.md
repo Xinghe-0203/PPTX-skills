@@ -166,10 +166,45 @@ python scripts/render_slides.py output/report.pptx `
 
 逐页检查文字溢出、遮挡、裁图、对比度、层级、旧内容残留和模板一致性。至少执行两轮“生成 → 渲染 → 逐页检查 → 修正”，连续两轮没有阻断问题后再交付。
 
+## 数据契约与 Manifest V3（PR1）
+
+生成和修改都围绕新的数据模型展开：
+
+- `ContentSpec` 表示整本 PPT 内容，`SlideSpec` 表示一页，`ElementSpec` 表示页内元素；每个元素都有跨重生成的稳定 `element_id`。
+- 本 Skill 生成的 PPTX 自动写入 Manifest V3（内嵌 XML + `.manifest.json` 侧写），记录 `content`、`layout_plans`、`render_trace` 和每次生成/QA/修复尝试。
+- `from pptx_skill import auto_generate_ppt` 是兼容 facade：默认行为与旧 API 完全一致；传入 `return_result=True` 可获得结构化结果：
+
+```python
+from pptx_skill import auto_generate_ppt, GenerationResult
+
+result = auto_generate_ppt(
+    title="汇报标题",
+    sections=sections,
+    output_path="output/report.pptx",
+    template_key="strategy-consulting",
+    qa_mode="report",       # off | report | strict（strict 暂未启用阻断）
+    return_result=True,
+)
+assert isinstance(result, GenerationResult)
+print(result.qa_status)   # pass | fail | inconclusive
+```
+
+- 读取或迁移 manifest：
+
+```python
+from pptx_skill import load_manifest
+
+manifest = load_manifest("output/report.pptx")
+print(manifest.manifest_schema_version)  # 3
+```
+
+- `layout_engine="adaptive"` 在 PR1 尚未实现，显式传入会报错；后续 PR 会逐步替换为约束求解排版。
+
 ## 修改已有 PPT
 
 - 对本 Skill 生成的文件，优先读取内嵌 manifest：
-  - `from pptx_skill import load_project, edit_section, regenerate`
+  - `from pptx_skill import load_project, edit_section, regenerate`（legacy v2 路径仍可用）
+  - `from pptx_skill import load_manifest`（V3 路径）
   - 改 Section 后调用 `regenerate(project, output_path)` 重画。
 - 对外部文件，使用 `pptx_skill.ppt_edit` 定点换字、换图或换色：
   - `edit_text` / `edit_text_by_role` / `swap_image` / `recolor` / `swap_theme`。
@@ -178,10 +213,11 @@ python scripts/render_slides.py output/report.pptx `
 - 所有写操作自动生成最近一次 `.bak.pptx` 备份；修改失败时调用 `restore_backup()`。
 - 复杂页面先分析形状名称，再用 shape-level plan 或显式 Section 数据，不依赖模糊角色猜测。
 
-## 研发状态（PR0 完成）
+## 研发状态
 
 - PR0 已落地：unittest 基线恢复、`pptx_skill` 包壳、`pyproject.toml`、渲染器隔离、运行能力报告。
-- 后续 PR（V2 数据模型、自适应排版、视觉 QA、模板引擎 V2）将按蓝图逐步实现。
+- PR1 已落地：核心数据模型（ContentSpec/SlideSpec/ElementSpec）、稳定 ID、Manifest V3、legacy v2 内存迁移、`api.py` 兼容 facade、22 个新增 unittest（总计 30/30 通过）。
+- 后续 PR（自适应排版、视觉 QA、模板引擎 V2）将按蓝图逐步实现。
 
 ## 版式与视觉原则
 
