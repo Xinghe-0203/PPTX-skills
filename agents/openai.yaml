@@ -1,0 +1,4 @@
+interface:
+  display_name: "PPTX 智能制作"
+  short_description: "生成、复刻并逐页验收可编辑 PowerPoint 演示文稿"
+  default_prompt: "Use $pptx to create or faithfully rebuild an editable PowerPoint deck and verify every rendered slide."

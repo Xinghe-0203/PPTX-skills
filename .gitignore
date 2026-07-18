@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# User-local tool permissions and generated deliverables.
+.claude/settings.local.json
+output/
+slides_preview/
+ppt_images/
+*.pdf
+
+# Temporary files created by Office/LibreOffice.
+~$*.pptx
+*.tmp

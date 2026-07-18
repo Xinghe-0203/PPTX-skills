@@ -1,0 +1,116 @@
+# Editing existing PPTX files
+
+## Contents
+
+1. Safety and indexing
+2. Round-trip edits for generated decks
+3. Direct edits for external decks
+4. Page operations
+5. Restore and verify
+
+## Safety and indexing
+
+All editing and page-operation functions create one overwrite-style backup named `deck.bak.pptx` before saving. Slide and image indices are one-based; `0` is accepted as an alias for the first item.
+
+Render and inspect before and after every non-trivial edit. Use `reference_ppt.py analyze` to identify exact slide and shape targets.
+
+## Round-trip edits for generated decks
+
+Decks created by `auto_generate_ppt()` contain an embedded project manifest and a readable `.manifest.json` sidecar. Load and regenerate them without reverse-engineering the slide shapes:
+
+```python
+from ppt_project import load_project, edit_section, regenerate
+
+project = load_project("output/report.pptx")
+edit_section(
+    "output/report.pptx",
+    2,
+    {"title": "更新后的标题", "bullets": ["新要点一", "新要点二"]},
+)
+```
+
+Use `regenerate(project, output_path)` after changing multiple section dictionaries in memory.
+
+## Direct edits for external decks
+
+Replace text while preserving run formatting where possible:
+
+```powershell
+python scripts/ppt_edit.py text deck.pptx `
+  --slide 3 --find "旧文本" --replace "新文本"
+```
+
+Replace a semantic text region:
+
+```powershell
+python scripts/ppt_edit.py role deck.pptx `
+  --slide 3 --role title --text "新标题"
+```
+
+Replace an image while preserving its bounding box:
+
+```powershell
+python scripts/ppt_edit.py image deck.pptx `
+  --slide 4 --image 1 --path C:/absolute/path/new-image.png
+```
+
+Replace one exact color globally:
+
+```powershell
+python scripts/ppt_edit.py recolor deck.pptx `
+  --old "#17324D" --new "#244A3D"
+```
+
+Switch between legacy built-in themes only when the old theme is recognized reliably:
+
+```powershell
+python scripts/ppt_edit.py theme deck.pptx --new forest_luxe
+```
+
+If theme recognition returns an error, inspect the color inventory and use explicit `recolor` mappings. Do not force a guessed theme onto an unrelated external deck.
+
+## Page operations
+
+Insert a page:
+
+```powershell
+python scripts/ppt_pages.py insert deck.pptx `
+  --index 3 `
+  --layout dashboard `
+  --section '{"title":"新增数据页","metrics":[{"label":"收入","value":"¥8.2B"}]}'
+```
+
+Delete, move, or duplicate:
+
+```powershell
+python scripts/ppt_pages.py delete deck.pptx --index 5
+python scripts/ppt_pages.py move deck.pptx --from 7 --to 3
+python scripts/ppt_pages.py duplicate deck.pptx --source 2 --target 6
+```
+
+Redraw one page in another layout:
+
+```powershell
+python scripts/ppt_pages.py replace-layout deck.pptx `
+  --index 4 --layout timeline `
+  --section '{"title":"里程碑","events":[{"date":"Q1","title":"启动"}]}'
+```
+
+Supply an explicit section JSON for complex pages. Automatic extraction only recovers a basic title and body.
+
+## Restore and verify
+
+Restore the most recent backup:
+
+```python
+from ppt_project import restore_backup
+restore_backup("deck.pptx")
+```
+
+After editing:
+
+1. Reopen the file with `python-pptx`.
+2. Render all slides.
+3. Verify page order and requested changes.
+4. Inspect untouched pages for regressions.
+5. Open in PowerPoint when the deck contains animation, OLE, SmartArt, or embedded workbooks.

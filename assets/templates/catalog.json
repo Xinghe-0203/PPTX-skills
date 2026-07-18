@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "templates": {
+    "strategy-consulting": {
+      "name": "战略咨询",
+      "layout_family": "technical_axis",
+      "description": "高信息密度、结论先行的管理层汇报模板。",
+      "use_cases": ["战略汇报", "行业研究", "管理层决策"],
+      "theme": {"bg": "#F7F4EE", "bg_alt": "#E9E4DA", "primary": "#17324D", "secondary": "#6E7C87", "accent": "#D9623B", "text": "#17202A", "text_muted": "#68737D", "white": "#FFFFFF", "dark": "#102335", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Aptos"},
+      "layout_opts": {"cover": {"title_size": 50, "title_y_ratio": 0.28}, "bullets": {"body_size": 16, "card_gap": 0.14}, "dashboard": {"metric_value_size": 34, "card_gap": 0.18}},
+      "preferred_sequence": ["cover", "toc", "section", "dashboard", "comparison", "process", "end"]
+    },
+    "executive-dark": {
+      "name": "高管深色",
+      "layout_family": "editorial_grid",
+      "description": "低饱和炭黑与香槟金，适合董事会及高端品牌汇报。",
+      "use_cases": ["董事会", "高端品牌", "投资汇报"],
+      "theme": {"bg": "#171816", "bg_alt": "#242521", "primary": "#D3B477", "secondary": "#8D9288", "accent": "#B85C45", "text": "#F2EEE5", "text_muted": "#A8AA9F", "white": "#FFFFFF", "dark": "#0B0C0B", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Georgia"},
+      "layout_opts": {"cover": {"title_size": 58, "title_y_ratio": 0.35}, "quote": {"quote_size": 32, "deco_alpha": 0.1}, "bullets": {"body_size": 16, "card_gap": 0.24}},
+      "preferred_sequence": ["cover", "section", "full_image", "quote", "dashboard", "end"]
+    },
+    "product-launch": {
+      "name": "产品发布",
+      "layout_family": "poster_column",
+      "description": "强对比、短句和大视觉，适合新品发布与路线图。",
+      "use_cases": ["产品发布", "路线图", "功能介绍"],
+      "theme": {"bg": "#0C111B", "bg_alt": "#171E2B", "primary": "#72E6C1", "secondary": "#7F8DA6", "accent": "#FFB347", "text": "#F2F5F7", "text_muted": "#9CA8B8", "white": "#FFFFFF", "dark": "#070A10", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
+      "layout_opts": {"cover": {"title_size": 62, "title_y_ratio": 0.3}, "text_image": {"text_ratio": 0.46, "image_padding": 0.08}, "process": {"card_gap": 0.22, "max_steps": 5}},
+      "preferred_sequence": ["cover", "full_image", "text_image", "process", "comparison", "end"]
+    },
+    "data-story": {
+      "name": "数据叙事",
+      "layout_family": "technical_axis",
+      "description": "突出关键指标、趋势与结论，适合经营分析和仪表盘。",
+      "use_cases": ["经营分析", "财务数据", "增长复盘"],
+      "theme": {"bg": "#F6F7F4", "bg_alt": "#E7ECE7", "primary": "#244A3D", "secondary": "#71837B", "accent": "#E39A3B", "text": "#1B2924", "text_muted": "#708078", "white": "#FFFFFF", "dark": "#142B24", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Aptos"},
+      "layout_opts": {"dashboard": {"metric_value_size": 40, "card_gap": 0.16}, "timeline": {"axis_x_ratio": 0.42, "node_size": 0.3}, "table": {"body_size": 14}},
+      "preferred_sequence": ["cover", "dashboard", "timeline", "table", "comparison", "end"]
+    },
+    "startup-pitch": {
+      "name": "创业路演",
+      "layout_family": "poster_column",
+      "description": "快速建立问题、方案、市场、壁垒和融资逻辑。",
+      "use_cases": ["融资路演", "商业计划", "Demo Day"],
+      "theme": {"bg": "#FFF9F1", "bg_alt": "#F3E9DC", "primary": "#4B2E83", "secondary": "#6D6A75", "accent": "#FF6B4A", "text": "#24202B", "text_muted": "#7B7482", "white": "#FFFFFF", "dark": "#24153F", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
+      "layout_opts": {"cover": {"title_size": 60, "title_y_ratio": 0.31}, "comparison": {"divider_x_ratio": 0.46, "vs_size": 16}, "dashboard": {"metric_value_size": 38}},
+      "preferred_sequence": ["cover", "section", "comparison", "dashboard", "process", "quote", "end"]
+    },
+    "academic-clean": {
+      "name": "学术清晰",
+      "layout_family": "technical_axis",
+      "description": "理性留白、图表优先，适合答辩、论文和科研汇报。",
+      "use_cases": ["论文答辩", "科研汇报", "学术会议"],
+      "theme": {"bg": "#FCFCFA", "bg_alt": "#EEF1F2", "primary": "#214B63", "secondary": "#657985", "accent": "#B45A3C", "text": "#1D2529", "text_muted": "#6D7A80", "white": "#FFFFFF", "dark": "#153341", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Georgia"},
+      "layout_opts": {"cover": {"title_size": 46, "subtitle_size": 18}, "bullets": {"body_size": 16, "card_gap": 0.12}, "timeline": {"node_size": 0.28}},
+      "preferred_sequence": ["cover", "toc", "bullets", "table", "timeline", "quote", "end"]
+    },
+    "training-friendly": {
+      "name": "培训友好",
+      "layout_family": "editorial_grid",
+      "description": "高可读性、步骤明确，适合课程、培训和操作指南。",
+      "use_cases": ["企业培训", "教学课件", "操作指南"],
+      "theme": {"bg": "#FFFDF7", "bg_alt": "#F2EFE5", "primary": "#2E5D50", "secondary": "#75877F", "accent": "#F0A44B", "text": "#21332E", "text_muted": "#6F7D78", "white": "#FFFFFF", "dark": "#1A4036", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
+      "layout_opts": {"bullets": {"body_size": 18, "card_gap": 0.2}, "process": {"max_steps": 5, "card_gap": 0.3}, "cover": {"title_size": 52}},
+      "preferred_sequence": ["cover", "toc", "section", "bullets", "process", "quote", "end"]
+    },
+    "government-formal": {
+      "name": "政务正式",
+      "layout_family": "technical_axis",
+      "description": "稳重红金、层级清楚，适合政策宣讲和正式会议。",
+      "use_cases": ["政策宣讲", "党建汇报", "正式会议"],
+      "theme": {"bg": "#FFFDF8", "bg_alt": "#F2EBDD", "primary": "#8D1B1B", "secondary": "#786A5F", "accent": "#C69A4B", "text": "#2A211C", "text_muted": "#756B64", "white": "#FFFFFF", "dark": "#5D1111", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
+      "layout_opts": {"cover": {"title_size": 50, "title_y_ratio": 0.38}, "bullets": {"body_size": 17}, "table": {"body_size": 14}},
+      "preferred_sequence": ["cover", "toc", "section", "bullets", "timeline", "table", "end"]
+    },
+    "healthcare-calm": {
+      "name": "医疗清朗",
+      "layout_family": "editorial_grid",
+      "description": "清洁柔和、可信且易读，适合医疗、健康与生命科学。",
+      "use_cases": ["医疗方案", "健康科普", "生命科学"],
+      "theme": {"bg": "#F7FBFA", "bg_alt": "#E5F0ED", "primary": "#176B70", "secondary": "#6E8F8D", "accent": "#E07B67", "text": "#1A3031", "text_muted": "#6B8080", "white": "#FFFFFF", "dark": "#104B4E", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Aptos"},
+      "layout_opts": {"dashboard": {"metric_value_size": 36, "card_gap": 0.24}, "text_image": {"text_ratio": 0.52}, "bullets": {"body_size": 17}},
+      "preferred_sequence": ["cover", "text_image", "dashboard", "process", "table", "end"]
+    },
+    "financial-luxe": {
+      "name": "金融稳健",
+      "layout_family": "technical_axis",
+      "description": "深墨绿、旧金与高密度数据，适合金融和法律汇报。",
+      "use_cases": ["金融分析", "投委会", "法律报告"],
+      "theme": {"bg": "#0E201C", "bg_alt": "#18312A", "primary": "#C2A566", "secondary": "#83948C", "accent": "#C56B4E", "text": "#EEE9DC", "text_muted": "#99A69F", "white": "#FFFFFF", "dark": "#07120F", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Georgia"},
+      "layout_opts": {"dashboard": {"metric_value_size": 35, "card_gap": 0.18}, "table": {"body_size": 13}, "quote": {"quote_size": 30}},
+      "preferred_sequence": ["cover", "dashboard", "table", "comparison", "timeline", "end"]
+    },
+    "creative-editorial": {
+      "name": "创意编辑",
+      "layout_family": "poster_column",
+      "description": "杂志化、不对称、大图优先，适合品牌和作品展示。",
+      "use_cases": ["品牌提案", "作品集", "营销创意"],
+      "theme": {"bg": "#F6F0E8", "bg_alt": "#E9DDD0", "primary": "#202020", "secondary": "#756B62", "accent": "#E3543E", "text": "#202020", "text_muted": "#756F69", "white": "#FFFFFF", "dark": "#111111", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Georgia"},
+      "layout_opts": {"cover": {"title_size": 66, "title_y_ratio": 0.24}, "text_image": {"text_ratio": 0.42, "image_padding": 0.05}, "quote": {"quote_size": 34}},
+      "preferred_sequence": ["cover", "full_image", "text_image", "image_grid", "quote", "end"]
+    },
+    "sustainability": {
+      "name": "可持续自然",
+      "layout_family": "editorial_grid",
+      "description": "植物绿、泥土色与自然留白，适合ESG和环境主题。",
+      "use_cases": ["ESG", "环境报告", "农业与能源"],
+      "theme": {"bg": "#F7F4EA", "bg_alt": "#E7E5D5", "primary": "#355D3A", "secondary": "#7C8A68", "accent": "#C66A45", "text": "#253029", "text_muted": "#70796E", "white": "#FFFFFF", "dark": "#203B25", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
+      "layout_opts": {"cover": {"title_size": 54}, "dashboard": {"metric_value_size": 36}, "timeline": {"axis_x_ratio": 0.56, "node_size": 0.34}},
+      "preferred_sequence": ["cover", "full_image", "dashboard", "timeline", "process", "end"]
+    }
+  }
+}
