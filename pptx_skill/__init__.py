@@ -55,6 +55,7 @@ from reference_ppt import (  # noqa: E402
     generate_from_reference,
 )
 from render_slides import render_slides  # noqa: E402
+from pptx_skill.preview_renderer import render_preview  # noqa: E402
 from template_engine import (  # noqa: E402
     generate_template_preview,
     generate_template_profile,
@@ -186,6 +187,7 @@ __all__ = [
     "recolor",
     "regenerate",
     "register_template_profile",
+    "render_preview",
     "render_slides",
     "replace_layout",
     "report_capabilities",
