@@ -245,7 +245,7 @@ def solve_recipe(
     # Add stay constraints for hints as weak objective.
     for name, value in (hints or {}).items():
         if name in variables:
-            solver.addConstraint(get_var(name) == value | kiwi.strength.weak)
+            solver.addConstraint((get_var(name) == value) | kiwi.strength.weak)
 
     try:
         solver.updateVariables()

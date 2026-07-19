@@ -152,12 +152,47 @@ def layout_text_image_grid(prs, theme, ctx):
         _fit_image_in_box(slide, images[0], 7.55, 1.8, 4.85, 4.8, cover=True)
     bullets = ctx.get("bullets") or []
     top = 1.9
+    bottom = 6.72
+    text_w = 5.45
+    line_h = 0.30
+    gap = 0.14
+
+    def _est_lines(text):
+        # 贪心折行模拟：CJK 逐字可断（0.229"/字，16pt 全角加安全余量）；
+        # 连续 ASCII 为不可断词：大写/数字/下划线 0.151"，其余 0.115"。
+        # 扣除 python-pptx 文本框默认内边距（左右各 0.1"）。
+        eff_w = text_w - 0.2
+        units = []
+        buf = 0.0
+        for ch in str(text):
+            if ord(ch) > 0x2E7F:
+                if buf:
+                    units.append(buf)
+                    buf = 0.0
+                units.append(0.229)
+            else:
+                buf += 0.151 if (ch.isupper() or ch.isdigit() or ch == "_") else 0.115
+        if buf:
+            units.append(buf)
+        lines, cur = 1, 0.0
+        for u in units:
+            if cur > 0 and cur + u > eff_w:
+                lines += 1
+                cur = 0.0
+            cur += u
+        return lines
+
+    y = top
     for index, item in enumerate(bullets[:6]):
-        y = top + index * 0.72
+        lines = _est_lines(item)
+        item_h = lines * line_h
+        if index > 0 and y + item_h > bottom:
+            break  # 容量不足时停止堆叠，避免条目互相重叠（由 QA 报告内容密度）
         number = _textbox(slide, 0.92, y, 0.45, 0.3)
         _add_para(number, f"{index + 1:02d}", first=True, size=Pt(9), color=theme["accent"], bold=True, name=FONT_EN)
-        text = _textbox(slide, 1.55, y - 0.02, 5.45, 0.48)
+        text = _textbox(slide, 1.55, y - 0.02, text_w, item_h + 0.1)
         _add_para(text, str(item), first=True, size=Pt(16), color=theme["text"], name=FONT_CN)
+        y += item_h + gap
     _rect(slide, 7.33, 1.8, 0.025, 4.8, fill=theme["accent"])
     return slide
 

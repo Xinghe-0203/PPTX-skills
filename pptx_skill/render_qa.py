@@ -94,7 +94,7 @@ def _perceptual_diff_pillow(
         draw.rectangle([width - ignore_edges_px, 0, width - 1, height - 1], fill=0)
     # Pixels above threshold are considered different.
     mask = gray.point(lambda v: 255 if v > threshold else 0)
-    data = list(mask.getdata())
+    data = list(mask.getdata() if not hasattr(mask, "get_flattened_data") else mask.get_flattened_data())
     diff_count = sum(1 for v in data if v > 0)
     total = len(data)
     ratio = diff_count / total if total > 0 else 0.0
@@ -105,7 +105,7 @@ def _windowed_density_pillow(mask: Image.Image, window_size: int = 16) -> float:
     width, height = mask.size
     if width <= 0 or height <= 0 or window_size <= 0:
         return 0.0
-    data = list(mask.getdata())
+    data = list(mask.getdata() if not hasattr(mask, "get_flattened_data") else mask.get_flattened_data())
     max_density = 0.0
     for y in range(0, height - window_size + 1, window_size):
         for x in range(0, width - window_size + 1, window_size):

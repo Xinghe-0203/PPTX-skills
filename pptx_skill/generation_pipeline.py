@@ -18,17 +18,11 @@ from pptx_skill.pptx_renderer import render_layout_plan, render_layout_plans
 from pptx_skill.repair_engine import apply_repairs, merge_profile_overrides, propose_repairs
 from pptx_skill.render_qa import RenderQAConfig, evaluate_render_against_baseline
 from pptx_skill.semantic_qa import SemanticQAEngine
-from pptx_skill.visual_qa import CheckOutcome, QACheckResult, QAReport
+from pptx_skill.visual_qa import CheckOutcome, PresentationQualityError, QACheckResult, QAReport
 
 
 class LayoutPlanningError(Exception):
     pass
-
-
-class PresentationQualityError(Exception):
-    def __init__(self, qa_report: QAReport):
-        self.qa_report = qa_report
-        super().__init__("Presentation quality check failed")
 
 
 @dataclass

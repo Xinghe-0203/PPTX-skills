@@ -19,6 +19,9 @@ dist/
 .venv/
 venv/
 
+# Local secrets (keep .env.example tracked)
+.env
+
 # User-local tool permissions and generated deliverables.
 .claude/settings.local.json
 output/

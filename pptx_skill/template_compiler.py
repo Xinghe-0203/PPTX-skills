@@ -140,8 +140,8 @@ def source_profile_from_intent(
         "description": intent.audience or "Generated TemplateProfileV2",
         "canvas": {
             "preset": intent.canvas or "16:9",
-            "width_pt": 959.976 if (intent.canvas or "16:9") == "16:9" else 720.0,
-            "height_pt": 540.0,
+            "width_pt": {"16:9": 959.976, "4:3": 720.0, "9:16": 540.0}.get(intent.canvas or "16:9", 720.0),
+            "height_pt": {"16:9": 540.0, "4:3": 540.0, "9:16": 959.976}.get(intent.canvas or "16:9", 540.0),
             "safe_margin": {"top": 38, "right": 52, "bottom": 34, "left": 52},
         },
         "tokens": {

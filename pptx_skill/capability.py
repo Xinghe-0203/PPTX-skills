@@ -45,7 +45,7 @@ def _libreoffice_version(soffice_path: str | None) -> dict[str, Any] | None:
     # a short timeout and fallback to path-only is acceptable for a capability report.
     try:
         result = subprocess.run(
-            [soffice_path, "--version"],
+            [soffice_path, "--headless", "--version"],
             capture_output=True,
             text=True,
             timeout=5,

@@ -8,7 +8,15 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from typing import Any
+
+# Ensure pptx_skill is importable when running as a script (python scripts/render_slides.py).
+# When installed via pip, this is unnecessary; when running from the repo, sys.path[0] is
+# scripts/ and the package root is one level up.
+_repo_root = str(Path(__file__).resolve().parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 from pptx_skill.preview_renderer import render_preview
 

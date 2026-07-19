@@ -404,28 +404,26 @@ def _fit_image_in_box(slide, img_path, l, t, w, h, cover=True):
         box_ratio = w / h
         img_ratio = iw / ih
         if cover:
-            # 填满盒子，裁掉溢出部分
+            # 填满盒子：图片严格落在盒子内，用真实 crop fractions 裁掉溢出部分。
+            # 不再通过放大图片越出盒子模拟 cover（会遮挡相邻区域）。
+            pic = slide.shapes.add_picture(img_path, Inches(l), Inches(t),
+                                           Inches(w), Inches(h))
             if img_ratio > box_ratio:
-                new_w = h * img_ratio
-                new_h = h
-                pl = l + (w - new_w) / 2
-                pt = t
+                crop = 1.0 - box_ratio / img_ratio
+                pic.crop_left = crop / 2
+                pic.crop_right = crop / 2
             else:
-                new_w = w
-                new_h = w / img_ratio
-                pl = l
-                pt = t + (h - new_h) / 2
+                crop = 1.0 - img_ratio / box_ratio
+                pic.crop_top = crop / 2
+                pic.crop_bottom = crop / 2
+            return pic
         else:
             new_w = min(w, h * img_ratio)
             new_h = new_w / img_ratio
             pl = l + (w - new_w) / 2
             pt = t + (h - new_h) / 2
-        pic = slide.shapes.add_picture(img_path, Inches(pl), Inches(pt),
-                                       Inches(new_w), Inches(new_h))
-        # 用一个同尺寸矩形做裁剪框：实际上 pptx 不支持裁剪显示溢出，
-        # 所以 cover 模式我们改用 contain 但铺满，避免超出盒子。
-        # 退而求其次：cover 时直接用盒子尺寸强制拉伸风险大，改用 contain 居中。
-        return pic
+            return slide.shapes.add_picture(img_path, Inches(pl), Inches(pt),
+                                            Inches(new_w), Inches(new_h))
     # 无 Pillow 或读取失败，直接按盒子塞
     return slide.shapes.add_picture(img_path, Inches(l), Inches(t),
                                     Inches(w), Inches(h))

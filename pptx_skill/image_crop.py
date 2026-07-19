@@ -133,13 +133,14 @@ def _saliency_map(img):
     w, h = img.size
     # Edge response
     edges = img.convert("L").filter(ImageFilter.FIND_EDGES)
-    edge_data = list(edges.getdata())
+    _gd = "get_flattened_data" if hasattr(edges, "get_flattened_data") else "getdata"
+    edge_data = list(getattr(edges, _gd)())
     # Saturation
     hsv = img.convert("HSV")
-    sat_data = [px[1] for px in hsv.getdata()]
+    sat_data = [px[1] for px in getattr(hsv, _gd)()]
     # Skin tone approximation in YCbCr-ish RGB heuristic
     skin_data = []
-    for r, g, b in img.getdata():
+    for r, g, b in getattr(img, _gd)():
         skin_score = 0
         if r > g and r > b and abs(r - g) > 15:
             skin_score = (r - g) + (r - b)

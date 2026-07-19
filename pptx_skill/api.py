@@ -15,7 +15,7 @@ from typing import Any, Literal
 from pptx_skill.generation_pipeline import GenerationResult as PipelineGenerationResult
 from pptx_skill.content_adapter import adapt_legacy_sections
 from pptx_skill.manifest import ManifestV3, load_manifest, save_manifest_v3, set_current_content
-from pptx_skill.visual_qa import CheckOutcome, QAReport, QACheckResult, Severity
+from pptx_skill.visual_qa import CheckOutcome, QAReport, QACheckResult, QAIssue, Severity
 
 
 # Keep api.GenerationResult as the canonical public result type while sharing

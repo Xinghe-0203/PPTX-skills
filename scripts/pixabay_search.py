@@ -16,8 +16,41 @@ import urllib.parse
 import urllib.request
 import urllib.error
 
-# 默认 API Key（用户提供的示例 key）
-DEFAULT_API_KEY = "56736282-f8f7357e3a0c8aca65350f06b"
+
+def _load_dotenv(path: str | None = None) -> None:
+    """Minimal zero-dependency .env loader.
+
+    Reads KEY=VALUE pairs from a .env file and sets them into os.environ
+    without overriding existing process environment variables. Supports
+    simple quoting and # comments. Only meant for local development.
+    """
+    if path is None:
+        # Walk up from this file to find a .env (project root usually).
+        here = os.path.dirname(os.path.abspath(__file__))
+        for parent in (here, os.path.dirname(here), os.path.dirname(os.path.dirname(here))):
+            candidate = os.path.join(parent, ".env")
+            if os.path.isfile(candidate):
+                path = candidate
+                break
+    if not path or not os.path.isfile(path):
+        return
+    with open(path, "r", encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_dotenv()
+
+# Pixabay API key. Read from process env (set by CI/shell) or .env file.
+# Never hardcode credentials in source. Register at https://pixabay.com/accounts/register/
+DEFAULT_API_KEY = os.environ.get("PIXABAY_API_KEY")
 
 API_ENDPOINT = "https://pixabay.com/api/"
 
@@ -113,6 +146,13 @@ def search_images(
         for c in color_list:
             if c not in VALID_COLORS:
                 raise ValueError(f"颜色 '{c}' 无效，合法值: {VALID_COLORS}")
+
+    if not api_key:
+        raise ValueError(
+            "Pixabay API key 未设置。请在项目根目录创建 .env 文件（参考 .env.example）"
+            "并写入 PIXABAY_API_KEY=your_key，或设置环境变量 PIXABAY_API_KEY。"
+            "注册地址: https://pixabay.com/accounts/register/"
+        )
 
     # 构造请求参数
     params = {
