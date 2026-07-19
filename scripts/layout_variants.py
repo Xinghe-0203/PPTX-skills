@@ -4,24 +4,15 @@ from __future__ import annotations
 
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
-
 from pptx_helper import (
-    CONTENT_H,
-    CONTENT_W,
     FONT_CN,
     FONT_EN,
-    MARGIN_TOP,
-    MARGIN_X,
-    SLIDE_H,
-    SLIDE_W,
     _add_para,
     _blank_layout,
     _fit_image_in_box,
-    _opts,
     _rect,
     _set_bg,
     _textbox,
-    _text_on,
 )
 
 
@@ -99,7 +90,7 @@ def layout_toc_grid(prs, theme, ctx):
     if kicker:
         small = _textbox(slide, 0.92, 0.45, 2.5, 0.24)
         _add_para(small, kicker, first=True, size=Pt(9), color=theme["accent"], bold=True, name=FONT_EN)
-    bullets = ctx.get("bullets") or []
+    bullets = ctx.get("toc_items") or ctx.get("bullets") or []
     top = 1.0
     for index, item in enumerate(bullets[:6]):
         y = top + index * 0.82
@@ -214,12 +205,14 @@ def layout_image_grid_editorial(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     _header(slide, theme, ctx, compact=True)
     images = ctx.get("images") or []
+    if len(images) > 3:
+        print(f"  [警告] image_grid_editorial 版式最多支持3张图，当前{len(images)}张，超出的图片被截断", file=__import__('sys').stderr)
     slots = [
         (0.9, 1.8, 7.2, 4.9),
         (8.3, 1.8, 4.1, 2.33),
         (8.3, 4.37, 4.1, 2.33),
     ]
-    for image, slot in zip(images[:3], slots):
+    for image, slot in zip(images[:3], slots, strict=False):
         _fit_image_in_box(slide, image, *slot, cover=True)
     return slide
 
@@ -246,18 +239,18 @@ def layout_dashboard_grid(prs, theme, ctx):
     for metric in metrics:
         raw = str(metric.get("change", ""))
         try:
-            values.append(abs(float(raw.replace("+", "").replace("-", "").replace("%", "").replace("pp", ""))))
+            values.append(abs(float(raw.replace("+", "").replace("%", "").replace("pp", ""))))
         except ValueError:
             values.append(1)
     maximum = max(values, default=1) or 1
     bar_left = 2.4
     bar_width = 8.6
-    for index, (metric, value) in enumerate(zip(metrics, values)):
+    for index, (metric, value) in enumerate(zip(metrics, values, strict=False)):
         y = 3.95 + index * 0.62
         label = _textbox(slide, 0.92, y - 0.02, 1.3, 0.28)
         _add_para(label, metric.get("label", ""), first=True, size=Pt(10), color=theme["text_muted"], name=FONT_CN)
         _rect(slide, bar_left, y, bar_width, 0.09, fill=theme["bg_alt"])
-        _rect(slide, bar_left, y, max(0.08, bar_width * value / maximum), 0.09, fill=theme["accent"])
+        _rect(slide, bar_left, y, bar_width * value / maximum, 0.09, fill=theme["accent"])
         number = _textbox(slide, 11.25, y - 0.07, 1.15, 0.25)
         _add_para(number, metric.get("change", ""), first=True, size=Pt(9), color=theme["text"], name=FONT_EN, align=PP_ALIGN.RIGHT)
     return slide
@@ -384,7 +377,7 @@ def layout_cover_technical(prs, theme, ctx):
 def layout_toc_technical(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     _technical_header(slide, theme, ctx)
-    bullets = (ctx.get("bullets") or [])[:6]
+    bullets = (ctx.get("toc_items") or ctx.get("bullets") or [])[:6]
     for index, item in enumerate(bullets):
         row = index // 3
         col = index % 3
@@ -507,7 +500,7 @@ def layout_toc_poster(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     title = _textbox(slide, 0.85, 0.55, 5.8, 0.85)
     _add_para(title, ctx.get("title", "目录"), first=True, size=Pt(36), color=theme["text"], bold=True, name=FONT_CN)
-    bullets = (ctx.get("bullets") or [])[:6]
+    bullets = (ctx.get("toc_items") or ctx.get("bullets") or [])[:6]
     for index, item in enumerate(bullets):
         col = index % 2
         row = index // 2

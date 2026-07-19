@@ -7,9 +7,9 @@ them across re-generation.
 from __future__ import annotations
 
 import copy
-import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from pptx_skill.content_model import ContentSpec, ElementSpec, SlideSpec
 
@@ -151,7 +151,7 @@ def _extract_body_items(element: ElementSpec) -> list[ContentItem]:
 def _split_text_element(element: ElementSpec, items: list[ContentItem]) -> ElementSpec:
     """Return a copy of element with only the given items' text."""
     new_element = copy.deepcopy(element)
-    lines = [("  " * it.level) + ("- " if it.level > 0 else "") + it.text for it in items]
+    lines = [("  " * it.level) + "- " + it.text for it in items]
     new_element.content["text"] = "\n".join(lines)
     return new_element
 

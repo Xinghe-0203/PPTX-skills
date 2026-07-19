@@ -40,7 +40,7 @@
 |---|---|---|
 | `Slides` 有无 delete/move | `slide.py:238-293` | **无**。只有 `add_slide`/`get`/`index`。增删移全靠 `_sldIdLst` |
 | `CT_SlideIdList` 增删改 API | `oxml/presentation.py:51-94` | `sldId_lst` 是标准 list，可 `append/insert/remove/pop`；`add_sldId(rId)` 建新元素；`_next_id` 自动 ≥256 |
-| 删 slide 的 relationship | `opc/package.py:84` vs `:409` | `OpcPackage.drop_rel`（包级，无条件）vs `XmlPart.drop_rel`（有 ref_count<2 保护）。删 slide 用 `prs.part.package.drop_rel(rId)` 最稳 |
+| 删 slide 的 relationship | `opc/package.py:84` vs `:409` | `OpcPackage.drop_rel`（包级，无条件）vs `XmlPart.drop_rel`（有 ref_count<2 保护）。删 slide 用 `prs.part.drop_rel(rId)` 即可（slide rId ref_count 通常为1） |
 | 官方删元素范式 | `slide.py:390-411` `SlideLayouts.remove` | `list.remove(elem)` + `part.drop_rel(rId)`，删 slide 照搬 |
 | `background.fill` 副作用 | `slide.py:471-498` | **访问即设 NoFill 切断继承**。inspect 只读时必须绕开，直接查 `_element.cSld` 下的 `p:bg` |
 | custom XML part API | `opc/package.py`、`parts/presentation.py` | **无公开 API**。嵌入需手搓 `Part`+Content-Type override，成本高 → manifest 走 json |
@@ -377,12 +377,12 @@ sld_id_lst = prs.slides._sldIdLst.sldId_lst
 sldId = sld_id_lst[i]
 sld_id_lst.remove(sldId)
 # 用包级 drop_rel（无条件删），而非 XmlPart.drop_rel（有 ref_count<2 保护可能删不掉）
-prs.part.package.drop_rel(sldId.rId)
+prs.part.drop_rel(sldId.rId)
 ```
 
 **drop_rel 选用要点**（源码核验）：
 - `XmlPart.drop_rel`（`opc/package.py:409`）有保护：`if self._rel_ref_count(rId) < 2: pop`。slide 的 rId 通常只被 sldId 引用一次，ref_count=1，能删；但保险起见用包级。
-- `OpcPackage.drop_rel`（`opc/package.py:84`）无条件 `pop`，最稳。删 slide 走 `prs.part.package.drop_rel(rId)`。
+- `OpcPackage.drop_rel`（`opc/package.py:84`）无条件 `pop`，最稳。删 slide 走 `prs.part.drop_rel(rId)`。
 
 **move_slide(from,to)**：纯重排，不碰 relationship，只动 list 顺序：
 ```python

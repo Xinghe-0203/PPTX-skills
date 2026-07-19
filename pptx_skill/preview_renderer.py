@@ -12,8 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pptx_skill.pptx_renderer import PreviewRenderResult
@@ -86,7 +85,7 @@ def _rename_pngs(pngs: list[str], output_dir: str) -> list[str]:
         if p != new_name:
             if os.path.exists(new_name):
                 os.remove(new_name)
-            os.rename(p, new_name)
+            shutil.move(p, new_name)
         renamed.append(new_name)
     return renamed
 
@@ -108,6 +107,9 @@ def _pdf_to_pngs(pdf_path: str, output_dir: str, dpi: int) -> tuple[list[str], l
         errors.append("PyMuPDF (fitz) not installed")
     except Exception as exc:
         errors.append(f"PyMuPDF error: {exc}")
+
+    if pngs:
+        return pngs, errors
 
     try:
         from pdf2image import convert_from_path
@@ -174,8 +176,14 @@ def render_with_libreoffice(
     ]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except subprocess.TimeoutExpired as exc:
+        if exc.child is not None:
+            try:
+                exc.child.kill()
+                exc.child.wait(timeout=10)
+            except Exception:
+                pass
         _cleanup_tmp(tmp_root)
         result.attempts.append({"engine": "libreoffice", "success": False, "error": f"timed out after {exc.timeout}s"})
         return result
@@ -294,32 +302,36 @@ def render_preview(
             attempts=[{"engine": engine, "success": False, "error": f"File not found: {pptx_path}"}],
         )
 
+    all_attempts: list[dict[str, Any]] = []
+
     if engine in ("auto", "libreoffice"):
         soffice = find_soffice()
         if soffice:
             result = render_with_libreoffice(pptx_path, output_dir, dpi, soffice)
+            all_attempts.extend(result.attempts)
             if result.slide_pngs:
+                result.attempts = all_attempts
                 return result
+        else:
+            all_attempts.append({"engine": "libreoffice", "success": False, "error": "LibreOffice (soffice) not found on system"})
 
     if engine in ("auto", "com"):
         ppt = find_powerpoint()
         if ppt:
             result = render_with_com(pptx_path, output_dir, dpi)
+            all_attempts.extend(result.attempts)
             if result.slide_pngs:
+                result.attempts = all_attempts
                 return result
+        else:
+            all_attempts.append({"engine": "com", "success": False, "error": "PowerPoint (POWERPNT.EXE) not found on system"})
 
-    # No engine succeeded or was available.
-    attempts: list[dict[str, Any]] = []
-    if engine in ("auto", "libreoffice"):
-        attempts.append({"engine": "libreoffice", "success": False, "error": "not found or failed"})
-    if engine in ("auto", "com"):
-        attempts.append({"engine": "com", "success": False, "error": "not found or failed"})
     return PreviewRenderResult(
         renderer="",
         renderer_version="",
         target_dpi=dpi,
         environment={},
-        attempts=attempts,
+        attempts=all_attempts,
     )
 
 

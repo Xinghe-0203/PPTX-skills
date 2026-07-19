@@ -4,32 +4,29 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
-from pathlib import Path
 
 from PIL import Image
 
 from pptx_skill.content_model import CanvasSpec, ContentSpec, ElementSpec, SlideSpec
 from pptx_skill.generation_pipeline import (
     GenerationResult,
-    LayoutPlanningError,
     PresentationQualityError,
     plan_deck_layouts,
     run_generation_pipeline,
 )
 from pptx_skill.layout_engine import _builtin_tokens
-from pptx_skill.repair_engine import (
-    RepairAction,
-    RepairActionKind,
-    apply_repairs,
-    merge_profile_overrides,
-    propose_repairs,
-)
 from pptx_skill.render_qa import (
     RenderQAConfig,
     compare_slide_to_baseline,
     evaluate_render_against_baseline,
 )
-from pptx_skill.semantic_qa import DetectedIssue, IssueKind, IssueSeverity, SemanticQAEngine
+from pptx_skill.repair_engine import (
+    RepairActionKind,
+    apply_repairs,
+    merge_profile_overrides,
+    propose_repairs,
+)
+from pptx_skill.semantic_qa import IssueKind, SemanticQAEngine
 from pptx_skill.visual_qa import CheckOutcome, QAIssue, QAReport, Severity
 
 
@@ -85,8 +82,7 @@ class RepairEngineTests(unittest.TestCase):
 
     def test_propose_reduce_font_for_overflow(self):
         # Build a plan manually with a small box to force overflow.
-        from pptx_skill.content_model import BBox, GeometrySpec, LayoutPlan, PlannedNode, CanvasSpec
-        from pptx_skill.semantic_qa import SemanticQAEngine, IssueKind
+        from pptx_skill.content_model import BBox, CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode
         node = PlannedNode(
             id="s1/body",
             element_id="body",
@@ -106,8 +102,7 @@ class RepairEngineTests(unittest.TestCase):
         self.assertTrue(any(a.kind == RepairActionKind.REDUCE_FONT_WITHIN_LIMIT for a in actions))
 
     def test_apply_reduce_font(self):
-        from pptx_skill.content_model import BBox, GeometrySpec, LayoutPlan, PlannedNode, CanvasSpec
-        from pptx_skill.semantic_qa import SemanticQAEngine
+        from pptx_skill.content_model import BBox, CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode
         node = PlannedNode(
             id="s1/body",
             element_id="body",
@@ -191,9 +186,9 @@ class GenerationPipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = os.path.join(tmp, "deck.pptx")
             # Patch plan_deck_layouts to return a plan with an overflow node.
+            import pptx_skill.generation_pipeline as gp
             from pptx_skill.content_model import BBox, GeometrySpec, PlannedNode
             from pptx_skill.semantic_qa import SemanticQAEngine
-            import pptx_skill.generation_pipeline as gp
             content = self._make_content(body_text="Short body")
             profile = {"tokens": _builtin_tokens()}
             bad_plans = plan_deck_layouts(content.slides, CanvasSpec(959.976, 540), profile)
@@ -233,9 +228,13 @@ class GenerationPipelineTests(unittest.TestCase):
 
 
 def _plan_for_slide(slide: SlideSpec):
-    from pptx_skill.layout_engine import builtin_recipes, plan_slide_candidates, solved_geometry_to_layout_plan
-    from pptx_skill.layout_engine import _builtin_tokens
     from pptx_skill.content_model import CanvasSpec, SafeInsets
+    from pptx_skill.layout_engine import (
+        _builtin_tokens,
+        builtin_recipes,
+        plan_slide_candidates,
+        solved_geometry_to_layout_plan,
+    )
     canvas = CanvasSpec(959.976, 540, safe=SafeInsets(36, 48, 32, 48))
     tokens = _builtin_tokens()
     recipes = builtin_recipes(slide.role)

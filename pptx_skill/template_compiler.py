@@ -13,11 +13,10 @@ import hashlib
 import re
 from typing import Any
 
-from pptx_skill.content_model import CanvasSpec
 from pptx_skill.design_schema import (
-    CompiledTemplateBundleV2,
     REQUIRED_ROLES,
     TEMPLATE_SCHEMA_VERSION,
+    CompiledTemplateBundleV2,
     StyleIntent,
     canvas_from_profile,
     resolve_all_tokens,
@@ -44,6 +43,8 @@ def _seed_from_intent(intent: StyleIntent) -> int:
 def _mix(a: str, b: str, weight_b: float) -> str:
     def hx(c: str) -> tuple[int, int, int]:
         c = c.lstrip("#")
+        if len(c) != 6:
+            raise ValueError(f"Invalid hex color: #{c} (expected 6 hex digits)")
         return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
 
     ra, ga, ba = hx(a)
@@ -291,7 +292,7 @@ def compile_source_profile(source: dict) -> CompiledTemplateBundleV2:
     executes generated code; recipes are identifiers resolved by the layout
     engine's recipe registry.
     """
-    warnings = validate_source_profile(source)
+    validate_source_profile(source)
     resolved_tokens = resolve_all_tokens(source["tokens"])
     layouts, recipe_provenance = _complete_layouts(source)
     canvas = canvas_from_profile(source["canvas"])

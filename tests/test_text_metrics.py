@@ -59,7 +59,7 @@ class TextMetricsTests(unittest.TestCase):
             TextRun(text="Heading ", font_family="Arial", size_pt=20, bold=True),
             TextRun(text="content", font_family="Arial", size_pt=16),
         ]
-        style = ParagraphStyle(line_height=1.2)
+        ParagraphStyle(line_height=1.2)
         metrics = measure_text("".join(r.text for r in runs), width_pt=300, font_size_pt=20, font_family="Arial")
         self.assertEqual(metrics.num_lines, 1)
 

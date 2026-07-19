@@ -7,9 +7,9 @@ crop properties.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,8 @@ def crop_contain(
     dst_height: float,
 ) -> CropResult:
     """Fit the whole image inside the destination box (letterbox)."""
+    if src_height == 0 or src_width == 0 or dst_height == 0 or dst_width == 0:
+        return CropResult(focus=(0.5, 0.5), crop_rect=(0.0, 0.0, 1.0, 1.0), crop_fractions=_to_fractions((0.0, 0.0, 1.0, 1.0)), score=0.0)
     src_ratio = src_width / src_height
     dst_ratio = dst_width / dst_height
     if dst_ratio > src_ratio:
@@ -90,6 +92,8 @@ def crop_cover(
     dst_height: float,
 ) -> CropResult:
     """Cover the destination box while preserving image aspect ratio."""
+    if src_height == 0 or src_width == 0 or dst_height == 0 or dst_width == 0:
+        return CropResult(focus=(0.5, 0.5), crop_rect=(0.0, 0.0, 1.0, 1.0), crop_fractions=_to_fractions((0.0, 0.0, 1.0, 1.0)), score=0.0)
     src_ratio = src_width / src_height
     dst_ratio = dst_width / dst_height
     if dst_ratio > src_ratio:
@@ -128,7 +132,7 @@ def _load_and_resize(image_path: str | Path, max_side: int = 512):
 
 def _saliency_map(img):
     """Build a simple saliency map using edges, saturation and skin tones."""
-    from PIL import Image, ImageFilter
+    from PIL import ImageFilter
 
     w, h = img.size
     # Edge response
@@ -151,7 +155,7 @@ def _saliency_map(img):
     max_skin = max(skin_data) or 1
 
     saliency = []
-    for e, s, sk in zip(edge_data, sat_data, skin_data):
+    for e, s, sk in zip(edge_data, sat_data, skin_data, strict=False):
         score = 0.5 * (e / max_edge) + 0.3 * (s / max_sat) + 0.2 * (sk / max_skin)
         saliency.append(score)
     return saliency, (w, h)
@@ -197,7 +201,7 @@ def _window_score(
     if weights == 0:
         return 0.0
     # Penalize cropping too close to edges or extreme aspect ratios.
-    area = (right - left) * (bottom - top)
+    (right - left) * (bottom - top)
     edge_penalty = (
         (left / w) ** 2
         + (top / h) ** 2

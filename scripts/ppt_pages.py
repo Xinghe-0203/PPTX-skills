@@ -7,9 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pptx import Presentation
-
 from ppt_project import create_backup
+from pptx import Presentation
 from pptx_helper import (
     LAYOUT_REGISTRY,
     Section,
@@ -194,7 +193,7 @@ def replace_layout(
     prs = Presentation(str(path))
     position = _position(index, len(prs.slides))
     old_slide = prs.slides[position]
-    content = section_dict or _extract_basic_section(old_slide)
+    content = section_dict if section_dict else _extract_basic_section(old_slide)
     theme = _theme_for_existing(path, theme_key)
     image_dir = path.parent / "ppt_images"
     image_dir.mkdir(exist_ok=True)

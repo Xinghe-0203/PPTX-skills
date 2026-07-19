@@ -6,19 +6,17 @@ operations when numpy/scikit-image are unavailable.
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageChops, ImageDraw
 
-from pptx_skill.content_model import BBox
 from pptx_skill.visual_qa import CheckOutcome, QACheckResult, QAIssue, QAReport, Severity
 
 
-class ImageBackend(str, Enum):
+class ImageBackend(StrEnum):
     SCIKIT_IMAGE = "scikit-image"
     PILLOW = "Pillow"
     UNAVAILABLE = "unavailable"
@@ -60,7 +58,10 @@ def _detect_backend() -> ImageBackend:
 
 
 def _load_image(path: str) -> Image.Image:
-    return Image.open(path).convert("RGB")
+    fp = Image.open(path)
+    img = fp.convert("RGB")
+    fp.close()
+    return img
 
 
 def _same_size(img_a: Image.Image, img_b: Image.Image) -> bool:
@@ -204,7 +205,13 @@ def compare_slide_to_baseline(
         out.mkdir(parents=True, exist_ok=True)
         diff_path = str(out / f"slide_{slide_index:03d}_diff.png")
         mask.save(diff_path)
-        annotated = Image.blend(img_rendered, Image.new("RGB", img_rendered.size, (255, 0, 0)), alpha=0.4)
+        red_mask = Image.new("RGB", img_rendered.size, (255, 0, 0))
+        red_channel = red_mask.split()[0]
+        r, g, b = img_rendered.split()
+        mask_resized = mask.resize(img_rendered.size, Image.Resampling.NEAREST)
+        mask_gray = mask_resized.convert("L")
+        r_masked = Image.composite(red_channel, r, mask_gray)
+        annotated = Image.merge("RGB", (r_masked, g, b))
         annotated_path = str(out / f"slide_{slide_index:03d}_annotated.png")
         annotated.save(annotated_path)
 
@@ -259,7 +266,7 @@ def evaluate_render_against_baseline(
         )
 
     diffs: list[SlideDiff] = []
-    for idx, (rendered, baseline) in enumerate(zip(rendered_pngs, baseline_pngs)):
+    for idx, (rendered, baseline) in enumerate(zip(rendered_pngs, baseline_pngs, strict=False)):
         diff = compare_slide_to_baseline(idx, rendered, baseline, output_dir=output_dir, config=cfg)
         diffs.append(diff)
 
@@ -301,7 +308,7 @@ def evaluate_render_against_baseline(
                     confidence=0.95,
                 )
             )
-        elif diff.perceptual_diff_ratio > thresholds["perceptual_threshold"] and not reference_mode:
+        if diff.perceptual_diff_ratio > thresholds["perceptual_threshold"] and not reference_mode:
             status = CheckOutcome.FAIL
             issues.append(
                 QAIssue(

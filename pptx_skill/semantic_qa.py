@@ -5,7 +5,7 @@ Checks for overflow, overlap, contrast, missing fonts and image distortion.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from PIL import Image
@@ -14,13 +14,13 @@ from pptx_skill.content_model import BBox, LayoutPlan, PlannedNode
 from pptx_skill.text_metrics import ParagraphStyle, measure_text, resolve_font
 
 
-class IssueSeverity(str, Enum):
+class IssueSeverity(StrEnum):
     BLOCKER = "blocker"
     WARNING = "warning"
     INFO = "info"
 
 
-class IssueKind(str, Enum):
+class IssueKind(StrEnum):
     TEXT_OVERFLOW = "text_overflow"
     OVERLAP = "overlap"
     LOW_CONTRAST = "low_contrast"
@@ -143,7 +143,7 @@ class SemanticQAEngine:
         style = node.resolved_style or {}
         font_size = style.get("size", 16)
         font_family = style.get("font_family", "Microsoft YaHei")
-        color = style.get("color", "#1A1A1A")
+        style.get("color", "#1A1A1A")
         bold = style.get("bold", False)
         para = ParagraphStyle(line_height=style.get("line_height", 1.35))
         try:

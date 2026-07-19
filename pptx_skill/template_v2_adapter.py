@@ -13,14 +13,12 @@ import copy
 from typing import Any
 
 from pptx_skill.design_schema import (
+    CompiledTemplateBundleV2,
     TEMPLATE_SCHEMA_VERSION,
-    StyleIntent,
-    canvas_from_profile,
     resolve_all_tokens,
     validate_source_profile,
 )
 from pptx_skill.template_compiler import compile_source_profile
-
 
 LEGACY_THEME_FIELDS = (
     "bg", "bg_alt", "primary", "secondary", "accent",
@@ -166,7 +164,7 @@ def migrate_profile_v1_to_v2(v1: dict[str, Any], key: str | None = None) -> dict
     return profile
 
 
-def migrate_and_compile_v1(v1: dict[str, Any]) -> "CompiledTemplateBundleV2":
+def migrate_and_compile_v1(v1: dict[str, Any]) -> CompiledTemplateBundleV2:
     """One-shot V1 -> partial V2 source -> compiled bundle."""
     source = migrate_profile_v1_to_v2(v1)
     return compile_source_profile(source)

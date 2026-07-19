@@ -5,13 +5,14 @@ results. The actual OOXML writing will be added in PR2.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from pptx.dml.color import RGBColor
 
-from pptx_skill.content_model import CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode
+from pptx_skill.content_model import GeometrySpec, LayoutPlan, PlannedNode
 
 
 @dataclass(frozen=True)
@@ -93,8 +94,9 @@ def _apply_text_style(run, style: dict[str, Any]) -> None:
         run.font.bold = True
 
 
-def _add_text_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
-    from pptx.util import Inches, Pt
+def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
+    from pptx.enum.text import PP_ALIGN
+    from pptx.util import Inches
 
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
@@ -114,7 +116,7 @@ def _add_text_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrace
     run = p.add_run()
     run.text = text
     _apply_text_style(run, node.resolved_style)
-    p.alignment = binding.get("align", 1)  # 1 = center, 2 = right, 0 = left
+    p.alignment = binding.get("align", PP_ALIGN.LEFT)  # PP_ALIGN: 1=LEFT, 2=CENTER, 3=RIGHT
 
     return RenderTraceEntry(
         render_node_id=node.id,
@@ -131,7 +133,7 @@ def _add_text_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrace
     )
 
 
-def _add_image_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+def _add_image_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     from pptx.util import Inches
 
     geom = node.geometry.bbox
@@ -160,8 +162,8 @@ def _add_image_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
         with open(path, "rb") as fh:
             from PIL import Image
 
-            img = Image.open(fh)
-            src_w, src_h = img.size
+            with Image.open(fh) as img:
+                src_w, src_h = img.size
         dst_ratio = geom.width / max(geom.height, 1)
         result = crop_cover(src_w, src_h, dst_ratio, 1.0)
         shape.crop_left = result.crop_fractions["left"]
@@ -185,7 +187,7 @@ def _add_image_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     )
 
 
-def _add_shape_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+def _add_shape_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     from pptx.enum.shapes import MSO_SHAPE
     from pptx.util import Inches
 
@@ -219,7 +221,7 @@ def _add_shape_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     )
 
 
-def _add_table_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+def _add_table_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     """Render a table node. Repeats headers; rows come from content_binding."""
     from pptx.util import Inches
 
@@ -266,7 +268,7 @@ def _add_table_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     )
 
 
-def _add_chart_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     """Render a chart node as a simple bar chart from metric items.
 
     Metrics arrive as ``{"items": [{"label": str, "value": number}, ...]}``.
@@ -293,7 +295,6 @@ def _add_chart_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     chart_frame = slide.shapes.add_chart(
         XL_CHART_TYPE.COLUMN_CLUSTERED, left, top, width, height, chart_data
     )
-    chart_shape = chart_frame.chart
 
     return RenderTraceEntry(
         render_node_id=node.id,
@@ -310,7 +311,7 @@ def _add_chart_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     )
 
 
-def render_layout_plan(plan: "LayoutPlan", output_path: str) -> RenderResult:
+def render_layout_plan(plan: LayoutPlan, output_path: str) -> RenderResult:
     """Render a single-slide LayoutPlan to a PPTX file.
 
     This is the PR2 minimal adaptive renderer: it supports text, image and
@@ -319,7 +320,7 @@ def render_layout_plan(plan: "LayoutPlan", output_path: str) -> RenderResult:
     return render_layout_plans([plan], output_path)
 
 
-def render_layout_plans(plans: list["LayoutPlan"], output_path: str) -> RenderResult:
+def render_layout_plans(plans: list[LayoutPlan], output_path: str) -> RenderResult:
     """Render a list of LayoutPlans to a single multi-slide PPTX file.
 
     Each plan becomes one slide in the output deck. Slide index is recorded
@@ -358,9 +359,8 @@ def render_layout_plans(plans: list["LayoutPlan"], output_path: str) -> RenderRe
                 else:
                     continue
             except Exception as exc:
-                raise AdaptiveRendererError(
-                    f"Failed to render node {node.id}: {exc}"
-                ) from exc
+                logging.getLogger(__name__).warning("Skipping failed node %s: %s", node.id, exc)
+                continue
             # Override slide_index on the entry to reflect this slide.
             trace.append(
                 RenderTraceEntry(

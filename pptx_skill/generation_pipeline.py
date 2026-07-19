@@ -10,13 +10,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pptx_skill.content_model import CanvasSpec, ContentSpec, LayoutPlan, PlannedNode, SlideSpec
+from pptx_skill.content_model import CanvasSpec, ContentSpec, LayoutPlan, SlideSpec
 from pptx_skill.deck_planner import LayoutScoringConfig, plan_deck
-from pptx_skill.layout_engine import _builtin_tokens, builtin_recipes, plan_slide_candidates, solved_geometry_to_layout_plan
+from pptx_skill.pptx_renderer import render_layout_plans
 from pptx_skill.preview_renderer import render_preview
-from pptx_skill.pptx_renderer import render_layout_plan, render_layout_plans
-from pptx_skill.repair_engine import apply_repairs, merge_profile_overrides, propose_repairs
 from pptx_skill.render_qa import RenderQAConfig, evaluate_render_against_baseline
+from pptx_skill.repair_engine import apply_repairs, merge_profile_overrides, propose_repairs
 from pptx_skill.semantic_qa import SemanticQAEngine
 from pptx_skill.visual_qa import CheckOutcome, PresentationQualityError, QACheckResult, QAReport
 

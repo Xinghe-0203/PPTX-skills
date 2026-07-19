@@ -5,11 +5,9 @@ candidate generator/scorer for bullets/text_image/dashboard roles.
 """
 from __future__ import annotations
 
-import json
 import math
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
 from typing import Any
 
 from pptx_skill.content_model import BBox, CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode, SlideSpec
@@ -17,7 +15,7 @@ from pptx_skill.semantic_qa import SemanticQAEngine
 from pptx_skill.text_metrics import ParagraphStyle, TextRun, measure_runs
 
 
-class Strength(str, Enum):
+class Strength(StrEnum):
     REQUIRED = "required"
     STRONG = "strong"
     MEDIUM = "medium"
@@ -95,7 +93,7 @@ def _load_rhs(rhs: dict) -> dict:
 
 def recipe_from_dict(data: dict) -> LayoutRecipe:
     zones = {
-        k: ZoneSpec(**v) if isinstance(v, dict) else v
+        k: ZoneSpec(**v) if isinstance(v, dict) else ZoneSpec(kind=str(v), style="default")
         for k, v in data.get("zones", {}).items()
     }
     constraints = []
@@ -158,7 +156,7 @@ def _resolve_token(token: str, tokens: dict[str, Any]) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, dict) and "$ref" in value:
-        return _resolve_token(value["$ref"].lstrip("$").replace(".", "."), tokens)
+        return _resolve_token(value["$ref"].lstrip("$"), tokens)
     raise ValueError(f"Token value is not numeric: {token}")
 
 
@@ -356,7 +354,6 @@ def _score_candidate(
         if element:
             content = element.content or {}
             resolved_style = {"font_family": "Microsoft YaHei", "size": 16.0}
-            style_ref = element.style_ref or "component.body"
             token_size = tokens.get("component", {}).get(zone_name, {}).get("size", 16)
             resolved_style["size"] = float(token_size) if not isinstance(token_size, dict) else 16.0
         nodes.append(
@@ -398,7 +395,16 @@ def _score_candidate(
                     score += 20 * max(0.0, h / box_h)
 
     # Whitespace / density penalty.
-    total_content_area = sum(b.width * b.height for b in bboxes.values())
+    total_content_area = 0.0
+    bbox_list = list(bboxes.values())
+    for i, a in enumerate(bbox_list):
+        area = a.width * a.height
+        for j in range(i):
+            b = bbox_list[j]
+            ox = max(0.0, min(a.x + a.width, b.x + b.width) - max(a.x, b.x))
+            oy = max(0.0, min(a.y + a.height, b.y + b.height) - max(a.y, b.y))
+            area -= ox * oy
+        total_content_area += area
     canvas_area = canvas.width_pt * canvas.height_pt
     density = total_content_area / canvas_area if canvas_area > 0 else 1.0
     target_density = tokens.get("grammar", {}).get("whitespace_ratio", {}).get("target", 0.72)
@@ -418,12 +424,17 @@ def plan_slide_candidates(
     """Solve and score a list of recipe candidates for a slide."""
     all_diagnostics: list[dict] = []
     bundles: list[CandidateBundle] = []
+    all_bundles: list[CandidateBundle] = []
     for recipe in recipes:
         geometry = solve_recipe(recipe, canvas, tokens, hints=hints)
         bundle = _score_candidate(recipe, geometry, canvas, slide, tokens)
         all_diagnostics.append({"recipe": recipe.id, "score": bundle.score, "blockers": bundle.blocker_count})
+        all_bundles.append(bundle)
         if bundle.blocker_count == 0:
             bundles.append(bundle)
+    if not bundles and all_bundles:
+        all_bundles.sort(key=lambda b: b.score)
+        bundles = [all_bundles[0]]
     bundles.sort(key=lambda b: b.score)
     return bundles[:max_candidates], all_diagnostics
 
@@ -446,7 +457,7 @@ def solved_geometry_to_layout_plan(
         if element:
             raw_size = tokens.get("component", {}).get(zone_name, {}).get("size", 16)
             if isinstance(raw_size, dict) and "$ref" in raw_size:
-                raw_size = _resolve_token(raw_size["$ref"].lstrip("$").replace(".", "."), tokens)
+                raw_size = _resolve_token(raw_size["$ref"].lstrip("$"), tokens)
             style["size"] = float(raw_size)
         nodes.append(
             PlannedNode(

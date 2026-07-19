@@ -8,25 +8,21 @@ Per blueprint §9.3 and PR8b acceptance:
 """
 from __future__ import annotations
 
-import os
 import tempfile
 import unittest
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches
 
 from pptx_skill.content_model import (
-    CanvasSpec,
     ContentSpec,
     ElementSpec,
     SlideSpec,
-    canvas_from_name,
 )
 from pptx_skill.reference_adapter import (
     REFERENCE_MODES,
     ReferenceAdapterResult,
-    ReferenceCanvasInfo,
     clone_mode_adapter,
     generate_from_reference_adapter,
     native_mode_adapter,

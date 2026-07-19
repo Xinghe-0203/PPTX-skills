@@ -14,7 +14,6 @@ from typing import Any
 
 from pptx_skill.content_model import CanvasSpec, SafeInsets
 
-
 TEMPLATE_SCHEMA_VERSION = 2
 
 REQUIRED_ROLES = (
@@ -182,9 +181,11 @@ def _validate_token_tree(path: str, node: Any) -> None:
 def validate_source_profile(profile: dict) -> list[str]:
     """Validate a TemplateProfileV2 source profile.
 
-    Returns a list of warnings (always empty on success); raises ``ValueError``
+    Returns a list of warnings; raises ``ValueError``
     on schema violations. Unknown keys outside ``extensions`` are rejected.
     """
+    warnings: list[str] = []
+
     if not isinstance(profile, dict):
         raise TypeError("Template profile must be a JSON object")
     if profile.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
@@ -268,7 +269,17 @@ def validate_source_profile(profile: dict) -> list[str]:
     if unknown_keys:
         raise ValueError(f"Unknown top-level keys: {sorted(unknown_keys)}")
 
-    return []
+    covered_in_layouts = set(profile["layouts"].keys())
+    missing_roles = set(REQUIRED_ROLES) - covered_in_layouts
+    if missing_roles:
+        warnings.append(f"layouts missing required roles: {sorted(missing_roles)}")
+
+    covered_in_coverage = set(coverage.get("roles", []))
+    uncovered = covered_in_layouts - covered_in_coverage
+    if uncovered:
+        warnings.append(f"layouts has roles not declared in coverage.roles: {sorted(uncovered)}")
+
+    return warnings
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +312,7 @@ class StyleIntent:
             "image_style": self.image_style.strip().lower(),
             "geometry": sorted(g.strip().lower() for g in self.geometry),
             "avoid": sorted(a.strip().lower() for a in self.avoid),
-            "brand_colors": [c.upper() for c in self.brand_colors],
+            "brand_colors": [c.strip().upper() for c in self.brand_colors],
             "canvas": self.canvas.strip().lower(),
             "font_constraints": sorted(f.strip().lower() for f in self.font_constraints),
         }

@@ -8,13 +8,11 @@ import unittest
 from pptx_skill.content_model import (
     CanvasSpec,
     ContentSpec,
-    DeckPlanResult,
     ElementSpec,
     SlideSpec,
 )
 from pptx_skill.deck_planner import (
     LayoutScoringConfig,
-    _geometry_signature,
     _signature_similarity,
     plan_deck,
 )

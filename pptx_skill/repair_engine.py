@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pptx_skill.content_model import SlideSpec
 
 
-class RepairActionKind(str, Enum):
+class RepairActionKind(StrEnum):
     REDUCE_FONT_WITHIN_LIMIT = "reduce_font_within_limit"
     EXPAND_ZONE_WITHIN_RECIPE = "expand_zone_within_recipe"
     SWITCH_LAYOUT_CANDIDATE = "switch_layout_candidate"
@@ -49,13 +49,9 @@ class _IssueView:
 def _view_issues(report: Any) -> list[_IssueView]:
     """Normalize SemanticQAReport or visual QAReport issues."""
     views: list[_IssueView] = []
-    if hasattr(report, "issues"):
-        issues = report.issues
-    elif hasattr(report, "blocker_count"):
-        # SemanticQAReport uses issues list of DetectedIssue
-        issues = report.issues
-    else:
+    if not hasattr(report, "issues"):
         return views
+    issues = report.issues
 
     for issue in issues:
         if hasattr(issue, "code"):
@@ -109,11 +105,9 @@ def propose_repairs(
     empty_placeholders = [i for i in issues if i.code in {"empty_content", "EMPTY_PLACEHOLDER"}]
 
     for issue in text_overflow_blockers:
-        slide_index = issue.slide_index
-        if slide_index < 0:
-            slide_index = 0
+        slide_index = max(issue.slide_index, 0)
         element_id = issue.element_id
-        if slide_index < 0 or slide_index >= len(slide_specs):
+        if slide_index >= len(slide_specs):
             continue
         slide = slide_specs[slide_index]
         element = next((e for e in slide.elements if e.id == element_id or e.role == element_id), None)
@@ -170,6 +164,8 @@ def propose_repairs(
 
     for issue in low_contrast_warnings:
         slide_index = issue.slide_index if issue.slide_index >= 0 else 0
+        if slide_index >= len(slide_specs):
+            continue
         element_id = issue.element_id
         actions.append(
             RepairAction(
@@ -186,6 +182,8 @@ def propose_repairs(
 
     for issue in empty_placeholders:
         slide_index = issue.slide_index if issue.slide_index >= 0 else 0
+        if slide_index >= len(slide_specs):
+            continue
         element_id = issue.element_id
         if element_id:
             actions.append(
@@ -237,8 +235,13 @@ def apply_repairs(
                 if current is None:
                     current = profile_state.get("qa", {}).get("min_body_font_size", 16)
                 new_size = action.to_value
-                if isinstance(new_size, (int, float)):
+                if new_size is not None and isinstance(new_size, (int, float)):
                     element.content["font_size_pt"] = float(new_size)
+                elif new_size is None:
+                    element.content["font_size_pt"] = max(
+                        profile_state.get("qa", {}).get("min_body_font_size", 9),
+                        current - 1,
+                    )
                 if action.render_node_id:
                     element.content["_repair_render_node_id"] = action.render_node_id
 

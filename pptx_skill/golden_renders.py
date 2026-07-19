@@ -20,21 +20,17 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pptx import Presentation
-
 from pptx_skill.content_model import (
-    CanvasSpec,
-    ContentSpec,
     ElementSpec,
     SlideSpec,
     canvas_from_name,
 )
 from pptx_skill.layout_engine import (
     LayoutRecipe,
+    _builtin_tokens,
     builtin_recipes,
     solve_recipe,
     solved_geometry_to_layout_plan,
-    _builtin_tokens,
 )
 from pptx_skill.pptx_renderer import render_layout_plans
 
@@ -101,7 +97,6 @@ def _role_slide_spec(role: str, recipe_id: str) -> tuple[SlideSpec, str]:
     family = parts[0] if parts else "standard"
     sid = f"golden/{role}"
     elements: list[ElementSpec] = []
-    # Provide sample content for common zone roles.
     sample_text = {
         "title": f"{role} 标题",
         "body": "正文要点一\n正文要点二\n正文要点三",
@@ -117,28 +112,38 @@ def _role_slide_spec(role: str, recipe_id: str) -> tuple[SlideSpec, str]:
         "items": "项目一\n项目二\n项目三",
         "steps": "步骤一\n步骤二\n步骤三",
     }
-    # Generic: a title + a body/text element for each common zone name.
-    for zone_role, text in sample_text.items():
-        elements.append(ElementSpec(
-            id=f"{sid}/{zone_role}", kind="text", role=zone_role,
-            content={"text": text}, style_ref="component.title" if zone_role in {"title", "mark", "lead"} else "component.body",
-        ))
-    # Table zone binding.
-    elements.append(ElementSpec(
-        id=f"{sid}/table", kind="table", role="table",
-        content={"headers": ["A", "B"], "rows": [["1", "2"], ["3", "4"]]},
-        style_ref="component.body",
-    ))
-    elements.append(ElementSpec(
-        id=f"{sid}/chart", kind="chart", role="lead",
-        content={"items": [{"label": "A", "value": 10}, {"label": "B", "value": 20}]},
-        style_ref="component.metric",
-    ))
-    # Image zones — content_binding empty path is fine for geometry-only golden.
-    elements.append(ElementSpec(
-        id=f"{sid}/hero", kind="image", role="hero",
-        content={"path": ""}, style_ref="component.hero",
-    ))
+    recipe = _recipe_by_id(recipe_id)
+    zone_roles = set(recipe.zones.keys()) if recipe else set(sample_text.keys())
+    for zone_role in zone_roles:
+        text = sample_text.get(zone_role, zone_role)
+        kind = recipe.zones[zone_role].kind if recipe and zone_role in recipe.zones else "text"
+        if kind in ("text", "text-list"):
+            elements.append(ElementSpec(
+                id=f"{sid}/{zone_role}", kind="text", role=zone_role,
+                content={"text": text}, style_ref="component.title" if zone_role in {"title", "mark", "lead"} else "component.body",
+            ))
+        elif kind == "table":
+            elements.append(ElementSpec(
+                id=f"{sid}/{zone_role}", kind="table", role=zone_role,
+                content={"headers": ["A", "B"], "rows": [["1", "2"], ["3", "4"]]},
+                style_ref="component.body",
+            ))
+        elif kind == "chart":
+            elements.append(ElementSpec(
+                id=f"{sid}/{zone_role}", kind="chart", role=zone_role,
+                content={"items": [{"label": "A", "value": 10}, {"label": "B", "value": 20}]},
+                style_ref="component.metric",
+            ))
+        elif kind in ("image", "hero"):
+            elements.append(ElementSpec(
+                id=f"{sid}/{zone_role}", kind="image", role=zone_role,
+                content={"path": ""}, style_ref="component.hero",
+            ))
+        else:
+            elements.append(ElementSpec(
+                id=f"{sid}/{zone_role}", kind="text", role=zone_role,
+                content={"text": text}, style_ref="component.body",
+            ))
     return SlideSpec(
         id=sid, role=role, communication_goal=f"golden {role}",
         elements=elements, preferred_layouts=[recipe_id],
@@ -157,29 +162,18 @@ def _geometry_signature(plan) -> str:
     """Stable signature of a plan's node geometry (family, role, variant, bboxes)."""
     h = hashlib.sha256()
     h.update(plan.recipe_id.encode("utf-8"))
-    plan_w = plan.canvas.width_pt
-    plan_h = plan.canvas.height_pt
+    plan_w = plan.canvas.width_pt or 1.0
+    plan_h = plan.canvas.height_pt or 1.0
     for node in sorted(plan.nodes, key=lambda n: n.z_order):
         b = node.geometry.bbox
-        h.update(f"{node.role}|{round(b.left,2)},{round(b.top,2)},{round(b.width,2)},{round(b.height,2)}".encode("utf-8"))
-    h.update(f"|{plan_w},{plan_h}".encode("utf-8"))
+        h.update(f"{node.role}|{round(b.left,2)},{round(b.top,2)},{round(b.width,2)},{round(b.height,2)}".encode())
+    h.update(f"|{plan_w},{plan_h}".encode())
     return h.hexdigest()[:16]
 
 
 def _try_render_png(pptx_path: str, png_path: Path) -> bool:
     """Attempt to rasterize the first slide to PNG. Returns False if no backend."""
-    try:
-        import fitz  # type: ignore[import-not-found]
-
-        doc = fitz.open(pptx_path)  # type: ignore[attr-defined]
-        if doc.page_count > 0:
-            page = doc[0]
-            pix = page.get_pixmap(dpi=150)
-            pix.save(str(png_path))
-        doc.close()
-        return True
-    except Exception:
-        return False
+    return _try_render_png_libreoffice(pptx_path, png_path)
 
 
 def _try_render_png_libreoffice(pptx_path: str, png_path: Path) -> bool:
@@ -329,6 +323,8 @@ def render_golden_set(
 
 def load_golden_index(output_dir: str | Path) -> dict[str, Any]:
     path = Path(output_dir) / "golden_index.json"
+    if not path.exists():
+        return {"golden_version": 0, "pages": [], "family_decks": []}
     with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
 

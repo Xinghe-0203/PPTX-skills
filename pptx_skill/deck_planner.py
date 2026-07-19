@@ -8,9 +8,7 @@ the deck planner consumes already-derived slides and never re-splits.
 """
 from __future__ import annotations
 
-import copy
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from pptx_skill.content_model import (
@@ -23,7 +21,6 @@ from pptx_skill.content_model import (
     SlideSpec,
 )
 from pptx_skill.layout_engine import (
-    CandidateBundle,
     builtin_recipes,
     plan_slide_candidates,
     solved_geometry_to_layout_plan,
@@ -55,7 +52,7 @@ class _BeamState:
     plans: list[LayoutPlan]
     accumulated_score: float
 
-    def branch(self) -> "_BeamState":
+    def branch(self) -> _BeamState:
         return _BeamState(
             chosen=list(self.chosen),
             derived_slides=list(self.derived_slides),
@@ -393,7 +390,7 @@ def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec) -> LayoutPlan:
                 recipe_node_id=element.role,
                 kind=element.kind,
                 role=element.role,
-                geometry=GeometrySpec(BBox(48, 48 + idx * 60, canvas.width_pt - 96, 50)),
+                geometry=GeometrySpec(BBox(48, 48 + idx * 60, max(canvas.width_pt - 96, 24), 50)),
                 resolved_style={"font_family": "Microsoft YaHei", "size": 16.0},
                 content_binding=element.content or {},
                 z_order=idx,

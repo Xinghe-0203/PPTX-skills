@@ -1,7 +1,6 @@
 """Tests for Manifest V3 persistence and legacy v2 migration."""
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -71,7 +70,7 @@ class ManifestV3Tests(unittest.TestCase):
         self.assertTrue(restored.attempts[0].run_id)
 
     def test_set_current_content(self):
-        from pptx_skill.content_model import ContentSpec, ElementSpec, SlideSpec
+        from pptx_skill.content_model import ContentSpec, SlideSpec
 
         slide = SlideSpec(
             id="s1",

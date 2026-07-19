@@ -8,13 +8,12 @@ Pixabay API 文档: https://pixabay.com/api/docs/
 """
 
 import argparse
+import json
 import os
 import sys
-import json
-import time
+import urllib.error
 import urllib.parse
 import urllib.request
-import urllib.error
 
 
 def _load_dotenv(path: str | None = None) -> None:
@@ -34,7 +33,7 @@ def _load_dotenv(path: str | None = None) -> None:
                 break
     if not path or not os.path.isfile(path):
         return
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         for raw in fh:
             line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -184,9 +183,9 @@ def search_images(
             data = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Pixabay API 返回 HTTP {e.code}: {body}") from None
+        raise RuntimeError(f"Pixabay API 返回 HTTP {e.code}: {body}") from e
     except urllib.error.URLError as e:
-        raise RuntimeError(f"无法连接 Pixabay API: {e.reason}") from None
+        raise RuntimeError(f"无法连接 Pixabay API: {e.reason}") from e
 
     hits = data.get("hits", [])
     if count is not None:
@@ -248,7 +247,8 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
                     f.write(resp.read())
             downloaded.append(filepath)
         except Exception as e:
-            # 单次重试：网络波动常见，1秒后重试一次
+            if os.path.exists(filepath):
+                os.remove(filepath)
             import time
             time.sleep(1)
             try:
@@ -258,6 +258,8 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
                         f.write(resp.read())
                 downloaded.append(filepath)
             except Exception as e2:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
                 print(f"  [警告] 下载失败 id={img_id}: {e} (重试也失败: {e2})", file=sys.stderr)
                 continue
 

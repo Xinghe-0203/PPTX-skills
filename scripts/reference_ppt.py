@@ -14,10 +14,8 @@ from typing import Any
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
-from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
-
 
 REL_ATTRS = {qn("r:embed"), qn("r:id"), qn("r:link")}
 CONTENT_PLACEHOLDERS = {
@@ -40,7 +38,7 @@ def _rgb_hex(value: Any) -> str | None:
         return None
     if rgb is None:
         return None
-    text = str(rgb).strip().upper()
+    text = str(rgb).strip().lstrip("#").upper()
     if re.fullmatch(r"[0-9A-F]{6}", text):
         return f"#{text}"
     try:
@@ -531,7 +529,7 @@ def auto_bind_slide(slide: Any, content: dict) -> set[str]:
         if path is not None and str(path).strip()
     ]
     pictures = [shape for shape in list(slide.shapes) if shape.shape_type == MSO_SHAPE_TYPE.PICTURE]
-    for picture, image in zip(pictures, images):
+    for picture, image in zip(pictures, images, strict=False):
         if image.exists():
             touched.add(picture.name)
             replace_image(slide, picture, image)
@@ -679,7 +677,7 @@ def _fill_native_slide(slide: Any, content: dict) -> None:
         shape for shape in slide.placeholders
         if shape.placeholder_format.type == PP_PLACEHOLDER.PICTURE
     ]
-    for placeholder, image in zip(picture_placeholders, images):
+    for placeholder, image in zip(picture_placeholders, images, strict=False):
         placeholder.insert_picture(str(image.resolve()))
 
 

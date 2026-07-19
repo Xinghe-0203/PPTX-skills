@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches
 
 from pptx_skill.content_model import (
     ContentSpec,
@@ -25,7 +24,7 @@ from pptx_skill.golden_renders import (
     load_golden_index,
     render_golden_set,
 )
-from pptx_skill.layout_engine import builtin_recipes, solve_recipe, solved_geometry_to_layout_plan, _builtin_tokens
+from pptx_skill.layout_engine import _builtin_tokens, builtin_recipes, solve_recipe, solved_geometry_to_layout_plan
 from pptx_skill.pagination import paginate_content_spec
 from pptx_skill.pptx_renderer import render_layout_plans
 from pptx_skill.qa_dataset import (
@@ -36,7 +35,6 @@ from pptx_skill.qa_dataset import (
     generate_annotation_dataset,
     load_annotation_dataset,
 )
-
 
 # ---------------------------------------------------------------------------
 # Annotation dataset coverage (blueprint §12.3: 200 pages, 6 categories)

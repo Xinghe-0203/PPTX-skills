@@ -12,25 +12,20 @@ is replaced by a real adaptive rebuild.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from pptx_skill.content_model import (
-    BBox,
     CanvasSpec,
-    ContentSpec,
     ElementSpec,
-    GeometrySpec,
     SlideSpec,
-    canvas_from_name,
 )
 from pptx_skill.layout_engine import (
+    _builtin_tokens,
     builtin_recipes,
-    plan_slide_candidates,
     solve_recipe,
     solved_geometry_to_layout_plan,
-    _builtin_tokens,
 )
 from pptx_skill.pptx_renderer import RenderResult, render_layout_plans
 
@@ -129,7 +124,6 @@ def _shape_to_element(shape_record: dict, slide_id: str, role: str) -> ElementSp
     has_table = shape_record.get("has_table", False)
     has_chart = shape_record.get("has_chart", False)
     shape_id = shape_record.get("shape_id")
-    name = shape_record.get("name", f"shape-{shape_id}")
     eid = f"{slide_id}/shape-{shape_id}"
 
     if has_table:
@@ -185,15 +179,11 @@ def _shapes_to_slide_spec(
     )
 
 
-def _pick_recipe(role: str, preferred_variant: str | None = None):
+def _pick_recipe(role: str):
     """Choose the recipe for a role, preferring the named variant."""
     recipes = builtin_recipes(role)
     if not recipes:
         return None
-    if preferred_variant:
-        for r in recipes:
-            if r.variant == preferred_variant:
-                return r
     preferred_id = REBUILD_RECIPE_PREFERENCE.get(role)
     if preferred_id:
         for r in recipes:
@@ -230,7 +220,8 @@ def _slide_geometry_similarity(
     recipe rather than cloning positions.
     """
     ref_boxes = [(s["x"], s["y"], s["w"], s["h"]) for s in reference_shapes
-                 if s.get("shape_type") != "PICTURE" or s.get("text")]
+                 if all(k in s for k in ("x", "y", "w", "h"))
+                 and (s.get("shape_type") != "PICTURE" or s.get("text"))]
     if not ref_boxes or not plan or not plan.nodes:
         return 0.0
     plan_w = plan.canvas.width_pt or 1.0
@@ -316,16 +307,19 @@ def visual_rebuild_adapter(
         index = record.get("index", 0)
         role = record.get("role", "bullets")
         slide_spec = _shapes_to_slide_spec(record, index, role)
-        preferred_variant = None
         preferred_id = REBUILD_RECIPE_PREFERENCE.get(role)
-        recipe = _pick_recipe(role, preferred_variant)
+        recipe = _pick_recipe(role)
         if recipe is None:
             diagnostics_log.append({"slide": index, "role": role, "skipped": "no_recipe"})
             continue
         geometry = solve_recipe(recipe, canvas, tokens)
         if geometry.infeasible:
             # Fall back to the first available recipe for the role.
-            recipe = builtin_recipes(role)[0]
+            fallback = builtin_recipes(role)
+            if not fallback:
+                diagnostics_log.append({"slide": index, "role": role, "skipped": "no_fallback_recipe"})
+                continue
+            recipe = fallback[0]
             geometry = solve_recipe(recipe, canvas, tokens)
         layout_plan = solved_geometry_to_layout_plan(slide_spec, recipe, geometry, canvas, tokens)
         plans.append(layout_plan)
@@ -348,7 +342,7 @@ def visual_rebuild_adapter(
     # Reference diff: per-slide geometry similarity vs the reference shapes.
     diff: list[ReferenceDiffRecord] = []
     sims: list[float] = []
-    for plan, rebuild in zip(plans, rebuild_plans):
+    for plan, rebuild in zip(plans, rebuild_plans, strict=False):
         ref_shapes = next(
             (r.get("shapes", []) for r in slide_records if r.get("index") == rebuild.source_slide_index),
             [],

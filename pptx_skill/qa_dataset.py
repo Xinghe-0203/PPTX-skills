@@ -26,14 +26,13 @@ evidence source.
 """
 from __future__ import annotations
 
-import copy
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 
 # Issue codes mirror the semantic_qa / visual_qa modules.
 ISSUE_TEXT_OVERFLOW = "TEXT_OVERFLOW_CONFIRMED"
@@ -211,10 +210,31 @@ def _build_table_readability(_prs, slide) -> int:
     return tbl_shape.shape_id
 
 
+def _build_table_readability_control(_prs, slide) -> int:
+    """A well-formatted table with readable font — control group."""
+    rows, cols = 6, 4
+    tbl_shape = slide.shapes.add_table(rows, cols, Inches(1), Inches(1), Inches(10), Inches(5))
+    table = tbl_shape.table
+    for r in range(rows):
+        for c in range(cols):
+            table.cell(r, c).text = f"单元格{r}-{c}"
+            for para in table.cell(r, c).text_frame.paragraphs:
+                for run in para.runs:
+                    run.font.size = Pt(12)
+    return tbl_shape.shape_id
+
+
 def _build_reference_residual(_prs, slide) -> int:
     """An empty placeholder left from a reference-deck residual."""
     box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(10), Inches(2))
     box.text_frame.text = ""  # empty — a residual placeholder
+    return box.shape_id
+
+
+def _build_reference_residual_control(_prs, slide) -> int:
+    """A textbox with actual content — control group for reference residual."""
+    box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(10), Inches(2))
+    box.text_frame.text = "正常内容文本"
     return box.shape_id
 
 
@@ -224,8 +244,8 @@ _BUILDERS: dict[str, Any] = {
     "image_distortion": (_build_image_distortion, _build_image_clean),
     "contrast": (_build_contrast, _build_contrast_control),
     "out_of_bounds": (_build_out_of_bounds, _build_in_bounds),
-    "table_readability": (_build_table_readability, _build_table_readability),
-    "reference_residual": (_build_reference_residual, _build_reference_residual),
+    "table_readability": (_build_table_readability, _build_table_readability_control),
+    "reference_residual": (_build_reference_residual, _build_reference_residual_control),
 }
 
 

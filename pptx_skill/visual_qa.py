@@ -6,19 +6,20 @@ any rendering or image processing themselves.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pptx_skill.content_model import BBox
+from pptx_skill.pptx_renderer import RenderResult
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     INFO = "info"
     WARNING = "warning"
     BLOCKER = "blocker"
 
 
-class CheckOutcome(str, Enum):
+class CheckOutcome(StrEnum):
     PASS = "pass"
     FAIL = "fail"
     INCONCLUSIVE = "inconclusive"
@@ -27,7 +28,7 @@ class CheckOutcome(str, Enum):
 class PresentationQualityError(Exception):
     """Raised in strict QA mode when blockers cannot be repaired."""
 
-    def __init__(self, report: "QAReport", message: str = "Presentation quality check failed"):
+    def __init__(self, report: QAReport, message: str = "Presentation quality check failed"):
         super().__init__(message)
         self.report = report
 
@@ -61,7 +62,7 @@ class QAReport:
     status: CheckOutcome
     checks: list[QACheckResult] = field(default_factory=list)
     issues: list[QAIssue] = field(default_factory=list)
-    render_result: "RenderResult | None" = None
+    render_result: RenderResult | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
     artifacts: dict[str, str] = field(default_factory=dict)
 

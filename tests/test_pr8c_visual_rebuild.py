@@ -15,9 +15,8 @@ import unittest
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches
 
-from pptx_skill.content_model import canvas_from_name
 from pptx_skill.reference_adapter import generate_from_reference_adapter
 from pptx_skill.visual_rebuild import (
     DEFAULT_SIMILARITY_BUDGET,

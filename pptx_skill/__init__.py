@@ -14,16 +14,6 @@ _SCRIPTS_DIR = _SKILL_ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from pptx_helper import (  # noqa: E402
-    LAYOUT_REGISTRY,
-    THEMES,
-    Section,
-    add_chart_slide,
-    auto_generate_ppt,
-    auto_validate_ppt,
-    choose_layout,
-    choose_theme,
-)
 from ppt_edit import (  # noqa: E402
     edit_kicker,
     edit_text,
@@ -48,6 +38,14 @@ from ppt_project import (  # noqa: E402
     regenerate,
     restore_backup,
 )
+from pptx_helper import (  # noqa: E402
+    LAYOUT_REGISTRY,
+    THEMES,
+    Section,
+    add_chart_slide,
+    choose_layout,
+    choose_theme,
+)
 from reference_ppt import (  # noqa: E402
     analyze_presentation,
     compose_from_reference,
@@ -55,7 +53,6 @@ from reference_ppt import (  # noqa: E402
     generate_from_reference,
 )
 from render_slides import render_slides  # noqa: E402
-from pptx_skill.preview_renderer import render_preview  # noqa: E402
 from template_engine import (  # noqa: E402
     generate_template_preview,
     generate_template_profile,
@@ -64,6 +61,7 @@ from template_engine import (  # noqa: E402
     register_template_profile,
     validate_template_profile,
 )
+
 from pptx_skill.api import (  # noqa: E402
     GenerationResult,
     auto_generate_ppt,
@@ -74,8 +72,8 @@ from pptx_skill.content_adapter import (  # noqa: E402
     adapt_legacy_sections,
 )
 from pptx_skill.content_model import (  # noqa: E402
-    BBox,
     CANVAS_PRESETS,
+    BBox,
     CanvasSpec,
     ContentSpec,
     DeckPlanResult,
@@ -91,18 +89,39 @@ from pptx_skill.content_model import (  # noqa: E402
     canvas_from_name,
     make_namespace,
 )
+from pptx_skill.deck_planner import (  # noqa: E402
+    LayoutScoringConfig,
+    plan_deck,
+)
+from pptx_skill.design_schema import (  # noqa: E402
+    TEMPLATE_SCHEMA_VERSION,
+    CompiledTemplateBundleV2,
+    StyleIntent,
+    bundle_to_dict,
+    canvas_from_profile,
+    resolve_all_tokens,
+    resolve_token,
+    validate_source_profile,
+)
+from pptx_skill.generation_pipeline import (  # noqa: E402
+    LayoutPlanningError,
+    plan_deck_layouts,
+    run_generation_pipeline,
+)
+from pptx_skill.golden_renders import (  # noqa: E402
+    ALL_ROLES,
+    GEOMETRY_FAMILIES,
+    GoldenIndex,
+    GoldenPage,
+    golden_coverage_report,
+    load_golden_index,
+    render_golden_set,
+)
 from pptx_skill.image_crop import (  # noqa: E402
     CropResult,
     crop_contain,
     crop_cover,
     crop_smart,
-)
-from pptx_skill.generation_pipeline import (  # noqa: E402
-    GenerationResult,
-    LayoutPlanningError,
-    PresentationQualityError,
-    plan_deck_layouts,
-    run_generation_pipeline,
 )
 from pptx_skill.layout_engine import (  # noqa: E402
     CandidateBundle,
@@ -114,17 +133,25 @@ from pptx_skill.layout_engine import (  # noqa: E402
     plan_slide_candidates,
     recipe_from_dict,
     recipe_to_dict,
-    solved_geometry_to_layout_plan,
     solve_recipe,
+    solved_geometry_to_layout_plan,
 )
-from pptx_skill.deck_planner import (  # noqa: E402
-    LayoutScoringConfig,
-    plan_deck,
+from pptx_skill.manifest import (  # noqa: E402
+    ManifestError,
+    ManifestV3,
+    load_manifest,
+    manifest_from_dict,
+    manifest_to_dict,
+    migrate_v2_to_v3,
+    save_manifest_v3,
+    set_current_content,
+    set_current_plans,
+    set_current_trace,
 )
 from pptx_skill.pagination import (  # noqa: E402
+    IMAGE_GRID_LAYOUTS,
     ContentItem,
     FitResult,
-    IMAGE_GRID_LAYOUTS,
     paginate_bullets,
     paginate_content_spec,
     paginate_image_grid,
@@ -133,29 +160,22 @@ from pptx_skill.pagination import (  # noqa: E402
     paginate_table,
     paginate_timeline,
 )
-from pptx_skill.design_schema import (  # noqa: E402
-    CompiledTemplateBundleV2,
-    StyleIntent,
-    TEMPLATE_SCHEMA_VERSION,
-    bundle_to_dict,
-    canvas_from_profile,
-    resolve_all_tokens,
-    resolve_token,
-    validate_source_profile,
+from pptx_skill.pptx_renderer import (  # noqa: E402
+    AdaptiveRendererError,
+    PreviewRenderResult,
+    RenderResult,
+    RenderTraceEntry,
+    render_layout_plan,
+    render_layout_plans,
 )
-from pptx_skill.template_compiler import (  # noqa: E402
-    compile_from_intent,
-    compile_source_profile,
-    source_profile_from_intent,
-    geometry_similarity,
-    passes_diversity_gate,
-)
-from pptx_skill.template_v2_adapter import (  # noqa: E402
-    migrate_and_compile_v1,
-    migrate_profile_v1_to_v2,
-    v2_bundle_to_legacy_fonts,
-    v2_bundle_to_legacy_profile,
-    v2_bundle_to_legacy_theme,
+from pptx_skill.preview_renderer import render_preview  # noqa: E402
+from pptx_skill.qa_dataset import (  # noqa: E402
+    DATASET_CATEGORIES,
+    DATASET_TOTAL_MIN,
+    ISSUE_CLEAN,
+    dataset_coverage_report,
+    generate_annotation_dataset,
+    load_annotation_dataset,
 )
 from pptx_skill.reference_adapter import (  # noqa: E402
     REFERENCE_MODES,
@@ -166,53 +186,11 @@ from pptx_skill.reference_adapter import (  # noqa: E402
     native_mode_adapter,
     reference_canvas,
 )
-from pptx_skill.visual_rebuild import (  # noqa: E402
-    DEFAULT_SIMILARITY_BUDGET,
-    REBUILD_RECIPE_PREFERENCE,
-    ReferenceDiffRecord,
-    SlideRebuildPlan,
-    VisualRebuildResult,
-    analyze_reference_deck,
-    reference_rebuild_diff_report,
-    visual_rebuild_adapter,
-)
-from pptx_skill.qa_dataset import (  # noqa: E402
-    DATASET_CATEGORIES,
-    DATASET_TOTAL_MIN,
-    ISSUE_CLEAN,
-    dataset_coverage_report,
-    generate_annotation_dataset,
-    load_annotation_dataset,
-)
-from pptx_skill.golden_renders import (  # noqa: E402
-    ALL_ROLES,
-    GEOMETRY_FAMILIES,
-    GoldenIndex,
-    GoldenPage,
-    golden_coverage_report,
-    load_golden_index,
-    render_golden_set,
-)
-from pptx_skill.manifest import (  # noqa: E402
-    ManifestV3,
-    ManifestError,
-    load_manifest,
-    manifest_from_dict,
-    manifest_to_dict,
-    migrate_v2_to_v3,
-    save_manifest_v3,
-    set_current_content,
-    set_current_plans,
-    set_current_trace,
-)
-from pptx_skill.preview_renderer import render_preview  # noqa: E402
-from pptx_skill.pptx_renderer import (  # noqa: E402
-    AdaptiveRendererError,
-    PreviewRenderResult,
-    RenderResult,
-    RenderTraceEntry,
-    render_layout_plan,
-    render_layout_plans,
+from pptx_skill.render_qa import (  # noqa: E402
+    RenderQAConfig,
+    SlideDiff,
+    compare_slide_to_baseline,
+    evaluate_render_against_baseline,
 )
 from pptx_skill.repair_engine import (  # noqa: E402
     RepairAction,
@@ -220,12 +198,6 @@ from pptx_skill.repair_engine import (  # noqa: E402
     apply_repairs,
     merge_profile_overrides,
     propose_repairs,
-)
-from pptx_skill.render_qa import (  # noqa: E402
-    RenderQAConfig,
-    SlideDiff,
-    compare_slide_to_baseline,
-    evaluate_render_against_baseline,
 )
 from pptx_skill.semantic_qa import (  # noqa: E402
     DetectedIssue,
@@ -235,6 +207,20 @@ from pptx_skill.semantic_qa import (  # noqa: E402
     SemanticQAReport,
     check_layout_plan,
     contrast_ratio,
+)
+from pptx_skill.template_compiler import (  # noqa: E402
+    compile_from_intent,
+    compile_source_profile,
+    geometry_similarity,
+    passes_diversity_gate,
+    source_profile_from_intent,
+)
+from pptx_skill.template_v2_adapter import (  # noqa: E402
+    migrate_and_compile_v1,
+    migrate_profile_v1_to_v2,
+    v2_bundle_to_legacy_fonts,
+    v2_bundle_to_legacy_profile,
+    v2_bundle_to_legacy_theme,
 )
 from pptx_skill.text_metrics import (  # noqa: E402
     LineMetrics,
@@ -249,11 +235,20 @@ from pptx_skill.text_metrics import (  # noqa: E402
 )
 from pptx_skill.visual_qa import (  # noqa: E402
     CheckOutcome,
-    PresentationQualityError,
-    QAReport,
     QACheckResult,
     QAIssue,
+    QAReport,
     Severity,
+)
+from pptx_skill.visual_rebuild import (  # noqa: E402
+    DEFAULT_SIMILARITY_BUDGET,
+    REBUILD_RECIPE_PREFERENCE,
+    ReferenceDiffRecord,
+    SlideRebuildPlan,
+    VisualRebuildResult,
+    analyze_reference_deck,
+    reference_rebuild_diff_report,
+    visual_rebuild_adapter,
 )
 
 __version__ = "2.0.0"

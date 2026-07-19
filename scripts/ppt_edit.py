@@ -5,15 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from ppt_project import create_backup
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.util import Inches
-
-from ppt_project import create_backup
 from pptx_helper import THEMES
 from reference_ppt import (
     _body_candidates,
@@ -173,7 +173,7 @@ def _walk_shapes(shapes: Iterable[Any]) -> Iterable[Any]:
 def _color_hex(color_format: Any) -> str | None:
     try:
         rgb = color_format.rgb
-    except (AttributeError, TypeError, ValueError):
+    except Exception:
         return None
     return f"#{str(rgb).upper()}" if rgb is not None else None
 

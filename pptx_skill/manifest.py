@@ -13,27 +13,17 @@ import os
 import tempfile
 import zipfile
 from dataclasses import asdict, dataclass, field, is_dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
 from pptx_skill.content_model import (
-    CanvasSpec,
     ContentSpec,
-    DeckPlanResult,
-    ElementSpec,
-    GeometrySpec,
     LayoutPlan,
-    PlannedNode,
-    SlidePlanCandidate,
-    SlidePlanResult,
-    SlideSpec,
 )
-from pptx_skill.pptx_renderer import PreviewRenderResult, RenderResult, RenderTraceEntry
-from pptx_skill.visual_qa import QAReport
-
+from pptx_skill.pptx_renderer import RenderTraceEntry
 
 # ---------------------------------------------------------------------------
 # XML constants
@@ -103,7 +93,7 @@ class ManifestV3:
         repairs: list[dict[str, Any]] | None = None,
         sha256: dict[str, str] | None = None,
     ) -> AttemptRecord:
-        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{pass_index:04d}"
+        run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"-{pass_index:04d}"
         attempt = AttemptRecord(
             run_id=run_id,
             pass_index=pass_index,
@@ -124,7 +114,11 @@ class ManifestV3:
 def _serialize_value(value: Any) -> Any:
     """Recursively turn dataclasses/enums into JSON-serializable values."""
     if is_dataclass(value) and not isinstance(value, type):
-        return {k: _serialize_value(v) for k, v in asdict(value).items()}
+        result = {k: _serialize_value(v) for k, v in asdict(value).items()}
+        extra = getattr(value, "_extra", None)
+        if extra:
+            result.update({k: _serialize_value(v) for k, v in extra.items()})
+        return result
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, list):
@@ -132,7 +126,7 @@ def _serialize_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
     if isinstance(value, tuple):
-        return [_serialize_value(v) for v in value]
+        return {"__tuple__": [_serialize_value(v) for v in value]}
     return value
 
 
@@ -145,19 +139,50 @@ def manifest_to_dict(manifest: ManifestV3) -> dict[str, Any]:
     return _to_plain_dict(manifest)
 
 
+def _deserialize_value(value: Any) -> Any:
+    """Inverse of _serialize_value: restore tuples and other wrapped types."""
+    if isinstance(value, dict):
+        if "__tuple__" in value and len(value) == 1:
+            return tuple(_deserialize_value(v) for v in value["__tuple__"])
+        return {k: _deserialize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_deserialize_value(v) for v in value]
+    return value
+
+
 def _deserialize_dataclass(cls: type, data: dict[str, Any]) -> Any:
-    """Best-effort dataclass reconstruction from a plain dict."""
+    """Best-effort dataclass reconstruction from a plain dict.
+
+    Unknown fields (not present in the dataclass definition) are preserved
+    via a ``_extra`` attribute so that round-trip serialization does not
+    lose data when the schema evolves.
+    """
     field_types = {f.name: f.type for f in cls.__dataclass_fields__.values()}
     kwargs: dict[str, Any] = {}
+    extra: dict[str, Any] = {}
     for name, value in data.items():
-        if name not in field_types:
-            continue
-        kwargs[name] = value
-    return cls(**kwargs)
+        value = _deserialize_value(value)
+        if name in field_types:
+            kwargs[name] = value
+        else:
+            extra[name] = value
+    try:
+        obj = cls(**kwargs)
+    except TypeError:
+        defaults = {f.name: f.default for f in cls.__dataclass_fields__.values() if f.default is not dataclass.MISSING}
+        defaults.update({f.name: f.default_factory() for f in cls.__dataclass_fields__.values() if f.default_factory is not dataclass.MISSING})
+        for k in cls.__dataclass_fields__:
+            if k not in kwargs and k in defaults:
+                kwargs[k] = defaults[k]
+        obj = cls(**kwargs)
+    if extra:
+        obj._extra = extra
+    return obj
 
 
 def manifest_from_dict(data: dict[str, Any]) -> ManifestV3:
     data = copy.deepcopy(data)
+    data = _deserialize_value(data)
     attempts = [
         _deserialize_dataclass(AttemptRecord, a)
         for a in data.get("attempts", [])
@@ -187,7 +212,10 @@ def _manifest_xml(manifest_json: str, namespace: str, version: str) -> bytes:
 
 
 def _presentation_rels_xml(existing: bytes) -> bytes:
-    root = ET.fromstring(existing)
+    try:
+        root = ET.fromstring(existing)
+    except ET.ParseError:
+        return existing
     relationship_tag = f"{{{REL_NS}}}Relationship"
     target_name = "../customXml/pptxSkillManifest.xml"
     if not any(
@@ -212,11 +240,13 @@ def _presentation_rels_xml(existing: bytes) -> bytes:
 
 def _embed_manifest_xml(pptx_path: Path, manifest_json: str, namespace: str, version: str) -> None:
     with zipfile.ZipFile(pptx_path, "r") as source:
-        members = {item.filename: source.read(item.filename) for item in source.infolist()}
-        infos = {item.filename: item for item in source.infolist()}
+        info_list = source.infolist()
+        members = {item.filename: source.read(item.filename) for item in info_list}
+        infos = {item.filename: item for item in info_list}
     members[MANIFEST_PART] = _manifest_xml(manifest_json, namespace, version)
     presentation_rels = "ppt/_rels/presentation.xml.rels"
-    members[presentation_rels] = _presentation_rels_xml(members[presentation_rels])
+    if presentation_rels in members:
+        members[presentation_rels] = _presentation_rels_xml(members[presentation_rels])
 
     temp_fd, temp_name = tempfile.mkstemp(suffix=".pptx", dir=str(pptx_path.parent))
     os.close(temp_fd)
@@ -402,7 +432,7 @@ def load_manifest(pptx_path: str | Path) -> ManifestV3 | None:
     # Treat any payload without manifest_schema_version as legacy v2.
     manifest = migrate_v2_to_v3(payload)
     manifest.legacy["loaded_from"] = source_version
-    manifest.legacy["migrated_at"] = datetime.now(timezone.utc).isoformat()
+    manifest.legacy["migrated_at"] = datetime.now(UTC).isoformat()
     return manifest
 
 

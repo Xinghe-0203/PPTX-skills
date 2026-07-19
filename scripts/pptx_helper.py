@@ -15,19 +15,19 @@ pptx_helper.py — 智能排版 PPT 生成库
 
 from __future__ import annotations
 
-import os
-import math
 import json
-from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+import math
+import os
+from collections.abc import Callable
+from dataclasses import dataclass
 
-from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.enum.shapes import MSO_SHAPE
-from pptx.oxml.ns import qn
 from lxml import etree
+from pptx import Presentation
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.ns import qn
+from pptx.util import Inches, Pt
 
 try:
     from PIL import Image  # noqa: F401  用于图片比例适配
@@ -48,6 +48,33 @@ MARGIN_BOTTOM = 0.5
 # 内容区
 CONTENT_W = SLIDE_W - 2 * MARGIN_X            # 11.533
 CONTENT_H = SLIDE_H - MARGIN_TOP - MARGIN_BOTTOM  # 6.4
+
+LAYOUT_CONSUMED_FIELDS = {
+    "cover": {"title", "subtitle", "kicker", "cover_image"},
+    "toc": {"title", "kicker", "toc_items", "bullets"},
+    "section": {"title", "subtitle", "kicker", "section_number"},
+    "bullets": {"title", "subtitle", "kicker", "bullets"},
+    "text_image": {"title", "subtitle", "kicker", "bullets", "images"},
+    "full_image": {"title", "kicker", "cover_image"},
+    "image_grid": {"title", "kicker", "images"},
+    "dashboard": {"title", "kicker", "metrics"},
+    "timeline": {"title", "kicker", "events", "bullets"},
+    "comparison": {"title", "kicker", "left", "right"},
+    "quote": {"title", "kicker", "quote", "source"},
+    "process": {"title", "kicker", "steps", "bullets"},
+    "table": {"title", "kicker", "table_headers", "table_rows", "bullets"},
+    "end": {"title", "subtitle", "kicker"},
+}
+
+def _warn_unconsumed(layout_name, ctx):
+    consumed = LAYOUT_CONSUMED_FIELDS.get(layout_name)
+    if not consumed:
+        return
+    content_fields = {"bullets", "images", "metrics", "events", "steps", "table_headers", "table_rows", "left", "right", "quote", "source", "cover_image"}
+    provided = {k for k in content_fields if ctx.get(k)}
+    unconsumed = provided - consumed
+    if unconsumed:
+        print(f"  [警告] 版式 '{layout_name}' 未消费字段 {unconsumed}，内容将被忽略", file=__import__('sys').stderr)
 
 # ============================================================
 # 配色系统：多套主题，每套 ≤3 主色 + 中性色，跨页统一
@@ -754,12 +781,12 @@ def layout_dashboard(prs, theme, ctx):
     for m in metrics[:4]:
         chg = m.get("change", "")
         try:
-            val = int(chg.replace("+", "").replace("%", "").replace("-", ""))
-            chart_data_vals.append(abs(val))
+            val = int(chg.replace("+", "").replace("%", ""))
+            chart_data_vals.append(val)
         except (ValueError, AttributeError):
             chart_data_vals.append(20)
     if chart_data_vals:
-        max_val = max(chart_data_vals) or 1
+        max_val = max(abs(v) for v in chart_data_vals) or 1
         bar_area_l = MARGIN_X + 1.5
         bar_area_w = CONTENT_W - 3.0
         bar_area_t = chart_top + 0.4
@@ -769,10 +796,14 @@ def layout_dashboard(prs, theme, ctx):
         bar_w = (bar_area_w - bar_gap * (n_bars - 1)) / n_bars
         bar_colors = [theme["primary"], theme["secondary"],
                       theme["accent"], theme["primary"]]
+        baseline_y = bar_area_t + bar_area_h * 0.5
         for bi, bv in enumerate(chart_data_vals):
-            bh = (bv / max_val) * bar_area_h * 0.85
+            bh = (abs(bv) / max_val) * bar_area_h * 0.4
             bl = bar_area_l + bi * (bar_w + bar_gap)
-            bt = bar_area_t + bar_area_h - bh
+            if bv >= 0:
+                bt = baseline_y - bh
+            else:
+                bt = baseline_y
             _rounded_rect(slide, bl, bt, bar_w, bh,
                           fill=bar_colors[bi % len(bar_colors)], radius_frac=0.15)
             # 数值标签
@@ -797,6 +828,8 @@ def layout_timeline(prs, theme, ctx):
     _set_bg(slide, theme["bg"])
     _header_band(slide, theme, ctx.get("title", ""), ctx.get("kicker"))
     events = ctx.get("events") or ctx.get("bullets") or []
+    if len(events) > 6:
+        print(f"  [警告] timeline 版式最多支持6个事件，当前{len(events)}个，超出的事件被截断", file=__import__('sys').stderr)
     n = len(events)
     if n == 0:
         return slide
@@ -846,7 +879,7 @@ def layout_comparison(prs, theme, ctx):
     _rect(slide, mid_x - 0.015, top, 0.03, CONTENT_H - 1.2,
           fill=theme["primary"])
     # VS 标签
-    vs_bg = _oval(slide, mid_x - 0.3, top + 0.1, 0.6, 0.6, fill=theme["accent"])
+    _oval(slide, mid_x - 0.3, top + 0.1, 0.6, 0.6, fill=theme["accent"])
     vstf = _textbox(slide, mid_x - 0.3, top + 0.1, 0.6, 0.6,
                     anchor=MSO_ANCHOR.MIDDLE)
     _add_para(vstf, "VS", first=True, size=Pt(14),
@@ -1139,7 +1172,9 @@ def choose_layout(section: dict, position: int, total: int) -> str:
 # 高级 API：自动生成完整 PPT（智能排版 + 配图 + 图表）
 # ============================================================
 
-from dataclasses import asdict, dataclass, field as dc_field
+from dataclasses import asdict
+from dataclasses import field as dc_field
+
 
 @dataclass
 class Section:
@@ -1267,6 +1302,7 @@ def auto_generate_ppt(
                     break
 
         layout_fn = resolve_layout(layout_name, layout_bullets)
+        _warn_unconsumed(layout_name, ctx)
         layout_fn(prs, theme, ctx)
         used_layouts.append(layout_name)
 
@@ -1463,9 +1499,9 @@ def auto_validate_ppt(pptx_path):
     自动化验收检查：分析 PPTX 文件，验证基本质量标准。
     返回 {"passed": bool, "checks": [...], "warnings": [...]}。
     """
-    from pptx import Presentation
-    from pptx.util import Pt
     import os
+
+    from pptx import Presentation
 
     if not os.path.exists(pptx_path):
         return {"passed": False, "checks": [], "warnings": [f"文件不存在: {pptx_path}"]}
@@ -1558,7 +1594,7 @@ def auto_validate_ppt(pptx_path):
         passed = False
 
     # 汇总
-    for name, result in checks:
+    for _name, result in checks:
         if result is False:
             passed = False
 

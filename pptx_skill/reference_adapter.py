@@ -20,8 +20,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pptx_skill.content_model import CanvasSpec, ContentSpec, SlideSpec, canvas_from_name
-from pptx_skill.layout_engine import builtin_recipes, solve_recipe, solved_geometry_to_layout_plan, _builtin_tokens
+from pptx_skill.content_model import CanvasSpec, ContentSpec, SlideSpec
 
 # These helpers live in scripts/reference_ppt.py (the legacy module). The
 # package __init__ prepends scripts/ to sys.path, so the bare import works both
@@ -34,7 +33,7 @@ try:
         compose_from_reference,
         generate_native_from_reference,
     )
-except Exception:  # pragma: no cover - import guard for environments without scripts/
+except ImportError:  # pragma: no cover - import guard for environments without scripts/
     analyze_presentation = None  # type: ignore[assignment]
     auto_bind_slide = None  # type: ignore[assignment]
     clone_slide = None  # type: ignore[assignment]
@@ -347,7 +346,7 @@ def _verify_clone_drift(
     drift: list[dict] = []
     try:
         out_prs = Presentation(str(output_path))
-    except Exception:  # pragma: no cover - corrupt output path
+    except (OSError, ValueError):  # pragma: no cover - corrupt output path
         return drift
     out_slides = list(out_prs.slides)
     # Build a lookup of source exemplar geometry keyed by source index.

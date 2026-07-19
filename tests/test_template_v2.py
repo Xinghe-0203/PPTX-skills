@@ -1,26 +1,21 @@
 """Tests for TemplateProfileV2 schema, compiler, migration and adapter (PR7)."""
 from __future__ import annotations
 
-import copy
 import json
 import unittest
 from pathlib import Path
 
 from pptx_skill.design_schema import (
     REQUIRED_ROLES,
-    TEMPLATE_SCHEMA_VERSION,
     StyleIntent,
     bundle_to_dict,
-    canvas_from_profile,
     resolve_all_tokens,
     resolve_token,
     validate_source_profile,
 )
 from pptx_skill.template_compiler import (
     COMPILER_VERSION,
-    bundle_diversity_signature,
     compile_from_intent,
-    compile_source_profile,
     geometry_similarity,
     passes_diversity_gate,
     source_profile_from_intent,
@@ -32,7 +27,6 @@ from pptx_skill.template_v2_adapter import (
     v2_bundle_to_legacy_profile,
     v2_bundle_to_legacy_theme,
 )
-
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = SKILL_ROOT / "assets" / "templates" / "catalog.json"

@@ -8,9 +8,8 @@ import copy
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
-
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CATALOG = SKILL_ROOT / "assets" / "templates" / "catalog.json"
@@ -81,7 +80,10 @@ def list_templates(catalog_path: str | Path | None = None) -> list[dict]:
         })
     if GENERATED_TEMPLATE_DIR.exists():
         for path in sorted(GENERATED_TEMPLATE_DIR.glob("*.json")):
-            profile = _read_json(path)
+            try:
+                profile = _read_json(path)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                continue
             result.append({
                 "key": profile.get("id", path.stem),
                 "name": profile.get("name", path.stem),
@@ -194,7 +196,7 @@ def _hls_color(hue: float, lightness: float, saturation: float) -> str:
 def _mix(color_a: str, color_b: str, weight_b: float) -> str:
     a = _hex_to_rgb(color_a)
     b = _hex_to_rgb(color_b)
-    return _rgb_to_hex(round(x * (1 - weight_b) + y * weight_b) for x, y in zip(a, b))
+    return _rgb_to_hex(round(x * (1 - weight_b) + y * weight_b) for x, y in zip(a, b, strict=False))
 
 
 def _generated_palette(prompt: str, dark: bool, brand_colors: list[str] | None) -> dict:

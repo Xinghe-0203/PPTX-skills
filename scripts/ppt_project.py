@@ -8,10 +8,9 @@ import os
 import shutil
 import tempfile
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from xml.etree import ElementTree as ET
-
 
 CUSTOM_NS = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
 VT_NS = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"
@@ -93,7 +92,17 @@ def _embed_manifest(pptx_path: Path, project: dict) -> None:
         infos = {item.filename: item for item in source.infolist()}
     members[MANIFEST_PART] = _manifest_xml(manifest_json)
     presentation_rels = "ppt/_rels/presentation.xml.rels"
-    members[presentation_rels] = _presentation_rels_xml(members[presentation_rels])
+    if presentation_rels in members:
+        members[presentation_rels] = _presentation_rels_xml(members[presentation_rels])
+    else:
+        from xml.etree.ElementTree import Element, SubElement
+        root = Element(f"{{{REL_NS}}}Relationships")
+        SubElement(root, f"{{{REL_NS}}}Relationship", {
+            "Id": "rId1",
+            "Type": CUSTOM_XML_REL_TYPE,
+            "Target": "../customXml/pptxSkillManifest.xml",
+        })
+        members[presentation_rels] = ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
     temp_fd, temp_name = tempfile.mkstemp(suffix=".pptx", dir=str(pptx_path.parent))
     os.close(temp_fd)
@@ -115,7 +124,7 @@ def save_project_manifest(pptx_path: str | Path, project: dict) -> None:
     path = Path(pptx_path).resolve()
     payload = copy.deepcopy(project)
     payload.setdefault("skill_version", 2)
-    payload.setdefault("generated_at", datetime.now(timezone.utc).isoformat())
+    payload.setdefault("generated_at", datetime.now(UTC).isoformat())
     sidecar = _sidecar_path(path)
     with sidecar.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
@@ -143,7 +152,6 @@ def _read_embedded_manifest(pptx_path: Path) -> dict | None:
             return json.loads(value.text)
     except (KeyError, ValueError, ET.ParseError, zipfile.BadZipFile):
         return None
-    return None
 
 
 def _relocate_images(project: dict, pptx_path: Path) -> None:
@@ -153,6 +161,8 @@ def _relocate_images(project: dict, pptx_path: Path) -> None:
         relocated = []
         for image in section.get("images", []) or []:
             original = Path(image)
+            if not original.is_absolute():
+                original = pptx_path.parent / original
             if original.exists():
                 relocated.append(str(original.resolve()))
                 continue
@@ -199,8 +209,10 @@ def regenerate(project: dict, output_path: str | Path | None = None) -> str:
         layout for layout in layouts
         if layout not in {"cover", "toc", "end"}
     ]
-    for section, layout in zip(sections, content_layouts):
-        section.setdefault("layout", layout)
+    for idx, section in enumerate(sections):
+        layout = content_layouts[idx] if idx < len(content_layouts) else None
+        if layout:
+            section.setdefault("layout", layout)
     return auto_generate_ppt(
         title=payload.get("title", ""),
         subtitle=payload.get("subtitle", ""),

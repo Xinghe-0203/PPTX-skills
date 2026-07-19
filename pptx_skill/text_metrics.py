@@ -141,7 +141,6 @@ def _load_font(font_family: str, size_pt: float, bold: bool, italic: bool):
         except Exception:
             pass
     font = ImageFont.load_default()
-    _FONT_CACHE[key] = font
     return font
 
 
@@ -185,7 +184,7 @@ def _measure_run(run: TextRun) -> tuple[float, float]:
         width = font.getlength(run.text)
     # Estimate height from ascent/descent.
     ascent, descent = font.getmetrics()
-    height = (ascent + descent) / 72 * 72  # already in px, treat as pt at 72 dpi
+    height = float(ascent + descent)
     return float(width), float(height)
 
 
@@ -273,13 +272,16 @@ def _break_text(text: str, width_pt: float, run: TextRun) -> list[str]:
 
     # Post-process: no CJK closing punctuation at the start of a line.
     fixed: list[str] = []
-    for idx, line in enumerate(lines):
+    for _idx, line in enumerate(lines):
         if line and line[0] in _CJK_CLOSE_PUNCT and fixed:
             prev = fixed[-1]
             if prev:
-                # Move the last printable char of the previous line to the front.
                 moved = prev[-1]
-                fixed[-1] = prev[:-1]
+                remainder = prev[:-1]
+                if remainder:
+                    fixed[-1] = remainder
+                else:
+                    fixed.pop()
                 line = moved + line
         fixed.append(line)
     # Drop any empty lines that may have been created.
@@ -386,8 +388,10 @@ class TextMeasurer:
         paragraph_style: ParagraphStyle,
         font_size_pt: float,
         locale: str = "zh-CN",
+        min_font_size_pt: float = 9.0,
+        height_pt: float | None = None,
     ) -> TextMetrics:
-        return measure_runs(runs, width_pt, paragraph_style, font_size_pt, locale=locale)
+        return measure_runs(runs, width_pt, paragraph_style, font_size_pt, min_font_size_pt=min_font_size_pt, locale=locale, height_pt=height_pt)
 
 
 def fit_text_to_height(
@@ -401,7 +405,7 @@ def fit_text_to_height(
 ) -> TextMetrics:
     """Find the largest font size so the text fits both width and height."""
     style = ParagraphStyle(line_height=1.35)
-    run = TextRun(text=text, font_family=font_family, size_pt=font_size_pt)
+    TextRun(text=text, font_family=font_family, size_pt=font_size_pt)
 
     def fits(size: float) -> bool:
         r = TextRun(text=text, font_family=font_family, size_pt=size)

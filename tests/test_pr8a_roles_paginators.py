@@ -16,21 +16,17 @@ import unittest
 from pptx import Presentation
 
 from pptx_skill.content_model import (
-    BBox,
-    CanvasSpec,
     ContentSpec,
     ElementSpec,
-    GeometrySpec,
     SlideSpec,
     canvas_from_name,
 )
 from pptx_skill.layout_engine import (
-    LayoutRecipe,
+    _builtin_tokens,
     builtin_recipes,
     recipe_to_dict,
     solve_recipe,
     solved_geometry_to_layout_plan,
-    _builtin_tokens,
 )
 from pptx_skill.pagination import (
     IMAGE_GRID_LAYOUTS,

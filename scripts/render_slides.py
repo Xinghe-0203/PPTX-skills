@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
 
 # Ensure pptx_skill is importable when running as a script (python scripts/render_slides.py).
 # When installed via pip, this is unnecessary; when running from the repo, sys.path[0] is
@@ -49,11 +48,15 @@ def main():
         engine=args.engine,
     )
     if not result.slide_pngs:
-        error = next(
-            (a.get("error") for a in result.attempts if not a.get("success")),
-            "No rendering engine succeeded",
-        )
-        print(f"ERROR: {error}", file=sys.stderr)
+        for a in result.attempts:
+            if not a.get("success"):
+                engine = a.get("engine", "unknown")
+                error = a.get("error", "unknown error")
+                print(f"ERROR [{engine}]: {error}", file=sys.stderr)
+                if a.get("stdout"):
+                    print(f"  stdout: {a['stdout'][:500]}", file=sys.stderr)
+                if a.get("stderr"):
+                    print(f"  stderr: {a['stderr'][:500]}", file=sys.stderr)
         sys.exit(1)
     print(f"Rendered {len(result.slide_pngs)} slides:")
     for p in result.slide_pngs:

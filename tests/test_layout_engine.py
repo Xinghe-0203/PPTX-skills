@@ -5,7 +5,6 @@ import math
 import unittest
 
 from pptx_skill.content_model import (
-    BBox,
     CanvasSpec,
     ElementSpec,
     SafeInsets,

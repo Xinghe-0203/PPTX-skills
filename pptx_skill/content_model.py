@@ -10,7 +10,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-
 # ---------------------------------------------------------------------------
 # Geometry primitives
 # ---------------------------------------------------------------------------
@@ -79,7 +78,7 @@ class BBox:
     def area(self) -> float:
         return self.width * self.height
 
-    def intersects(self, other: "BBox") -> bool:
+    def intersects(self, other: BBox) -> bool:
         return not (
             self.right <= other.left
             or self.left >= other.right
@@ -87,7 +86,7 @@ class BBox:
             or self.top >= other.bottom
         )
 
-    def intersection(self, other: "BBox") -> "BBox | None":
+    def intersection(self, other: BBox) -> BBox | None:
         if not self.intersects(other):
             return None
         x1 = max(self.left, other.left)
@@ -143,11 +142,11 @@ class StableIdGenerator:
     _seen: set[str] = field(default_factory=set, repr=False)
 
     @classmethod
-    def from_seed(cls, seed: str) -> "StableIdGenerator":
+    def from_seed(cls, seed: str) -> StableIdGenerator:
         return cls(namespace=make_namespace(seed))
 
     @classmethod
-    def from_manifest(cls, manifest: dict | None) -> "StableIdGenerator":
+    def from_manifest(cls, manifest: dict | None) -> StableIdGenerator:
         if manifest is None:
             return cls.from_seed("")
         namespace = manifest.get("deck_namespace") or manifest.get("namespace")
