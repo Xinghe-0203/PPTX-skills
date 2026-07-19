@@ -12,32 +12,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from pptx_skill.generation_pipeline import GenerationResult as PipelineGenerationResult
 from pptx_skill.content_adapter import adapt_legacy_sections
 from pptx_skill.manifest import ManifestV3, load_manifest, save_manifest_v3, set_current_content
 from pptx_skill.visual_qa import CheckOutcome, QAReport, QACheckResult, Severity
 
 
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
-
-@dataclass
-class GenerationResult:
-    """Structured result returned when ``return_result=True``."""
-
-    pptx_path: str
-    manifest_path: str | None = None
-    qa_report_path: str | None = None
-    qa_status: CheckOutcome | None = None
-    render_trace_path: str | None = None
-    preview_dir: str | None = None
-    repair_passes: int = 0
-    manifest: ManifestV3 | None = None
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+# Keep api.GenerationResult as the canonical public result type while sharing
+# the same field layout with the pipeline's GenerationResult.
+GenerationResult = PipelineGenerationResult
 
 def _ensure_dir(path: str) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -224,7 +207,7 @@ def auto_generate_ppt(
         pptx_path=pptx_path,
         manifest_path=_sidecar_path(pptx_path),
         qa_report_path=None,
-        qa_status=qa_report.status if qa_report else None,
+        qa_status=qa_report.status.value if qa_report else None,
         render_trace_path=None,
         preview_dir=None,
         repair_passes=0,

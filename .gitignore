@@ -2,6 +2,22 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+*.egg-info/
+*.egg
+build/
+dist/
+
+# Type/lint caches
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
 
 # User-local tool permissions and generated deliverables.
 .claude/settings.local.json

@@ -19,7 +19,7 @@ Render and inspect before and after every non-trivial edit. Use `reference_ppt.p
 Decks created by `auto_generate_ppt()` contain an embedded project manifest and a readable `.manifest.json` sidecar. Load and regenerate them without reverse-engineering the slide shapes:
 
 ```python
-from ppt_project import load_project, edit_section, regenerate
+from pptx_skill import load_project, edit_section, regenerate
 
 project = load_project("output/report.pptx")
 edit_section(
@@ -103,7 +103,7 @@ Supply an explicit section JSON for complex pages. Automatic extraction only rec
 Restore the most recent backup:
 
 ```python
-from ppt_project import restore_backup
+from pptx_skill import restore_backup
 restore_backup("deck.pptx")
 ```
 

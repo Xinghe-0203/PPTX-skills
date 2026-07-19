@@ -28,6 +28,14 @@
 - Cover, section dividers, and closing page form one visual family.
 - The result follows the requested template mode and aspect ratio.
 
+## Adaptive pipeline checks (PR4+)
+
+- When using `run_generation_pipeline`, inspect `GenerationResult.qa_status` and `repair_log` rather than only the file path.
+- In `strict` mode, blockers raise `PresentationQualityError`; in `report` mode they are recorded but never block delivery.
+- Repair is capped at `max_repair_passes` (default 2); verify the final pass did not exceed the budget.
+- For adaptive output, prefer `render_layout_plans` so each derived slide becomes its own page; check `RenderTraceEntry.slide_index` maps to the right slide.
+- Pagination (PR6) splits overloaded `bullets` across derived slides with deterministic IDs; confirm split titles carry the `（续）` continuation marker and that derived element IDs (`<parent>/page-<n>`) stay stable across re-generation.
+
 ## Reference-deck checks
 
 - Compare generated pages with the corresponding exemplar pages side by side.

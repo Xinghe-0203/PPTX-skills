@@ -10,10 +10,10 @@
 
 ## Built-in generation
 
-Import `scripts/pptx_helper.py` and call:
+Import `auto_generate_ppt` from the `pptx_skill` package and call:
 
 ```python
-from pptx_helper import auto_generate_ppt
+from pptx_skill import auto_generate_ppt
 
 auto_generate_ppt(
     title="2026 行业趋势",
@@ -129,7 +129,7 @@ Generated profiles are stored in `assets/templates/generated/` and become availa
 Run structural validation:
 
 ```python
-from pptx_helper import auto_validate_ppt
+from pptx_skill import auto_validate_ppt
 result = auto_validate_ppt("output/report.pptx")
 ```
 
@@ -141,3 +141,38 @@ python scripts/render_slides.py output/report.pptx `
 ```
 
 Always inspect the PNGs. Structural validation cannot detect awkward crops, overflow, low contrast, or incorrect visual hierarchy.
+
+## Adaptive pipeline and deck planning (PR4+)
+
+The structured adaptive pipeline lives in `pptx_skill.generation_pipeline` and is reached via `auto_generate_ppt(..., layout_engine="adaptive")` once fully wired, or directly:
+
+```python
+from pptx_skill import run_generation_pipeline, ContentSpec, CanvasSpec
+
+result = run_generation_pipeline(content, "output/report.pptx", qa_mode="report")
+```
+
+- `qa_mode`: `off` skips QA and repair; `report` records QA without blocking on quality failures; `strict` raises `PresentationQualityError` if blockers remain after the repair budget.
+- Repair is capped at `max_repair_passes` (default 2); each pass re-plans, re-renders and re-QAs. Only whitelist actions (`reduce_font_within_limit`, `switch_layout_candidate`, `change_text_color_to_token`, `remove_empty_placeholder`) are applied automatically.
+
+### Pagination and deck planning (PR6)
+
+Long `bullets` content is split across derived slides by `pptx_skill.pagination.paginate_bullets`, with deterministic derived IDs (`<parent>/frag-<n>` for slides, `<parent>/page-<n>` for split body elements) so QA and repair keep stable mappings after re-generation.
+
+Whole-deck planning is handled by `pptx_skill.deck_planner.plan_deck`, which:
+
+1. builds per-slide candidate bundles (single-page or split);
+2. runs a beam search over candidate bundles, accumulating `local_score` plus transition penalties (adjacent geometry-signature similarity, `preferred_sequence`, `rhythm.rules`, section transitions);
+3. returns a `DeckPlanResult` with the chosen derived slides and their `LayoutPlan`s.
+
+A profile supplies `preferred_sequence` (ordered layout names) and optional `rhythm.rules` (`{"after": <role>, "prefer": [...], "avoid": [...]}`); both now actually influence candidate selection instead of being metadata-only.
+
+```python
+from pptx_skill import plan_deck, LayoutScoringConfig, CanvasSpec
+
+deck = plan_deck(slides, CanvasSpec(959.976, 540), profile_state)
+# deck.derived_slides  -> list[SlideSpec] after pagination
+# deck.plans            -> list[LayoutPlan] one per derived slide
+```
+
+The renderer writes one PPTX slide per derived `LayoutPlan` via `render_layout_plans`, and each `RenderTraceEntry` carries its `slide_index` so QA reports point back to the right slide.

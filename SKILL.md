@@ -1,31 +1,53 @@
 ---
 name: pptx
+version: "2.0.0"
 description: |
-  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、扩展模板库、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 14 种内容版式、12 套模板档案、3 套非卡片式版式家族、9 套传统主题、自然语言生成新模板、母版占位符填充和样例页逐形状克隆。
+  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 14 种内容版式、12 套模板档案、3 套非卡片式版式家族、9 套传统主题、自然语言生成新模板、母版占位符填充和样例页逐形状克隆。
 ---
 
 # PPTX 智能制作
 
-始终交付可编辑 `.pptx`，并执行渲染验收。不要只检查代码或 XML。
+> 一句话：始终交付可编辑的 `.pptx`，并执行渲染验收。不要只检查代码或 XML。
 
-## 按任务选择路径
+## 适用场景
 
-1. 用户没有提供参考 PPT：
-   - 直接使用已有模板档案生成；或
-   - 根据行业、品牌色、受众和语气生成新模板档案，再生成演示文稿。
-2. 用户提供了规范母版或企业模板：
-   - 分析母版、版式和占位符；
-   - 使用 `native` 模式从原生版式创建页面。
-3. 用户提供了样例演示文稿，设计主要画在页面上：
-   - 使用 `clone` 模式复制代表页；
-   - 按形状名称精确替换文字、图片和内容区域。
-4. 用户提供的是扁平图片、复杂 SmartArt/OLE 或不可复用结构：
-   - 使用 `visual-rebuild` 路径；
-   - 按截图重建可编辑元素并进行并排验收。
+- 用户给主题/资料，需要生成完整 PPT。
+- 用户提供了企业母版或规范模板，需要按母版占位符生成。
+- 用户提供了样例 PPT，需要高保真复刻并替换内容。
+- 用户提供了扁平截图或复杂结构，需要重建可编辑近似版本。
+- 用户需要修改已有 PPT 的文字、图片、颜色、页面顺序或版式。
+- 用户需要把数据表格/指标/时间线/流程图做成可编辑图表或表格。
 
-处理用户提供的 PPT 时，完整阅读 [references/reference-ppt-workflow.md](references/reference-ppt-workflow.md)。修改已有文件时，完整阅读 [references/editing-workflow.md](references/editing-workflow.md)。调用生成 API 或管理模板档案时，阅读 [references/engine-api.md](references/engine-api.md)。交付前阅读 [references/quality-checklist.md](references/quality-checklist.md)。
+## 不适用场景
 
-## 前置检查
+- 需要保留复杂 PowerPoint 动画、宏、OLE、嵌入工作簿或部分 SmartArt 的完整行为。
+- 要求从扁平截图恢复原始矢量、不可见数据或原动画。
+- 要求 LibreOffice 与 PowerPoint 逐像素一致（不同引擎使用不同基线）。
+- 要求模型直接生成并执行未验证的 OOXML/Python/JavaScript。
+
+## 能力地图
+
+| 能力 | 状态 | 主要入口 |
+|---|---|---|
+| 从头生成演示文稿 | 已落地 | `pptx_skill.auto_generate_ppt()` / `scripts/pptx_helper.py` |
+| 模板档案管理 | 已落地 | `scripts/template_engine.py list/generate/preview` |
+| 母版占位符生成（native） | 已落地 | `pptx_skill.reference_adapter.native_mode_adapter()` |
+| 样例页逐形状克隆（clone） | 已落地 | `pptx_skill.reference_adapter.clone_mode_adapter()` |
+| 扁平稿视觉重建（visual-rebuild） | 已落地 | `pptx_skill.visual_rebuild.visual_rebuild_adapter()` |
+| 约束式自适应排版 | 已落地 | `pptx_skill.layout_engine.solve_recipe()` |
+| 整本拆页与 beam search 节奏 | 已落地 | `pptx_skill.deck_planner.plan_deck()` |
+| 文字度量与字号适配 | 已落地 | `pptx_skill.text_metrics.measure_runs()` |
+| 语义 QA（溢出/重叠/对比度等） | 已落地 | `pptx_skill.semantic_qa.SemanticQAEngine` |
+| 渲染 QA 与视觉回归 | 已落地 | `pptx_skill.render_qa.compare_slide_to_baseline()` |
+| 白名单修复引擎 | 已落地 | `pptx_skill.repair_engine.propose_repairs()` |
+| 生成 → QA → 修复闭环 | 已落地 | `pptx_skill.generation_pipeline.run_generation_pipeline()` |
+| Manifest V3 读写 | 已落地 | `pptx_skill.manifest.load_manifest()` |
+| 定点文字/图片/颜色编辑 | 已落地 | `pptx_skill.ppt_edit.*` |
+| 页面增删移复制换版式 | 已落地 | `pptx_skill.ppt_pages.*` |
+| 200 页 QA 标注数据集 | 已落地 | `pptx_skill.qa_dataset.generate_annotation_dataset()` |
+| Golden renders 基线 | 已落地 | `pptx_skill.golden_renders.render_golden_set()` |
+
+## 前置依赖
 
 从项目根目录安装为可编辑包（推荐）：
 
@@ -33,13 +55,13 @@ description: |
 python -m pip install -e .
 ```
 
-然后检查当前环境能力：
+检查当前环境能力：
 
 ```powershell
 python -m pptx_skill.capability
 ```
 
-确认以下依赖可用：
+确认核心依赖可用：
 
 ```powershell
 python -m pip show python-pptx Pillow
@@ -47,6 +69,32 @@ python scripts/render_slides.py --help
 ```
 
 截图渲染优先使用 LibreOffice；Windows 也可回退到 PowerPoint COM。缺少渲染引擎时再安装 LibreOffice，不要无条件安装。
+
+可选后端按需要安装（详见 `THIRD_PARTY_NOTICES.md`）：
+
+```powershell
+python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
+```
+
+## 按任务选择路径
+
+1. **用户没有提供参考 PPT**
+   - 直接使用已有模板档案生成；或
+   - 根据行业、品牌色、受众和语气生成新模板档案，再生成演示文稿。
+2. **用户提供了规范母版或企业模板**
+   - 分析母版、版式和占位符；
+   - 使用 `native` 模式从原生版式创建页面。
+3. **用户提供了样例演示文稿，设计主要画在页面上**
+   - 使用 `clone` 模式复制代表页；
+   - 按形状名称精确替换文字、图片和内容区域。
+4. **用户提供的是扁平图片、复杂 SmartArt/OLE 或不可复用结构**
+   - 使用 `visual-rebuild` 路径；
+   - 按截图重建可编辑元素并进行并排验收。
+
+处理用户提供的 PPT 时，完整阅读 [references/reference-ppt-workflow.md](references/reference-ppt-workflow.md)。
+修改已有文件时，完整阅读 [references/editing-workflow.md](references/editing-workflow.md)。
+调用生成 API 或管理模板档案时，阅读 [references/engine-api.md](references/engine-api.md)。
+交付前阅读 [references/quality-checklist.md](references/quality-checklist.md)。
 
 ## 核心工作流
 
@@ -153,7 +201,7 @@ python scripts/reference_ppt.py compose reference.pptx `
 运行结构检查：
 
 ```python
-from pptx_helper import auto_validate_ppt
+from pptx_skill import auto_validate_ppt
 result = auto_validate_ppt("output/report.pptx")
 ```
 
@@ -166,7 +214,7 @@ python scripts/render_slides.py output/report.pptx `
 
 逐页检查文字溢出、遮挡、裁图、对比度、层级、旧内容残留和模板一致性。至少执行两轮“生成 → 渲染 → 逐页检查 → 修正”，连续两轮没有阻断问题后再交付。
 
-## 数据契约与 Manifest V3（PR1）
+## 数据契约与 Manifest V3
 
 生成和修改都围绕新的数据模型展开：
 
@@ -189,7 +237,7 @@ assert isinstance(result, GenerationResult)
 print(result.qa_status)   # pass | fail | inconclusive
 ```
 
-- 读取或迁移 manifest：
+读取或迁移 manifest：
 
 ```python
 from pptx_skill import load_manifest
@@ -197,8 +245,6 @@ from pptx_skill import load_manifest
 manifest = load_manifest("output/report.pptx")
 print(manifest.manifest_schema_version)  # 3
 ```
-
-- `layout_engine="adaptive"` 在 PR1 尚未实现，显式传入会报错；后续 PR 会逐步替换为约束求解排版。
 
 ## 修改已有 PPT
 
@@ -213,12 +259,40 @@ print(manifest.manifest_schema_version)  # 3
 - 所有写操作自动生成最近一次 `.bak.pptx` 备份；修改失败时调用 `restore_backup()`。
 - 复杂页面先分析形状名称，再用 shape-level plan 或显式 Section 数据，不依赖模糊角色猜测。
 
-## 研发状态
+## 错误处理
 
-- PR0 已落地：unittest 基线恢复、`pptx_skill` 包壳、`pyproject.toml`、渲染器隔离、运行能力报告。
-- PR1 已落地：核心数据模型（ContentSpec/SlideSpec/ElementSpec）、稳定 ID、Manifest V3、legacy v2 内存迁移、`api.py` 兼容 facade。
-- PR2 已落地：preview_renderer 适配器（结构化 PreviewRenderResult）、image_crop（contain/cover/smart crop + 真实 crop fractions）、adaptive pptx_renderer 基础（text/image/shape 节点 + RenderTrace）。unittest 基线 40/40 通过。
-- 后续 PR（文字度量与语义 QA、约束求解自适应排版、生成式模板引擎 V2、参考稿模式）将按蓝图逐步实现。
+| 问题 | 典型原因 | 处理方式 |
+|---|---|---|
+| `ImportError: kiwisolver` | 未安装 adaptive 依赖 | `pip install -e ".[adaptive]"` 或回退 `layout_engine="legacy"` |
+| 求解器不可行（infeasible） | 内容超长、约束冲突或 recipe 不匹配 | 换 recipe、分页或放宽内容限制 |
+| 参考稿模式推荐 `visual-rebuild` | 母版/占位符不可用，形状都在页面上 | 按视觉重建路径执行，并给出相似度预算报告 |
+| QA 报 `blocker` | 溢出、重叠、越界、低对比度等 | 进入 repair 闭环，最多两轮；仍失败则明确返回 |
+| 渲染引擎不可用 | 未安装 LibreOffice/PyMuPDF/PowerPoint COM | 标记 unavailable，不影响结构/语义 QA；需要时再安装 |
+| 图片搜索失败 | Pixabay 网络或关键词问题 | 降级为本地图片或纯文字版式，不中断生成 |
+
+## 模块索引
+
+| 模块 | 职责 |
+|---|---|
+| `pptx_skill.api` | 兼容 facade 与 `GenerationResult` |
+| `pptx_skill.content_model` | `ContentSpec`/`SlideSpec`/`ElementSpec` 数据模型 |
+| `pptx_skill.layout_engine` | 声明式 `LayoutRecipe` + Kiwi 约束求解 |
+| `pptx_skill.deck_planner` | 整本 beam search 节奏规划 |
+| `pptx_skill.pagination` | bullets/table/timeline/process/image_grid 分页 |
+| `pptx_skill.text_metrics` | Pillow 字体度量、CJK 换行、字号二分搜索 |
+| `pptx_skill.semantic_qa` | 溢出/重叠/对比度/缺字体/图片畸变/空内容 |
+| `pptx_skill.render_qa` | 像素级 perceptual diff、窗口密度、SSIM |
+| `pptx_skill.repair_engine` | 白名单修复动作与 profile override 合并 |
+| `pptx_skill.generation_pipeline` | plan → render → QA → repair 闭环 |
+| `pptx_skill.reference_adapter` | native/clone/visual-rebuild adapter |
+| `pptx_skill.visual_rebuild` | 扁平稿解析与自适应重建 |
+| `pptx_skill.qa_dataset` | 200 页标注数据集生成器 |
+| `pptx_skill.golden_renders` | 每 role golden render 与 family deck |
+| `pptx_skill.manifest` | Manifest V3 读写与迁移 |
+| `pptx_skill.pptx_renderer` | 自适应渲染器（text/image/shape/table/chart） |
+| `pptx_skill.template_compiler` | TemplateProfileV2 编译与多样性闸门 |
+| `pptx_skill.design_schema` | V2 schema、token 解析与校验 |
+| `pptx_skill.image_crop` | contain/cover/smart crop + 真实 crop fractions |
 
 ## 版式与视觉原则
 
@@ -239,3 +313,28 @@ print(manifest.manifest_schema_version)  # 3
 - 自动内容绑定适合简单封面和标题内容页；复杂仪表盘、流程图和多区域页面必须使用显式形状映射。
 - 无法从扁平截图恢复原始矢量、动画或不可见数据；应重建可编辑近似版本并明确说明。
 - Pixabay 搜索失败时降级为本地图片或纯文字版式，不中断生成。
+
+## 研发状态
+
+| PR | 内容 | 测试基线 |
+|---|---|---|
+| PR0 | unittest 基线恢复、`pptx_skill` 包壳、`pyproject.toml`、渲染器隔离、运行能力报告 | — |
+| PR1 | 核心数据模型、稳定 ID、Manifest V3、legacy v2 迁移、`api.py` 兼容 facade | — |
+| PR2 | preview_renderer、image_crop、adaptive pptx_renderer 基础 | 40/40 |
+| PR3 | text_metrics、semantic_qa | 54/54 |
+| PR4 | layout_engine 约束求解、候选评分 | 63/63 |
+| PR5 | render_qa、repair_engine、generation_pipeline 闭环 | 75/75 |
+| PR6 | pagination、deck_planner beam search、多页渲染 | 92/92 |
+| PR7 | TemplateProfileV2、编译器、V1/V2 迁移与适配、多样性闸门 | 117/117 |
+| PR8a | 14 role 全部 recipe、role-specific paginator、table/chart 节点 | 138/138 |
+| PR8b | reference_adapter native/clone、clone drift QA sidecar | 147/147 |
+| PR8c | visual_rebuild 真实自适应重建、参考差异预算 | 164/164 |
+| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 184/184 |
+
+## 相关文档
+
+- [references/reference-ppt-workflow.md](references/reference-ppt-workflow.md) — 处理用户提供的参考稿。
+- [references/editing-workflow.md](references/editing-workflow.md) — 修改已有 PPT。
+- [references/engine-api.md](references/engine-api.md) — 生成 API 与模板档案。
+- [references/quality-checklist.md](references/quality-checklist.md) — 交付前检查清单。
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — 第三方依赖与许可证。

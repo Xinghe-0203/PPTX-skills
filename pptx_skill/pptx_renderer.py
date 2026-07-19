@@ -219,41 +219,164 @@ def _add_shape_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTrac
     )
 
 
+def _add_table_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+    """Render a table node. Repeats headers; rows come from content_binding."""
+    from pptx.util import Inches
+
+    geom = node.geometry.bbox
+    left = Inches(_pt_to_inches(geom.left))
+    top = Inches(_pt_to_inches(geom.top))
+    width = Inches(_pt_to_inches(geom.width))
+    height = Inches(_pt_to_inches(geom.height))
+
+    binding = node.content_binding or {}
+    headers = list(binding.get("headers", []))
+    rows = [list(r) for r in binding.get("rows", [])]
+    all_rows = [headers] + rows if headers else rows
+    n_rows = max(len(all_rows), 1)
+    n_cols = max(len(headers), max((len(r) for r in rows), default=0), 1)
+
+    table_shape = slide.shapes.add_table(n_rows, n_cols, left, top, width, height)
+    table = table_shape.table
+
+    # Fill cells, padding short rows with empty strings.
+    for r_idx, row in enumerate(all_rows):
+        for c_idx in range(n_cols):
+            cell_text = str(row[c_idx]) if c_idx < len(row) else ""
+            cell = table.cell(r_idx, c_idx)
+            cell.text = cell_text
+            # Bold the header row for readability.
+            if headers and r_idx == 0 and cell_text:
+                for paragraph in cell.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.bold = True
+
+    return RenderTraceEntry(
+        render_node_id=node.id,
+        element_id=node.element_id,
+        recipe_node_id=node.recipe_node_id,
+        shape_instance_index=shape_index,
+        slide_index=0,
+        ppt_shape_id=table_shape.shape_id,
+        shape_name=table_shape.name,
+        z_order=node.z_order,
+        geometry=node.geometry,
+        crop=None,
+        parent_render_node_id=node.parent_node_id,
+    )
+
+
+def _add_chart_node(slide, node: "PlannedNode", shape_index: int) -> "RenderTraceEntry":
+    """Render a chart node as a simple bar chart from metric items.
+
+    Metrics arrive as ``{"items": [{"label": str, "value": number}, ...]}``.
+    """
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+    from pptx.util import Inches
+
+    geom = node.geometry.bbox
+    left = Inches(_pt_to_inches(geom.left))
+    top = Inches(_pt_to_inches(geom.top))
+    width = Inches(_pt_to_inches(geom.width))
+    height = Inches(_pt_to_inches(geom.height))
+
+    binding = node.content_binding or {}
+    items = list(binding.get("items", []))
+    labels = [str(it.get("label", f"item-{i}")) for i, it in enumerate(items)]
+    values = [float(it.get("value", 0)) for it in items] or [0.0]
+
+    chart_data = CategoryChartData()
+    chart_data.categories = labels or ["item"]
+    chart_data.add_series("series", values)
+
+    chart_frame = slide.shapes.add_chart(
+        XL_CHART_TYPE.COLUMN_CLUSTERED, left, top, width, height, chart_data
+    )
+    chart_shape = chart_frame.chart
+
+    return RenderTraceEntry(
+        render_node_id=node.id,
+        element_id=node.element_id,
+        recipe_node_id=node.recipe_node_id,
+        shape_instance_index=shape_index,
+        slide_index=0,
+        ppt_shape_id=chart_frame.shape_id,
+        shape_name=chart_frame.name,
+        z_order=node.z_order,
+        geometry=node.geometry,
+        crop=None,
+        parent_render_node_id=node.parent_node_id,
+    )
+
+
 def render_layout_plan(plan: "LayoutPlan", output_path: str) -> RenderResult:
     """Render a single-slide LayoutPlan to a PPTX file.
 
     This is the PR2 minimal adaptive renderer: it supports text, image and
     shape nodes, applies real picture crop fractions, and returns a trace.
     """
+    return render_layout_plans([plan], output_path)
+
+
+def render_layout_plans(plans: list["LayoutPlan"], output_path: str) -> RenderResult:
+    """Render a list of LayoutPlans to a single multi-slide PPTX file.
+
+    Each plan becomes one slide in the output deck. Slide index is recorded
+    in every RenderTraceEntry so QA can map issues back to slides.
+    """
     from pathlib import Path
 
     from pptx import Presentation
     from pptx.util import Inches
 
+    if not plans:
+        raise AdaptiveRendererError("Cannot render an empty plan list")
+
     prs = Presentation()
-    canvas = plan.canvas
-    prs.slide_width = Inches(_pt_to_inches(canvas.width_pt))
-    prs.slide_height = Inches(_pt_to_inches(canvas.height_pt))
+    first_canvas = plans[0].canvas
+    prs.slide_width = Inches(_pt_to_inches(first_canvas.width_pt))
+    prs.slide_height = Inches(_pt_to_inches(first_canvas.height_pt))
 
     blank_layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[-1]
-    slide = prs.slides.add_slide(blank_layout)
 
     trace: list[RenderTraceEntry] = []
-    for i, node in enumerate(sorted(plan.nodes, key=lambda n: n.z_order)):
-        try:
-            if node.kind == "text":
-                entry = _add_text_node(slide, node, i)
-            elif node.kind == "image":
-                entry = _add_image_node(slide, node, i)
-            elif node.kind == "shape":
-                entry = _add_shape_node(slide, node, i)
-            else:
-                continue
-        except Exception as exc:
-            raise AdaptiveRendererError(
-                f"Failed to render node {node.id}: {exc}"
-            ) from exc
-        trace.append(entry)
+    for slide_index, plan in enumerate(plans):
+        slide = prs.slides.add_slide(blank_layout)
+        for i, node in enumerate(sorted(plan.nodes, key=lambda n: n.z_order)):
+            try:
+                if node.kind == "text":
+                    entry = _add_text_node(slide, node, i)
+                elif node.kind == "image":
+                    entry = _add_image_node(slide, node, i)
+                elif node.kind == "shape":
+                    entry = _add_shape_node(slide, node, i)
+                elif node.kind == "table":
+                    entry = _add_table_node(slide, node, i)
+                elif node.kind == "chart":
+                    entry = _add_chart_node(slide, node, i)
+                else:
+                    continue
+            except Exception as exc:
+                raise AdaptiveRendererError(
+                    f"Failed to render node {node.id}: {exc}"
+                ) from exc
+            # Override slide_index on the entry to reflect this slide.
+            trace.append(
+                RenderTraceEntry(
+                    render_node_id=entry.render_node_id,
+                    element_id=entry.element_id,
+                    recipe_node_id=entry.recipe_node_id,
+                    shape_instance_index=entry.shape_instance_index,
+                    slide_index=slide_index,
+                    ppt_shape_id=entry.ppt_shape_id,
+                    shape_name=entry.shape_name,
+                    z_order=entry.z_order,
+                    geometry=entry.geometry,
+                    crop=entry.crop,
+                    parent_render_node_id=entry.parent_render_node_id,
+                )
+            )
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     prs.save(output_path)
@@ -262,6 +385,6 @@ def render_layout_plan(plan: "LayoutPlan", output_path: str) -> RenderResult:
         pptx_path=output_path,
         trace=trace,
         generation_engine="pptx_skill.adaptive_renderer.v2",
-        generation_engine_version="2.0.0-pr2",
+        generation_engine_version="2.0.0-pr8a",
         artifacts={},
     )
