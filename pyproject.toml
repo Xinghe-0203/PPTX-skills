@@ -7,7 +7,7 @@ name = "pptx-skill"
 version = "2.0.0"
 description = "PPTX generation and editing skill for agent workflows"
 readme = "SKILL.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 authors = [
     {name = "Xinghe"},
 ]
@@ -29,6 +29,9 @@ render-pdf-poppler = ["pdf2image>=1.17,<2"]
 render-com = ["pywin32>=306,<400; platform_system == 'Windows'"]
 test = ["pytest>=8,<10", "hypothesis>=6,<7"]
 
+[project.scripts]
+pptx-skill-capability = "pptx_skill.capability:main"
+
 [project.urls]
 Homepage = "https://github.com/Xinghe-0203/pptx-skill"
 Issues = "https://github.com/Xinghe-0203/pptx-skill/issues"
@@ -36,3 +39,29 @@ Issues = "https://github.com/Xinghe-0203/pptx-skill/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pptx_skill*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E402"]
+"tests/*" = ["E402"]
+"pptx_skill/__init__.py" = ["E402", "F401"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
