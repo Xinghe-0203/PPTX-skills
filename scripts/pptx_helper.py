@@ -351,13 +351,40 @@ def _merge_layout_opts(base: dict, overrides: dict) -> dict:
     return result
 
 
-def choose_theme(key: str | None = None, profile: dict | None = None) -> dict:
-    """Resolve a built-in theme or a JSON-friendly template profile."""
+def _resolve_font_pair(theme_key: str | None, profile: dict | None = None) -> dict[str, str]:
+    """Resolve heading/body font pair from a theme key or template profile.
+    Returns {"heading": ..., "body": ...}."""
+    # Profile fonts take priority (from V2 adapter or user-supplied)
     if profile:
-        return theme_from_profile(profile)
-    if key and key in THEMES:
-        return THEMES[key]
-    return THEMES["editorial"]
+        fonts = profile.get("fonts")
+        if fonts and isinstance(fonts, dict):
+            heading = fonts.get("en") or fonts.get("heading") or fonts.get("display")
+            body = fonts.get("cn") or fonts.get("body")
+            if heading or body:
+                return {
+                    "heading": heading or FONTS.get("editorial", {}).get("heading", FONT_EN),
+                    "body": body or FONTS.get("editorial", {}).get("body", FONT_CN),
+                }
+    # Built-in FONTS dict lookup
+    if theme_key and theme_key in FONTS:
+        return dict(FONTS[theme_key])
+    return dict(FONTS.get("editorial", {"heading": FONT_EN, "body": FONT_CN}))
+
+
+def choose_theme(key: str | None = None, profile: dict | None = None) -> dict:
+    """Resolve a built-in theme or a JSON-friendly template profile.
+    The returned dict includes 'font_heading' and 'font_body' keys from FONTS."""
+    if profile:
+        theme = theme_from_profile(profile)
+    elif key and key in THEMES:
+        theme = THEMES[key]
+    else:
+        theme = THEMES["editorial"]
+    # Attach font pair to the theme dict
+    font_pair = _resolve_font_pair(key, profile)
+    theme["font_heading"] = font_pair["heading"]
+    theme["font_body"] = font_pair["body"]
+    return theme
 
 
 # 字体：跨平台自动检测，中英文混排
@@ -405,9 +432,11 @@ def _blank_layout(prs):
 # 底层工具函数
 # ============================================================
 
-def _set_font(run, name=FONT_CN, size=None, bold=None, color=None, italic=None):
-    """统一设置 run 字体，并强制东亚文字使用同一字体（避免 fallback 到宋体）。"""
-    run.font.name = name
+def _set_font(run, name=FONT_CN, size=None, bold=None, color=None, italic=None, font_family=None):
+    """统一设置 run 字体，并强制东亚文字使用同一字体（避免 fallback 到宋体）。
+    font_family: 优先级高于 name；传入时覆盖 name 用于拉丁字体，同时设置东亚字体。"""
+    effective_name = font_family if font_family else name
+    run.font.name = effective_name
     if size is not None:
         run.font.size = size
     if bold is not None:
@@ -422,7 +451,10 @@ def _set_font(run, name=FONT_CN, size=None, bold=None, color=None, italic=None):
     if ea is None:
         ea = rPr.makeelement(qn("a:ea"), {})
         rPr.append(ea)
-    ea.set("typeface", name)
+    # When font_family is provided, use CJK_FONTS body font for East-Asian text;
+    # otherwise fall back to the effective_name (original behaviour).
+    ea_font = CJK_FONTS.get("body", effective_name) if font_family else effective_name
+    ea.set("typeface", ea_font)
 
 
 def _no_line(shape):
@@ -512,8 +544,9 @@ def _textbox(slide, left, t, w, h, anchor=MSO_ANCHOR.TOP, wrap=True):
 
 def _add_para(tf, text, *, first=False, size=None, color=None, bold=False,
              name=FONT_CN, align=PP_ALIGN.LEFT, space_before=0, space_after=0,
-             level=0, line_spacing=1.15):
-    """添加一个段落并设置样式。first=True 时复用首段。"""
+             level=0, line_spacing=1.15, font_family=None):
+    """添加一个段落并设置样式。first=True 时复用首段。
+    font_family: 主题字体（拉丁），传入时覆盖 name 参数。"""
     if size is None:
         size = _DEFAULT_FONT_SIZE
     p = tf.paragraphs[0] if first else tf.add_paragraph()
@@ -529,7 +562,7 @@ def _add_para(tf, text, *, first=False, size=None, color=None, bold=False,
     except Exception:
         pass
     if p.runs:
-        _set_font(p.runs[0], name=name, size=size, bold=bold, color=color)
+        _set_font(p.runs[0], name=name, size=size, bold=bold, color=color, font_family=font_family)
     return p
 
 
@@ -602,13 +635,13 @@ def _header_band(slide, theme, title, kicker=None):
     if kicker:
         kf = _textbox(slide, tx, MARGIN_TOP - 0.05, CONTENT_W - 0.35, 0.3)
         _add_para(kf, kicker.upper(), first=True, size=Pt(12),
-                  color=theme["accent"], bold=True, name=FONT_EN, space_after=0)
+                  color=theme["accent"], bold=True, font_family=theme.get("font_heading", FONT_EN), space_after=0)
         ty = MARGIN_TOP + 0.28
     else:
         ty = MARGIN_TOP
     tf = _textbox(slide, tx, ty, CONTENT_W - 0.35, 0.7, anchor=MSO_ANCHOR.MIDDLE)
     _add_para(tf, title, first=True, size=Pt(34), color=theme["text"],
-              bold=True, name=FONT_CN)
+              bold=True, font_family=theme.get("font_body", FONT_CN))
 
 
 def layout_cover(prs, theme, ctx):
@@ -633,16 +666,16 @@ def layout_cover(prs, theme, ctx):
         kf = _textbox(slide, MARGIN_X, 1.9, CONTENT_W, 0.4)
         _add_para(kf, kicker.upper(), first=True, size=Pt(14),
                   color=theme["accent"] if on_dark else theme["primary"],
-                  bold=True, name=FONT_EN)
+                  bold=True, font_family=theme.get('font_heading', FONT_EN))
     tf = _textbox(slide, MARGIN_X, 2.4, CONTENT_W, 2.0, anchor=MSO_ANCHOR.BOTTOM)
     _add_para(tf, ctx.get("title", ""), first=True, size=Pt(54),
-              color=title_color, bold=True, name=FONT_CN, line_spacing=1.1)
+              color=title_color, bold=True, font_family=theme.get('font_body', FONT_CN), line_spacing=1.1)
     sub = ctx.get("subtitle")
     if sub:
         sf = _textbox(slide, MARGIN_X, 4.5, CONTENT_W * 0.7, 0.8)
         _add_para(sf, sub, first=True, size=Pt(20),
                   color=theme["text_muted"] if on_dark else theme["secondary"],
-                  name=FONT_CN)
+                  font_family=theme.get('font_body', FONT_CN))
     # 底部分隔线
     line_color = theme["accent"] if on_dark else theme["primary"]
     _rect(slide, MARGIN_X, 6.7, 1.2, 0.06, fill=line_color)
@@ -655,9 +688,9 @@ def layout_toc(prs, theme, ctx):
     # 左侧标题区
     lf = _textbox(slide, MARGIN_X, MARGIN_TOP, 4.5, 2.0, anchor=MSO_ANCHOR.BOTTOM)
     _add_para(lf, ctx.get("kicker", "CONTENTS").upper(), first=True,
-              size=Pt(13), color=theme["accent"], bold=True, name=FONT_EN)
+              size=Pt(13), color=theme["accent"], bold=True, font_family=theme.get('font_heading', FONT_EN))
     _add_para(lf, ctx.get("title", "目录"), size=Pt(44), color=theme["text"],
-              bold=True, name=FONT_CN, space_before=4)
+              bold=True, font_family=theme.get('font_body', FONT_CN), space_before=4)
     # 右侧目录项
     items = ctx.get("toc_items") or ctx.get("bullets") or []
     n = len(items)
@@ -676,12 +709,12 @@ def layout_toc(prs, theme, ctx):
         # 编号
         nf = _textbox(slide, ix, iy, 0.7, rh, anchor=MSO_ANCHOR.MIDDLE)
         _add_para(nf, f"{i+1:02d}", first=True, size=Pt(22),
-                  color=theme["primary"], bold=True, name=FONT_EN)
+                  color=theme["primary"], bold=True, font_family=theme.get('font_heading', FONT_EN))
         # 标题
         tf = _textbox(slide, ix + 0.8, iy, col_w - 0.8, rh,
                       anchor=MSO_ANCHOR.MIDDLE)
         _add_para(tf, item, first=True, size=Pt(16),
-                  color=theme["text"], name=FONT_CN)
+                  color=theme["text"], font_family=theme.get('font_body', FONT_CN))
         # 下划线
         _rect(slide, ix + 0.8, iy + rh - 0.12, col_w - 0.8, 0.02,
               fill=theme["bg_alt"])
@@ -701,16 +734,16 @@ def layout_section(prs, theme, ctx):
                   anchor=MSO_ANCHOR.MIDDLE)
     _add_para(nf, num, first=True, size=Pt(160),
               color=_text_on(theme["primary"]),
-              bold=True, name=FONT_EN)
+              bold=True, font_family=theme.get('font_heading', FONT_EN))
     # 章节标题(在左侧深底)
     tf = _textbox(slide, MARGIN_X, SLIDE_H / 2 - 0.5, 4.5, 1.4,
                   anchor=MSO_ANCHOR.MIDDLE)
     kk = ctx.get("kicker")
     if kk:
         _add_para(tf, kk.upper(), first=True, size=Pt(13),
-                  color=theme["accent"], bold=True, name=FONT_EN, space_after=6)
+                  color=theme["accent"], bold=True, font_family=theme.get('font_heading', FONT_EN), space_after=6)
     _add_para(tf, ctx.get("title", ""), size=Pt(38), color=theme["text"],
-              bold=True, name=FONT_CN)
+              bold=True, font_family=theme.get('font_body', FONT_CN))
     return slide
 
 
@@ -725,7 +758,7 @@ def layout_bullets(prs, theme, ctx):
         wf = _textbox(slide, SLIDE_W - 3.2, MARGIN_TOP - 0.15, 2.5, 1.2,
                       anchor=MSO_ANCHOR.MIDDLE)
         _add_para(wf, str(ctx["page_number"]).zfill(2), first=True,
-                  size=Pt(60), color=theme["bg_alt"], bold=True, name=FONT_EN)
+                  size=Pt(60), color=theme["bg_alt"], bold=True, font_family=theme.get('font_heading', FONT_EN))
 
     top = MARGIN_TOP + 1.1
     n = len(bullets)
@@ -746,12 +779,12 @@ def layout_bullets(prs, theme, ctx):
                        0.44, 0.44, anchor=MSO_ANCHOR.MIDDLE)
         _add_para(ntf, str(i + 1), first=True, size=Pt(16),
                   color=_text_on(theme["primary"]),
-                  bold=True, name=FONT_EN, align=PP_ALIGN.CENTER)
+                  bold=True, font_family=theme.get('font_heading', FONT_EN), align=PP_ALIGN.CENTER)
         # 文字
         tf = _textbox(slide, MARGIN_X + 1.0, cy, CONTENT_W - 1.3, card_h,
                       anchor=MSO_ANCHOR.MIDDLE)
         _add_para(tf, b, first=True, size=Pt(17), color=theme["text"],
-                  name=FONT_CN)
+                  font_family=theme.get('font_body', FONT_CN))
     return slide
 
 def layout_text_image(prs, theme, ctx):
@@ -769,7 +802,7 @@ def layout_text_image(prs, theme, ctx):
     tf = _textbox(slide, MARGIN_X, MARGIN_TOP + 1.1, left_w, CONTENT_H - 1.1)
     for i, b in enumerate(bullets):
         _add_para(tf, b, first=(i == 0), size=Pt(17), color=theme["text"],
-                  name=FONT_CN, space_before=8 if i > 0 else 0, line_spacing=1.4)
+                  font_family=theme.get('font_body', FONT_CN), space_before=8 if i > 0 else 0, line_spacing=1.4)
     # 右侧图片
     if img:
         img_l = MARGIN_X + left_w + 0.5
@@ -809,11 +842,11 @@ def layout_full_image(prs, theme, ctx):
     tf = _textbox(slide, MARGIN_X, SLIDE_H * 0.55, CONTENT_W, 1.5,
                   anchor=MSO_ANCHOR.TOP)
     _add_para(tf, ctx.get("title", ""), first=True, size=Pt(42),
-              color=title_color, bold=True, name=FONT_CN, line_spacing=1.1)
+              color=title_color, bold=True, font_family=theme.get('font_body', FONT_CN), line_spacing=1.1)
     sub = ctx.get("subtitle") or ctx.get("kicker")
     if sub:
         _add_para(tf, sub, size=Pt(18), color=sub_color,
-                  name=FONT_CN, space_before=8)
+                  font_family=theme.get('font_body', FONT_CN), space_before=8)
     # 底部小装饰线
     _rect(slide, MARGIN_X, SLIDE_H * 0.55 - 0.15, 1.0, 0.06,
           fill=theme["accent"])
@@ -880,18 +913,18 @@ def layout_dashboard(prs, theme, ctx):
                       anchor=MSO_ANCHOR.BOTTOM)
         _add_para(vf, m.get("value", "--"), first=True,
                   size=Pt(opts.get("metric_value_size", 36)),
-                  color=value_color, bold=True, name=FONT_EN)
+                  color=value_color, bold=True, font_family=theme.get('font_heading', FONT_EN))
         # 标签
         lf = _textbox(slide, cl + 0.3, card_top + 1.0, card_w - 0.6, 0.3)
         _add_para(lf, m.get("label", ""), first=True, size=Pt(13),
-                  color=theme["text_muted"], name=FONT_CN)
+                  color=theme["text_muted"], font_family=theme.get('font_body', FONT_CN))
         # 变化
         chg = m.get("change", "")
         if chg:
             cf = _textbox(slide, cl + 0.3, card_top + 1.25, card_w - 0.6, 0.25)
             chg_color = _c("22C55E") if chg.startswith("+") else _c("EF4444") if chg.startswith("-") else theme["text_muted"]
             _add_para(cf, chg, first=True, size=Pt(12), color=chg_color,
-                      bold=True, name=FONT_EN)
+                      bold=True, font_family=theme.get('font_heading', FONT_EN))
     # 底部图表区：用形状模拟简单柱状图
     chart_top = card_top + card_h + 0.3
     chart_h = CONTENT_H - 1.2 - card_h - 0.3
@@ -930,12 +963,12 @@ def layout_dashboard(prs, theme, ctx):
             # 数值标签
             lf = _textbox(slide, bl, bt - 0.35, bar_w, 0.3)
             _add_para(lf, metrics[bi].get("change", ""), first=True,
-                      size=Pt(11), color=theme["text_muted"], name=FONT_EN,
+                      size=Pt(11), color=theme["text_muted"], font_family=theme.get('font_heading', FONT_EN),
                       align=PP_ALIGN.CENTER)
             # 底部标签
             blf = _textbox(slide, bl, bar_area_t + bar_area_h + 0.05, bar_w, 0.3)
             _add_para(blf, metrics[bi].get("label", ""), first=True,
-                      size=Pt(10), color=theme["text_muted"], name=FONT_CN,
+                      size=Pt(10), color=theme["text_muted"], font_family=theme.get('font_body', FONT_CN),
                       align=PP_ALIGN.CENTER)
         # 底部基线
         _rect(slide, bar_area_l, bar_area_t + bar_area_h,
@@ -978,12 +1011,12 @@ def layout_timeline(prs, theme, ctx):
             align = PP_ALIGN.LEFT
         if isinstance(ev, dict):
             _add_para(tf, ev.get("date", ""), first=True, size=Pt(12),
-                      color=theme["accent"], bold=True, name=FONT_EN, align=align)
+                      color=theme["accent"], bold=True, font_family=theme.get('font_heading', FONT_EN), align=align)
             _add_para(tf, ev.get("title", ev.get("text", "")), size=Pt(15),
-                      color=theme["text"], name=FONT_CN, align=align, space_before=2)
+                      color=theme["text"], font_family=theme.get('font_body', FONT_CN), align=align, space_before=2)
         else:
             _add_para(tf, str(ev), first=True, size=Pt(15),
-                      color=theme["text"], name=FONT_CN, align=align)
+                      color=theme["text"], font_family=theme.get('font_body', FONT_CN), align=align)
     return slide
 
 def layout_comparison(prs, theme, ctx):
@@ -1005,30 +1038,30 @@ def layout_comparison(prs, theme, ctx):
                     anchor=MSO_ANCHOR.MIDDLE)
     _add_para(vstf, "VS", first=True, size=Pt(14),
               color=_text_on(theme["accent"]),
-              bold=True, name=FONT_EN, align=PP_ALIGN.CENTER)
+              bold=True, font_family=theme.get('font_heading', FONT_EN), align=PP_ALIGN.CENTER)
     # 左列
     ltitle = left_data.get("title", "")
     if ltitle:
         ltf = _textbox(slide, MARGIN_X, top, col_w, 0.5)
         _add_para(ltf, ltitle, first=True, size=Pt(22), color=theme["primary"],
-                  bold=True, name=FONT_CN)
+                  bold=True, font_family=theme.get('font_body', FONT_CN))
     lbullets = left_data.get("bullets", [])
     lbf = _textbox(slide, MARGIN_X, top + 0.6, col_w, CONTENT_H - 1.8)
     for i, b in enumerate(lbullets):
         _add_para(lbf, b, first=(i == 0), size=Pt(16), color=theme["text"],
-                  name=FONT_CN, space_before=6 if i > 0 else 0, line_spacing=1.35)
+                  font_family=theme.get('font_body', FONT_CN), space_before=6 if i > 0 else 0, line_spacing=1.35)
     # 右列
     rx = mid_x + 0.15
     rtitle = right_data.get("title", "")
     if rtitle:
         rtf = _textbox(slide, rx, top, col_w, 0.5)
         _add_para(rtf, rtitle, first=True, size=Pt(22), color=theme["secondary"],
-                  bold=True, name=FONT_CN)
+                  bold=True, font_family=theme.get('font_body', FONT_CN))
     rbullets = right_data.get("bullets", [])
     rbf = _textbox(slide, rx, top + 0.6, col_w, CONTENT_H - 1.8)
     for i, b in enumerate(rbullets):
         _add_para(rbf, b, first=(i == 0), size=Pt(16), color=theme["text"],
-                  name=FONT_CN, space_before=6 if i > 0 else 0, line_spacing=1.35)
+                  font_family=theme.get('font_body', FONT_CN), space_before=6 if i > 0 else 0, line_spacing=1.35)
     return slide
 
 
@@ -1039,14 +1072,14 @@ def layout_quote(prs, theme, ctx):
     # 巨大装饰引号
     qtf = _textbox(slide, MARGIN_X - 0.1, 0.8, 3, 3)
     _add_para(qtf, "“", first=True, size=Pt(200), color=theme["primary"],
-              bold=True, name=FONT_EN, align=PP_ALIGN.LEFT)
+              bold=True, font_family=theme.get('font_heading', FONT_EN), align=PP_ALIGN.LEFT)
     _set_alpha_on_textbox(qtf, 0.15)
     # 引文
     quote_text = ctx.get("quote") or ctx.get("title", "")
     qf = _textbox(slide, MARGIN_X + 1.0, 2.2, CONTENT_W - 1.5, 2.5,
                   anchor=MSO_ANCHOR.MIDDLE)
     _add_para(qf, quote_text, first=True, size=Pt(28), color=theme["text"],
-              name=FONT_CN, line_spacing=1.5)
+              font_family=theme.get('font_body', FONT_CN), line_spacing=1.5)
     # Set italic on the run
     if qf.paragraphs and qf.paragraphs[0].runs:
         qf.paragraphs[0].runs[0].font.italic = True
@@ -1055,7 +1088,7 @@ def layout_quote(prs, theme, ctx):
     if source:
         sf = _textbox(slide, MARGIN_X + 1.0, 5.0, CONTENT_W - 1.5, 0.5)
         _add_para(sf, f"—— {source}", first=True, size=Pt(16),
-                  color=theme["accent"], name=FONT_CN)
+                  color=theme["accent"], font_family=theme.get('font_body', FONT_CN))
     # 装饰线
     _rect(slide, MARGIN_X + 1.0, 4.7, 2.0, 0.04, fill=theme["accent"])
     return slide
@@ -1108,13 +1141,13 @@ def layout_process(prs, theme, ctx):
         # 步骤编号
         nf = _textbox(slide, cl, top + 0.3, card_w, 0.6, anchor=MSO_ANCHOR.MIDDLE)
         _add_para(nf, f"STEP {i+1}", first=True, size=Pt(13),
-                  color=c, bold=True, name=FONT_EN, align=PP_ALIGN.CENTER)
+                  color=c, bold=True, font_family=theme.get('font_heading', FONT_EN), align=PP_ALIGN.CENTER)
         # 步骤文字
         step_text = steps[i] if isinstance(steps[i], str) else steps[i].get("title", "")
         sf = _textbox(slide, cl + 0.2, top + 1.0, card_w - 0.4, card_h - 1.2,
                       anchor=MSO_ANCHOR.TOP)
         _add_para(sf, step_text, first=True, size=Pt(16), color=theme["text"],
-                  name=FONT_CN, align=PP_ALIGN.CENTER, line_spacing=1.3)
+                  font_family=theme.get('font_body', FONT_CN), align=PP_ALIGN.CENTER, line_spacing=1.3)
         # 箭头(用右箭头形状)
         if i < n - 1:
             ax = cl + card_w + 0.05
@@ -1138,7 +1171,7 @@ def layout_table(prs, theme, ctx):
         tf = _textbox(slide, MARGIN_X, MARGIN_TOP + 1.2, CONTENT_W, CONTENT_H - 1.2)
         for i, b in enumerate(ctx.get("bullets", [])):
             _add_para(tf, b, first=(i == 0), size=Pt(17), color=theme["text"],
-                      name=FONT_CN, space_before=6 if i > 0 else 0)
+                      font_family=theme.get('font_body', FONT_CN), space_before=6 if i > 0 else 0)
         return slide
     n_cols = len(headers)
     n_rows = len(rows)
@@ -1152,7 +1185,7 @@ def layout_table(prs, theme, ctx):
                       anchor=MSO_ANCHOR.MIDDLE)
         _add_para(tf, h, first=True, size=Pt(14),
                   color=_text_on(theme["primary"]),
-                  bold=True, name=FONT_CN, align=PP_ALIGN.CENTER)
+                  bold=True, font_family=theme.get('font_body', FONT_CN), align=PP_ALIGN.CENTER)
     # 数据行
     for i, row in enumerate(rows):
         ry = top + (i + 1) * row_h
@@ -1162,7 +1195,7 @@ def layout_table(prs, theme, ctx):
             tf = _textbox(slide, MARGIN_X + j * col_w, ry, col_w, row_h,
                           anchor=MSO_ANCHOR.MIDDLE)
             _add_para(tf, str(cell), first=True, size=Pt(13),
-                      color=theme["text"], name=FONT_CN, align=PP_ALIGN.CENTER)
+                      color=theme["text"], font_family=theme.get('font_body', FONT_CN), align=PP_ALIGN.CENTER)
     return slide
 
 
@@ -1180,13 +1213,13 @@ def layout_end(prs, theme, ctx):
     tf = _textbox(slide, MARGIN_X, SLIDE_H / 2 - 1, CONTENT_W, 2.0,
                   anchor=MSO_ANCHOR.MIDDLE)
     _add_para(tf, text, first=True, size=Pt(56), color=theme["white"],
-              bold=True, name=FONT_CN, align=PP_ALIGN.CENTER, line_spacing=1.1)
+              bold=True, font_family=theme.get('font_body', FONT_CN), align=PP_ALIGN.CENTER, line_spacing=1.1)
     # 副文字
     sub = ctx.get("subtitle") or ctx.get("source")
     if sub:
         sf = _textbox(slide, MARGIN_X, SLIDE_H / 2 + 1.2, CONTENT_W, 0.6)
         _add_para(sf, sub, first=True, size=Pt(16), color=theme["text_muted"],
-                  name=FONT_CN, align=PP_ALIGN.CENTER)
+                  font_family=theme.get('font_body', FONT_CN), align=PP_ALIGN.CENTER)
     # 底部装饰线
     _rect(slide, SLIDE_W / 2 - 0.6, SLIDE_H - 1.2, 1.2, 0.04,
           fill=theme["accent"])

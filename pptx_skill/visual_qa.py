@@ -11,6 +11,7 @@ from typing import Any
 
 from pptx_skill.content_model import BBox
 from pptx_skill.pptx_renderer import RenderResult
+from pptx_skill.semantic_qa import SemanticQAReport
 
 
 class Severity(StrEnum):
@@ -28,7 +29,11 @@ class CheckOutcome(StrEnum):
 class PresentationQualityError(Exception):
     """Raised in strict QA mode when blockers cannot be repaired."""
 
-    def __init__(self, report: QAReport, message: str = "Presentation quality check failed"):
+    def __init__(
+        self,
+        report: QAReport | SemanticQAReport | None,
+        message: str = "Presentation quality check failed",
+    ):
         super().__init__(message)
         self.report = report
 

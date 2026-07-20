@@ -349,6 +349,7 @@ def _score_candidate(
     canvas: CanvasSpec,
     slide: SlideSpec,
     tokens: dict[str, Any],
+    font_family: str | None = None,
 ) -> CandidateBundle:
     diagnostics: list[dict] = []
     score = 0.0
@@ -357,6 +358,7 @@ def _score_candidate(
     if geometry.infeasible:
         return CandidateBundle(recipe, geometry, score=1e9, blocker_count=1, diagnostics=diagnostics)
 
+    _default_font = font_family or tokens.get("primitive", {}).get("font", {}).get("family", {}).get("body", "Microsoft YaHei")
     bboxes = _zone_bboxes(geometry.variables)
     elements_by_role = {e.role: e for e in slide.elements}
 
@@ -369,7 +371,7 @@ def _score_candidate(
         resolved_style: dict[str, Any] = {}
         if element:
             content = element.content or {}
-            resolved_style = {"font_family": "Microsoft YaHei", "size": 16.0}
+            resolved_style = {"font_family": _default_font, "size": 16.0}
             token_size = tokens.get("component", {}).get(zone_name, {}).get("size", 16)
             resolved_style["size"] = float(token_size) if not isinstance(token_size, dict) else 16.0
         nodes.append(
@@ -436,6 +438,7 @@ def plan_slide_candidates(
     tokens: dict[str, Any],
     hints: dict[str, float] | None = None,
     max_candidates: int = 3,
+    font_family: str | None = None,
 ) -> tuple[list[CandidateBundle], list[dict]]:
     """Solve and score a list of recipe candidates for a slide."""
     all_diagnostics: list[dict] = []
@@ -443,7 +446,7 @@ def plan_slide_candidates(
     all_bundles: list[CandidateBundle] = []
     for recipe in recipes:
         geometry = solve_recipe(recipe, canvas, tokens, hints=hints)
-        bundle = _score_candidate(recipe, geometry, canvas, slide, tokens)
+        bundle = _score_candidate(recipe, geometry, canvas, slide, tokens, font_family=font_family)
         all_diagnostics.append({"recipe": recipe.id, "score": bundle.score, "blockers": bundle.blocker_count})
         all_bundles.append(bundle)
         if bundle.blocker_count == 0:
@@ -461,15 +464,17 @@ def solved_geometry_to_layout_plan(
     geometry: SolvedGeometry,
     canvas: CanvasSpec,
     tokens: dict[str, Any],
+    font_family: str | None = None,
 ) -> LayoutPlan:
     """Convert a solved recipe into a LayoutPlan."""
+    _default_font = font_family or tokens.get("primitive", {}).get("font", {}).get("family", {}).get("body", "Microsoft YaHei")
     bboxes = _zone_bboxes(geometry.variables)
     elements_by_role = {e.role: e for e in slide.elements}
     nodes: list[PlannedNode] = []
     for idx, (zone_name, zone) in enumerate(recipe.zones.items()):
         bbox = bboxes.get(zone_name, BBox(0, 0, 100, 100))
         element = elements_by_role.get(zone_name)
-        style: dict[str, Any] = {"font_family": "Microsoft YaHei", "size": 16.0}
+        style: dict[str, Any] = {"font_family": _default_font, "size": 16.0}
         if element:
             raw_size = tokens.get("component", {}).get(zone_name, {}).get("size", 16)
             if isinstance(raw_size, dict) and "$ref" in raw_size:
@@ -847,9 +852,10 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "subtitle.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "subtitle.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "subtitle.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "hero.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
                 {"terms": [{"var": "hero.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "hero.top"}, {"var": "kicker.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
-                {"terms": [{"var": "hero.height"}], "op": ">=", "rhs": {"const": 200}},
+                {"terms": [{"var": "hero.height"}], "op": "==", "rhs": {"const": 200}},
                 {"terms": [{"var": "hero.bottom"}, {"var": "hero.top", "coef": -1}, {"var": "hero.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
             ],
             {"title.max_lines": 2, "title.min_font_size": 36},
@@ -1064,9 +1070,9 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "a.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
                 {"terms": [{"var": "a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "a.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
-                {"terms": [{"var": "a.right"}, {"var": "b.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "b.left"}, {"var": "a.right", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "b.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
-                {"terms": [{"var": "b.right"}, {"var": "c.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "c.left"}, {"var": "b.right", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "b.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
                 {"terms": [{"var": "c.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "c.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
@@ -1797,10 +1803,10 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "a.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
                 {"terms": [{"var": "a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "a.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
-                {"terms": [{"var": "a.right"}, {"var": "b.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "b.left"}, {"var": "a.right", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "b.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
                 {"terms": [{"var": "b.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
-                {"terms": [{"var": "b.right"}, {"var": "c.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "c.left"}, {"var": "b.right", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "c.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
                 {"terms": [{"var": "c.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "c.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},

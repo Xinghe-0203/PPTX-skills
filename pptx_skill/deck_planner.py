@@ -197,6 +197,7 @@ def _plan_slide(
     config: LayoutScoringConfig,
     qa_engine: SemanticQAEngine,
     min_font_size_pt: float,
+    font_family: str | None = None,
 ) -> SlidePlanResult:
     """Plan a single source slide: try single-page candidates, split if overloaded."""
     role = slide.role
@@ -205,7 +206,7 @@ def _plan_slide(
         return SlidePlanResult(status="infeasible", candidates=[], blockers=[{"reason": "no recipes"}], diagnostics=[])
 
     candidates, diagnostics = plan_slide_candidates(
-        slide, recipes, canvas, tokens, max_candidates=config.max_candidates
+        slide, recipes, canvas, tokens, max_candidates=config.max_candidates, font_family=font_family
     )
 
     bundles: list[SlidePlanCandidate] = []
@@ -214,7 +215,7 @@ def _plan_slide(
         derived = [slide]
         ok = True
         for derived_slide in derived:
-            plan = solved_geometry_to_layout_plan(derived_slide, bundle.recipe, bundle.geometry, canvas, tokens)
+            plan = solved_geometry_to_layout_plan(derived_slide, bundle.recipe, bundle.geometry, canvas, tokens, font_family=font_family)
             report = qa_engine.check(plan)
             if not report.passed:
                 ok = False
@@ -245,7 +246,7 @@ def _plan_slide(
         )
         if split_slides:
             split_bundle = _build_split_candidate(
-                split_slides, recipes[0], canvas, tokens, qa_engine
+                split_slides, recipes[0], canvas, tokens, qa_engine, font_family=font_family
             )
             if split_bundle is not None:
                 bundles.append(split_bundle)
@@ -262,6 +263,7 @@ def _build_split_candidate(
     canvas: CanvasSpec,
     tokens: dict[str, Any],
     qa_engine: SemanticQAEngine,
+    font_family: str | None = None,
 ) -> SlidePlanCandidate | None:
     """Build a split candidate bundle from paginated slides using the first recipe."""
     from pptx_skill.layout_engine import solve_recipe
@@ -272,7 +274,7 @@ def _build_split_candidate(
         geometry = solve_recipe(recipe_template, canvas, tokens)
         if geometry.infeasible:
             return None
-        plan = solved_geometry_to_layout_plan(derived_slide, recipe_template, geometry, canvas, tokens)
+        plan = solved_geometry_to_layout_plan(derived_slide, recipe_template, geometry, canvas, tokens, font_family=font_family)
         report = qa_engine.check(plan)
         if not report.passed:
             # Split pages that still fail are kept but penalized; do not drop silently.
@@ -302,6 +304,15 @@ def plan_deck(
     min_font_size_pt = float(
         profile_state.get("qa", {}).get("min_body_font_size", 9)
     )
+    # Extract font_family from profile_state (set by template V2 adapter or caller)
+    # Priority: explicit font_family key > fonts.cn (body font from V2 adapter) > tokens
+    font_family = profile_state.get("font_family")
+    if not font_family:
+        fonts = profile_state.get("fonts")
+        if fonts and isinstance(fonts, dict):
+            font_family = fonts.get("cn") or fonts.get("body")
+    if not font_family:
+        font_family = tokens.get("primitive", {}).get("font", {}).get("family", {}).get("body")
 
     blockers: list[dict] = []
     diagnostics: list[dict] = []
@@ -309,7 +320,7 @@ def plan_deck(
     # Per-slide SlidePlanResult.
     per_slide: list[SlidePlanResult] = []
     for idx, slide in enumerate(slides):
-        result = _plan_slide(slide, canvas, tokens, config, qa_engine, min_font_size_pt)
+        result = _plan_slide(slide, canvas, tokens, config, qa_engine, min_font_size_pt, font_family=font_family)
         per_slide.append(result)
         diagnostics.append({"slide_index": idx, "status": result.status, "candidates": len(result.candidates)})
         if result.status == "infeasible":
@@ -320,7 +331,7 @@ def plan_deck(
                 candidates=[
                     SlidePlanCandidate(
                         derived_slides=[slide],
-                        plans=[_fallback_plan(slide, canvas)],
+                        plans=[_fallback_plan(slide, canvas, font_family=font_family)],
                         local_score=1e6,
                         diagnostics=result.diagnostics,
                         kind="single",
@@ -373,10 +384,11 @@ def plan_deck(
     )
 
 
-def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec) -> LayoutPlan:
+def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec, font_family: str | None = None) -> LayoutPlan:
     """A minimal plan for an infeasible slide so the beam can continue."""
     from pptx_skill.content_model import BBox, GeometrySpec
 
+    _default_font = font_family or "Microsoft YaHei"
     nodes: list[PlannedNode] = []
     for idx, element in enumerate(slide.elements):
         nodes.append(
@@ -387,7 +399,7 @@ def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec) -> LayoutPlan:
                 kind=element.kind,
                 role=element.role,
                 geometry=GeometrySpec(BBox(48, 48 + idx * 60, max(canvas.width_pt - 96, 24), 50)),
-                resolved_style={"font_family": "Microsoft YaHei", "size": 16.0},
+                resolved_style={"font_family": _default_font, "size": 16.0},
                 content_binding=element.content or {},
                 z_order=idx,
             )

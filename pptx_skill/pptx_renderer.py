@@ -98,6 +98,7 @@ def _pt_to_inches(pt: float) -> float:
 
 def _apply_text_style(run, style: dict[str, Any]) -> None:
     from pptx.dml.color import RGBColor
+    from pptx.oxml.ns import qn
     from pptx.util import Pt
 
     if "size" in style:
@@ -108,6 +109,20 @@ def _apply_text_style(run, style: dict[str, Any]) -> None:
         run.font.bold = True
     if style.get("italic"):
         run.font.italic = True
+    # Apply font_family from resolved style (set by layout_engine / deck_planner)
+    font_family = style.get("font_family")
+    if font_family:
+        run.font.name = font_family
+        # Also set East-Asian typeface to keep CJK consistency
+        try:
+            rPr = run._r.get_or_add_rPr()
+            ea = rPr.find(qn("a:ea"))
+            if ea is None:
+                ea = rPr.makeelement(qn("a:ea"), {})
+                rPr.append(ea)
+            ea.set("typeface", font_family)
+        except Exception:
+            pass
 
 
 def _align_from_str(align_str: str):
@@ -896,7 +911,12 @@ def _add_video_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
 
 
 def _add_audio_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
-    """Render an audio node via XML manipulation (python-pptx lacks add_audio)."""
+    """Render an audio node using add_movie with audio MIME type.
+
+    python-pptx does not have a dedicated add_audio API, but add_movie
+    supports embedding media files including audio when given an audio
+    MIME type. Falls back to a placeholder shape on failure.
+    """
     from pptx.enum.shapes import MSO_SHAPE
     from pptx.util import Inches
 
@@ -907,69 +927,44 @@ def _add_audio_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     height = Inches(_pt_to_inches(geom.height))
 
     binding = node.content_binding or {}
-    audio_path = binding.get("path", "")
+    path = binding.get("path", "")
 
-    # Add a placeholder shape with an audio icon
-    shape = slide.shapes.add_shape(
-        MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height
-    )
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = RGBColor(80, 80, 80)
-    shape.line.fill.background()
-
-    tf = shape.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.alignment = _align_from_str("center")
-    run = p.add_run()
-    run.text = "♪ Audio"
-    run.font.color.rgb = RGBColor(255, 255, 255)
-
-    # If audio file exists, embed via XML manipulation
-    if audio_path and Path(audio_path).exists():
+    if not path or not Path(path).exists():
+        # Placeholder shape when audio file is missing
+        shape = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height
+        )
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = RGBColor(240, 240, 240)
+        shape.line.fill.background()
+        tf = shape.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.alignment = _align_from_str("center")
+        run = p.add_run()
+        run.text = "♪ Audio"
+        run.font.color.rgb = RGBColor(100, 100, 100)
+    else:
         try:
-            from lxml import etree
-            import os
-
-            # Add a media relationship to the slide's part
-            media_type = "audio/mpeg"
-            if audio_path.lower().endswith(".wav"):
-                media_type = "audio/wav"
-            elif audio_path.lower().endswith(".ogg"):
-                media_type = "audio/ogg"
-
-            rel = slide.part.relate_to(audio_path, media_type)
-
-            # Build the media XML element inside the shape
-            ns_a = "http://schemas.openxmlformats.org/drawingml/2006/main"
-            ns_r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-            ns_p = "http://schemas.openxmlformats.org/presentationml/2006/main"
-
-            sp = shape._element
-            # Find or create nvSpPr to add video/audio element
-            nvSpPr = sp.find(f"{{{ns_p}}}nvSpPr")
-            if nvSpPr is not None:
-                # Remove existing nvSpPr/cNvSpPr and replace with media nvGrpSpPr
-                pass  # Keep existing structure; add media element separately
-
-            # Add an audio element as a child of the shape tree
-            # This is a simplified approach: we add the relationship and
-            # mark the shape as containing media.
-            audio_elem = etree.SubElement(sp, f"{{{ns_p}}}audio")
-            audio_elem.set("showMediaControls", "1")
-            # Link to the media relationship
-            cNvPr = sp.find(f".//{{{ns_a}}}cNvPr")
-            if cNvPr is None:
-                # Try in p namespace
-                cNvPr = sp.find(f".//{{{ns_p}}}cNvPr")
-            if cNvPr is not None:
-                # Add the audio reference
-                hlinkClick = etree.SubElement(cNvPr, f"{{{ns_a}}}hlinkClick")
-                hlinkClick.set(f"{{{ns_r}}}id", rel)
-
-            log.info("Audio media relationship added: %s", rel)
+            mime = binding.get("mime_type", "audio/mpeg")
+            shape = slide.shapes.add_movie(
+                path, left, top, width, height, mime_type=mime
+            )
         except Exception as exc:
-            log.warning("Failed to embed audio via XML: %s", exc)
+            log.warning("Failed to embed audio %s: %s", path, exc)
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height
+            )
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = RGBColor(240, 240, 240)
+            shape.line.fill.background()
+            tf = shape.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            p.alignment = _align_from_str("center")
+            run = p.add_run()
+            run.text = "♪ Audio"
+            run.font.color.rgb = RGBColor(100, 100, 100)
 
     return RenderTraceEntry(
         render_node_id=node.id,

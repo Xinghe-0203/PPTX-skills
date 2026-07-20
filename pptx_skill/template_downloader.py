@@ -9,6 +9,7 @@ dependency.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import re
@@ -79,6 +80,79 @@ REMOTE_PACKS: list[dict[str, Any]] = [
 
 
 # ---------------------------------------------------------------------------
+# Security helpers
+# ---------------------------------------------------------------------------
+
+# Private-network CIDRs that must never be reached from user-supplied URLs.
+_PRIVATE_NETWORKS = [
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+]
+
+
+def _validate_url(url: str) -> None:
+    """Reject dangerous URLs: non-HTTP(S) schemes and private/reserved IPs."""
+    parsed = urllib.parse.urlparse(url)
+    scheme = parsed.scheme.lower()
+    if scheme not in ("http", "https"):
+        raise ValueError(
+            f"Blocked URL scheme {scheme!r}; only http and https are allowed"
+        )
+    if scheme == "file":
+        # Redundant (already blocked above), but explicit for clarity.
+        raise ValueError("file:// scheme is not allowed for downloads")
+
+    hostname = parsed.hostname
+    if not hostname:
+        return  # relative / malformed; let urllib surface the real error later
+
+    try:
+        # Resolve the hostname to check for private IPs.
+        import socket
+        addr_infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror:
+        return  # unresolvable hostname; let urllib surface the real error later
+
+    for _family, _type, _proto, _canon, sockaddr in addr_infos:
+        ip_str = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        for network in _PRIVATE_NETWORKS:
+            if ip in network:
+                raise ValueError(
+                    f"Blocked private IP {ip_str} for hostname {hostname!r}"
+                )
+
+
+def _sanitize_filename(name: str) -> str:
+    """Strip path separators and traversal sequences from a filename."""
+    # Keep only the last path component (defence against embedded / or \).
+    name = name.replace("\\", "/").rsplit("/", 1)[-1]
+    # Reject traversal patterns.
+    if ".." in name:
+        raise ValueError(f"Filename contains path-traversal sequence: {name!r}")
+    # Remove leading dots (hidden files / relative tricks).
+    name = name.lstrip(".")
+    if not name:
+        raise ValueError("Filename is empty after sanitization")
+    return name
+
+
+def _validate_output_dir(output_dir: str) -> Path:
+    """Validate *output_dir* does not contain path-traversal sequences."""
+    if ".." in Path(output_dir).parts:
+        raise ValueError(
+            f"output_dir contains path-traversal sequence '..': {output_dir!r}"
+        )
+    p = Path(output_dir).resolve()
+    return p
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -92,6 +166,7 @@ def _ensure_scripts_on_path() -> None:
 
 def _fetch_json(url: str, timeout: int = _REQUEST_TIMEOUT) -> Any:
     """Fetch JSON from *url*, raising on HTTP errors."""
+    _validate_url(url)
     req = urllib.request.Request(url, headers={"User-Agent": "pptx-skill/2.0"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
@@ -100,6 +175,7 @@ def _fetch_json(url: str, timeout: int = _REQUEST_TIMEOUT) -> Any:
 
 def _download_file(url: str, dest: Path, timeout: int = _REQUEST_TIMEOUT) -> None:
     """Download a single file from *url* to *dest*."""
+    _validate_url(url)
     req = urllib.request.Request(url, headers={"User-Agent": "pptx-skill/2.0"})
     dest.parent.mkdir(parents=True, exist_ok=True)
     with urllib.request.urlopen(req, timeout=timeout) as resp, \
@@ -177,7 +253,7 @@ def download_template_pack(source: str, output_dir: str, **kwargs: Any) -> dict[
     dict with ``downloaded`` (list of file paths), ``errors`` (list of error
     messages), and ``source`` (the *source* argument).
     """
-    out = Path(output_dir)
+    out = _validate_output_dir(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     result: dict[str, Any] = {"downloaded": [], "errors": [], "source": source}
 
@@ -206,7 +282,7 @@ def download_template_pack(source: str, output_dir: str, **kwargs: Any) -> dict[
             return result
 
         for rel_path in pptx_paths:
-            filename = Path(rel_path).name
+            filename = _sanitize_filename(Path(rel_path).name)
             dest = out / filename
             try:
                 raw_url = _github_raw_url(repo, rel_path, branch)
@@ -225,7 +301,8 @@ def download_template_pack(source: str, output_dir: str, **kwargs: Any) -> dict[
             return result
         # Derive filename from URL path, fallback to "downloaded.pptx"
         parsed = urllib.parse.urlparse(url)
-        filename = Path(parsed.path).name or "downloaded.pptx"
+        raw_name = Path(parsed.path).name or "downloaded.pptx"
+        filename = _sanitize_filename(raw_name)
         if not filename.lower().endswith(".pptx"):
             filename += ".pptx"
         dest = out / filename
@@ -303,7 +380,7 @@ def import_template(
     on_dark = theme.get("on_dark", False)
 
     # Build three-layer tokens (primitive -> semantic -> component)
-    palette = {
+    primitive_tokens = {
         "palette": {
             "ink_950": theme.get("dark", "#1A1A1A"),
             "paper_050": theme.get("bg", "#FDFCF8"),
