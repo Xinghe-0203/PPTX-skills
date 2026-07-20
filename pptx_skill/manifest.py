@@ -12,7 +12,7 @@ import json
 import os
 import tempfile
 import zipfile
-from dataclasses import asdict, dataclass, field, is_dataclass
+from dataclasses import MISSING, asdict, dataclass, field, is_dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -169,8 +169,8 @@ def _deserialize_dataclass(cls: type, data: dict[str, Any]) -> Any:
     try:
         obj = cls(**kwargs)
     except TypeError:
-        defaults = {f.name: f.default for f in cls.__dataclass_fields__.values() if f.default is not dataclass.MISSING}
-        defaults.update({f.name: f.default_factory() for f in cls.__dataclass_fields__.values() if f.default_factory is not dataclass.MISSING})
+        defaults = {f.name: f.default for f in cls.__dataclass_fields__.values() if f.default is not MISSING}
+        defaults.update({f.name: f.default_factory() for f in cls.__dataclass_fields__.values() if f.default_factory is not MISSING})
         for k in cls.__dataclass_fields__:
             if k not in kwargs and k in defaults:
                 kwargs[k] = defaults[k]
@@ -429,7 +429,10 @@ def load_manifest(pptx_path: str | Path) -> ManifestV3 | None:
         manifest.legacy.setdefault("loaded_from", source_version)
         return manifest
 
-    # Treat any payload without manifest_schema_version as legacy v2.
+    if schema_version is not None and schema_version > 3:
+        raise ManifestError(f"Unsupported manifest schema version {schema_version}: {path}")
+
+    # Treat payload without manifest_schema_version as legacy v2.
     manifest = migrate_v2_to_v3(payload)
     manifest.legacy["loaded_from"] = source_version
     manifest.legacy["migrated_at"] = datetime.now(UTC).isoformat()

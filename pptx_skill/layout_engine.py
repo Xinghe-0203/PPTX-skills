@@ -146,7 +146,11 @@ def recipe_to_dict(recipe: LayoutRecipe) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_token(token: str, tokens: dict[str, Any]) -> float:
+def _resolve_token(token: str, tokens: dict[str, Any], _visited: set[str] | None = None) -> float:
+    _visited = _visited or set()
+    if token in _visited:
+        raise ValueError(f"Circular token reference detected: {token}")
+    _visited.add(token)
     parts = token.split(".")
     value = tokens
     for p in parts:
@@ -156,7 +160,7 @@ def _resolve_token(token: str, tokens: dict[str, Any]) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, dict) and "$ref" in value:
-        return _resolve_token(value["$ref"].lstrip("$"), tokens)
+        return _resolve_token(value["$ref"].lstrip("$"), tokens, _visited)
     raise ValueError(f"Token value is not numeric: {token}")
 
 
@@ -327,6 +331,18 @@ def _estimate_text_height(text: str, bbox: BBox, style: dict, tokens: dict) -> t
     return metrics.height_pt, overflow
 
 
+def _normalize_node_kind(raw_kind: str) -> str:
+    """Map a zone kind to a renderable node kind."""
+    _KIND_MAP = {
+        "text-list": "text",
+        "chart-bar": "chart",
+        "chart-line": "chart",
+        "chart-pie": "chart",
+        "chart-area": "chart",
+    }
+    return _KIND_MAP.get(raw_kind, raw_kind.split("-")[0] if "-" in raw_kind else raw_kind)
+
+
 def _score_candidate(
     recipe: LayoutRecipe,
     geometry: SolvedGeometry,
@@ -361,7 +377,7 @@ def _score_candidate(
                 id=f"{slide.id}/{zone_name}",
                 element_id=element.id if element else None,
                 recipe_node_id=zone_name,
-                kind=zone.kind.split("-")[0] if "-" in zone.kind else zone.kind,
+                kind=_normalize_node_kind(zone.kind),
                 role=zone_name,
                 geometry=GeometrySpec(bbox),
                 resolved_style=resolved_style,
@@ -464,7 +480,7 @@ def solved_geometry_to_layout_plan(
                 id=f"{slide.id}/{zone_name}",
                 element_id=element.id if element else None,
                 recipe_node_id=zone_name,
-                kind=zone.kind.split("-")[0] if "-" in zone.kind else zone.kind,
+                kind=_normalize_node_kind(zone.kind),
                 role=zone_name,
                 geometry=GeometrySpec(bbox),
                 resolved_style=style,
@@ -606,6 +622,48 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
             ],
             {"body.max_items": 10, "body.min_font_size": 14},
         ))
+        recipes.append(_recipe(
+            "bullets.sparse",
+            "bullets",
+            "sparse",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "body": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "body.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "body.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "body.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "body.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"body.max_items": 4, "body.min_font_size": 18},
+        ))
+        recipes.append(_recipe(
+            "bullets.dense",
+            "bullets",
+            "dense",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "body": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 36}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "body.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "body.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "body.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "body.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"body.max_items": 12, "body.min_font_size": 12},
+        ))
     elif role == "text_image":
         recipes.append(_recipe(
             "text_image.asymmetric_left",
@@ -714,6 +772,54 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "right.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
                 {"terms": [{"var": "right.left"}, {"var": "left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
             ],
+        ))
+        recipes.append(_recipe(
+            "dashboard.sparse",
+            "dashboard",
+            "sparse",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "lead": {"kind": "text", "style": "component.metric"},
+                "support": {"kind": "text", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "lead.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "lead.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "lead.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "lead.height"}], "op": "==", "rhs": {"const": 180}},
+                {"terms": [{"var": "lead.bottom"}, {"var": "lead.top", "coef": -1}, {"var": "lead.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "support.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "support.top"}, {"var": "lead.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "support.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "support.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"lead.max_metrics": 3, "support.min_font_size": 16},
+        ))
+        recipes.append(_recipe(
+            "dashboard.dense",
+            "dashboard",
+            "dense",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "grid": {"kind": "text-list", "style": "component.metric"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 36}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "grid.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "grid.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "grid.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "grid.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"grid.max_metrics": 8, "grid.min_font_size": 12},
         ))
     elif role == "cover":
         recipes.append(_recipe(
@@ -970,6 +1076,45 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "b.width"}, {"var": "c.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
             ],
         ))
+        recipes.append(_recipe(
+            "image_grid.grid4",
+            "image_grid",
+            "grid4",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "a": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "b": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "c": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "d": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Top-left image
+                {"terms": [{"var": "a.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "a.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "a.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                # Top-right image
+                {"terms": [{"var": "b.left"}, {"var": "a.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "b.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "b.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "b.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Bottom-left image
+                {"terms": [{"var": "c.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "c.top"}, {"var": "a.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "c.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "c.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Bottom-right image
+                {"terms": [{"var": "d.left"}, {"var": "c.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "d.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "d.top"}, {"var": "c.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "d.bottom"}, {"var": "c.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+            ],
+        ))
     elif role == "timeline":
         recipes.append(_recipe(
             "timeline.horizontal",
@@ -1020,6 +1165,32 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "items.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
             {"items.max_items": 6, "items.min_font_size": 14},
+        ))
+        recipes.append(_recipe(
+            "timeline.vertical_dense",
+            "timeline",
+            "vertical_dense",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "items": {"kind": "text-list", "style": "component.body"},
+                "axis": {"kind": "shape", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 32}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "axis.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "axis.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "axis.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "axis.width"}], "op": "==", "rhs": {"const": 2}},
+                {"terms": [{"var": "items.left"}, {"var": "axis.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "items.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "items.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "items.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"items.max_items": 10, "items.min_font_size": 11},
         ))
     elif role == "comparison":
         recipes.append(_recipe(
@@ -1073,6 +1244,51 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "right.top"}, {"var": "left.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
                 {"terms": [{"var": "right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "right.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+        ))
+        recipes.append(_recipe(
+            "comparison.three_column",
+            "comparison",
+            "three_column",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "left": {"kind": "text", "style": "component.body"},
+                "center": {"kind": "text", "style": "component.body"},
+                "right": {"kind": "text", "style": "component.body"},
+                "divider_a": {"kind": "shape", "style": "component.body"},
+                "divider_b": {"kind": "shape", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Left column
+                {"terms": [{"var": "left.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "left.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "left.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Center column
+                {"terms": [{"var": "center.top"}, {"var": "left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "center.bottom"}, {"var": "left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Right column
+                {"terms": [{"var": "right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "right.top"}, {"var": "left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "right.bottom"}, {"var": "left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Equal column widths
+                {"terms": [{"var": "left.width"}, {"var": "center.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "center.width"}, {"var": "right.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Dividers
+                {"terms": [{"var": "divider_a.left"}, {"var": "left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "divider_a.width"}], "op": "==", "rhs": {"const": 1}},
+                {"terms": [{"var": "divider_a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "divider_a.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "center.left"}, {"var": "divider_a.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "divider_b.left"}, {"var": "center.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "divider_b.width"}], "op": "==", "rhs": {"const": 1}},
+                {"terms": [{"var": "divider_b.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "divider_b.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "right.left"}, {"var": "divider_b.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
             ],
         ))
     elif role == "quote":
@@ -1173,6 +1389,27 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
             ],
             {"steps.max_items": 6, "steps.min_font_size": 14},
         ))
+        recipes.append(_recipe(
+            "process.horizontal_dense",
+            "process",
+            "horizontal_dense",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "steps": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 32}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "steps.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "steps.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "steps.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "steps.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"steps.max_items": 8, "steps.min_font_size": 11},
+        ))
     elif role == "table":
         recipes.append(_recipe(
             "table.standard",
@@ -1212,6 +1449,28 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "table.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
         ))
+        recipes.append(_recipe(
+            "table.wide",
+            "table",
+            "wide",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "table": {"kind": "table", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 32}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Table uses minimal margins for wider column space
+                {"terms": [{"var": "table.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "table.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "table.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "table.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"table.min_col_width": 80, "table.min_font_size": 11},
+        ))
     elif role == "end":
         recipes.append(_recipe(
             "end.thanks",
@@ -1247,5 +1506,343 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "title.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
             {"title.max_lines": 2, "title.min_font_size": 36},
+        ))
+    elif role == "matrix":
+        recipes.append(_recipe(
+            "matrix.quadrant",
+            "matrix",
+            "quadrant",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "top_left": {"kind": "text", "style": "component.body"},
+                "top_right": {"kind": "text", "style": "component.body"},
+                "bottom_left": {"kind": "text", "style": "component.body"},
+                "bottom_right": {"kind": "text", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Top-left quadrant
+                {"terms": [{"var": "top_left.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "top_left.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "top_left.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "top_left.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                # Top-right quadrant
+                {"terms": [{"var": "top_right.left"}, {"var": "top_left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "top_right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "top_right.top"}, {"var": "top_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "top_right.bottom"}, {"var": "top_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Bottom-left quadrant
+                {"terms": [{"var": "bottom_left.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "bottom_left.top"}, {"var": "top_left.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "bottom_left.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "bottom_left.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Bottom-right quadrant
+                {"terms": [{"var": "bottom_right.left"}, {"var": "bottom_left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "bottom_right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "bottom_right.top"}, {"var": "bottom_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "bottom_right.bottom"}, {"var": "bottom_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+            ],
+        ))
+        recipes.append(_recipe(
+            "matrix.labeled",
+            "matrix",
+            "labeled",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "col_label_left": {"kind": "text", "style": "component.body"},
+                "col_label_right": {"kind": "text", "style": "component.body"},
+                "row_label_top": {"kind": "text", "style": "component.body"},
+                "row_label_bottom": {"kind": "text", "style": "component.body"},
+                "top_left": {"kind": "text", "style": "component.body"},
+                "top_right": {"kind": "text", "style": "component.body"},
+                "bottom_left": {"kind": "text", "style": "component.body"},
+                "bottom_right": {"kind": "text", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Column labels
+                {"terms": [{"var": "col_label_left.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "col_label_left.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "col_label_left.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "col_label_left.height"}], "op": "==", "rhs": {"const": 24}},
+                {"terms": [{"var": "col_label_right.left"}, {"var": "col_label_left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "col_label_right.top"}, {"var": "col_label_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "col_label_right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "col_label_right.height"}], "op": "==", "rhs": {"const": 24}},
+                # Row labels (left column, narrow)
+                {"terms": [{"var": "row_label_top.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "row_label_top.top"}, {"var": "col_label_left.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "row_label_top.width"}], "op": "==", "rhs": {"const": 80}},
+                {"terms": [{"var": "row_label_top.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                {"terms": [{"var": "row_label_bottom.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "row_label_bottom.top"}, {"var": "row_label_top.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "row_label_bottom.width"}], "op": "==", "rhs": {"const": 80}},
+                {"terms": [{"var": "row_label_bottom.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Quadrant cells
+                {"terms": [{"var": "top_left.left"}, {"var": "row_label_top.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "top_left.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "top_left.top"}, {"var": "col_label_left.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "top_left.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                {"terms": [{"var": "top_right.left"}, {"var": "top_left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "top_right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "top_right.top"}, {"var": "top_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "top_right.bottom"}, {"var": "top_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "bottom_left.left"}, {"var": "row_label_bottom.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "bottom_left.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "bottom_left.top"}, {"var": "top_left.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "bottom_left.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "bottom_right.left"}, {"var": "bottom_left.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "bottom_right.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "bottom_right.top"}, {"var": "bottom_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "bottom_right.bottom"}, {"var": "bottom_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+            ],
+        ))
+    elif role == "kpi_hero":
+        recipes.append(_recipe(
+            "kpi_hero.split",
+            "kpi_hero",
+            "split",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "kpi_value": {"kind": "text", "style": "component.title"},
+                "kpi_label": {"kind": "text", "style": "component.body"},
+                "chart": {"kind": "chart", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # KPI value (large number, left side)
+                {"terms": [{"var": "kpi_value.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "kpi_value.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "kpi_value.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "kpi_value.height"}], "op": "==", "rhs": {"const": 80}},
+                # KPI label below value
+                {"terms": [{"var": "kpi_label.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "kpi_label.top"}, {"var": "kpi_value.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "kpi_label.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "kpi_label.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Chart area (right side)
+                {"terms": [{"var": "chart.left"}, {"var": "kpi_value.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "chart.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "chart.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "chart.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"kpi_value.max_lines": 1, "kpi_value.min_font_size": 48},
+        ))
+        recipes.append(_recipe(
+            "kpi_hero.full",
+            "kpi_hero",
+            "full",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "kpi_value": {"kind": "text", "style": "component.title"},
+                "kpi_label": {"kind": "text", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # KPI value centered, large
+                {"terms": [{"var": "kpi_value.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "kpi_value.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "kpi_value.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "kpi_value.height"}], "op": "==", "rhs": {"const": 120}},
+                # KPI label below
+                {"terms": [{"var": "kpi_label.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "kpi_label.top"}, {"var": "kpi_value.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "kpi_label.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "kpi_label.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"kpi_value.max_lines": 1, "kpi_value.min_font_size": 72},
+        ))
+    elif role == "faq":
+        recipes.append(_recipe(
+            "faq.alternating",
+            "faq",
+            "alternating",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "questions": {"kind": "text-list", "style": "component.body"},
+                "answers": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Questions on left half
+                {"terms": [{"var": "questions.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "questions.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "questions.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "questions.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Answers on right half
+                {"terms": [{"var": "answers.left"}, {"var": "questions.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "answers.top"}, {"var": "questions.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "answers.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "answers.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"questions.max_items": 6, "questions.min_font_size": 14},
+        ))
+        recipes.append(_recipe(
+            "faq.stacked",
+            "faq",
+            "stacked",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "questions": {"kind": "text-list", "style": "component.body"},
+                "answers": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Questions spanning full width, top half
+                {"terms": [{"var": "questions.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "questions.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "questions.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "questions.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                # Answers spanning full width, bottom half
+                {"terms": [{"var": "answers.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "answers.top"}, {"var": "questions.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "answers.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "answers.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"questions.max_items": 4, "questions.min_font_size": 14},
+        ))
+    elif role == "testimonial":
+        recipes.append(_recipe(
+            "testimonial.centered",
+            "testimonial",
+            "centered",
+            {
+                "quote_text": {"kind": "text", "style": "component.title"},
+                "attribution": {"kind": "text", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "quote_text.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "quote_text.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "quote_text.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "quote_text.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                {"terms": [{"var": "attribution.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "attribution.top"}, {"var": "quote_text.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "attribution.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "attribution.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "attribution.height"}], "op": "==", "rhs": {"const": 24}},
+            ],
+            {"quote_text.max_lines": 4, "quote_text.min_font_size": 24},
+        ))
+        recipes.append(_recipe(
+            "testimonial.card",
+            "testimonial",
+            "card",
+            {
+                "quote_text": {"kind": "text", "style": "component.title"},
+                "attribution": {"kind": "text", "style": "component.body"},
+                "card_bg": {"kind": "shape", "style": "component.body"},
+            },
+            [
+                # Card background
+                {"terms": [{"var": "card_bg.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "card_bg.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "card_bg.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "card_bg.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Quote text inside card with padding
+                {"terms": [{"var": "quote_text.left"}], "op": ">=", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "quote_text.top"}], "op": ">=", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "quote_text.right"}], "op": "<=", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "quote_text.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                # Attribution below
+                {"terms": [{"var": "attribution.left"}], "op": ">=", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "attribution.top"}, {"var": "quote_text.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "attribution.right"}], "op": "<=", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "attribution.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "attribution.height"}], "op": "==", "rhs": {"const": 24}},
+            ],
+            {"quote_text.max_lines": 4, "quote_text.min_font_size": 22},
+        ))
+    elif role == "logo_wall":
+        recipes.append(_recipe(
+            "logo_wall.grid3",
+            "logo_wall",
+            "grid3",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "a": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "b": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "c": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Three logo columns
+                {"terms": [{"var": "a.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "a.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "a.right"}, {"var": "b.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "b.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "b.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "b.right"}, {"var": "c.left", "coef": -1}], "op": "==", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "c.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "c.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "c.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Equal column widths
+                {"terms": [{"var": "a.width"}, {"var": "b.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "b.width"}, {"var": "c.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+            ],
+        ))
+        recipes.append(_recipe(
+            "logo_wall.grid4",
+            "logo_wall",
+            "grid4",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "a": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "b": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "c": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+                "d": {"kind": "image", "style": "component.hero", "fit": "smart-cover"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 40}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # 2x2 grid of logos
+                {"terms": [{"var": "a.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "a.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "a.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "a.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                {"terms": [{"var": "b.left"}, {"var": "a.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "b.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "b.top"}, {"var": "a.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "b.bottom"}, {"var": "a.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "c.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "c.top"}, {"var": "a.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "c.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "c.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "d.left"}, {"var": "c.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "d.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "d.top"}, {"var": "c.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "d.bottom"}, {"var": "c.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+            ],
         ))
     return recipes

@@ -16,7 +16,7 @@ from pptx_skill.content_model import (
     PlannedNode,
     SafeInsets,
 )
-from pptx_skill.pptx_renderer import render_layout_plan
+from pptx_skill.pptx_renderer import render_layout_plan, render_layout_plans
 
 
 class PptxRendererTests(unittest.TestCase):
@@ -94,7 +94,10 @@ class PptxRendererTests(unittest.TestCase):
                 ],
                 local_score=0.0,
             )
-            result = render_layout_plan(plan, str(out))
+            # Disable slide numbers so only the shape is on the slide
+            result = render_layout_plans([plan], str(out), deck_options={
+                "show_slide_numbers": False,
+            })
             self.assertEqual(len(result.trace), 1)
             prs = Presentation(str(out))
             self.assertEqual(len(prs.slides[0].shapes), 1)

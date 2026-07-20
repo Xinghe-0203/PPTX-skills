@@ -250,6 +250,12 @@ from pptx_skill.visual_rebuild import (  # noqa: E402
     reference_rebuild_diff_report,
     visual_rebuild_adapter,
 )
+from pptx_skill.template_downloader import (  # noqa: E402
+    download_template_pack,
+    import_template,
+    list_remote_packs,
+    search_github_templates,
+)
 
 __version__ = "2.0.0"
 
@@ -439,4 +445,8 @@ __all__ = [
     "generate_annotation_dataset",
     "dataset_coverage_report",
     "golden_coverage_report",
+    "download_template_pack",
+    "import_template",
+    "list_remote_packs",
+    "search_github_templates",
 ]

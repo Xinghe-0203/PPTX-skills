@@ -78,6 +78,7 @@ def run_generation_pipeline(
     repair_log: list[dict] = []
     qa_report: QAReport | None = None
     final_pptx_path = output_path
+    manifest_sidecar: str | None = None
 
     repair_budget = max_repair_passes if qa_mode != "off" and auto_repair else 0
 
@@ -110,10 +111,21 @@ def run_generation_pipeline(
             # All plans passed semantic QA; render one slide per derived plan.
             render_layout_plans(plans, final_pptx_path)
 
+            from pptx_skill.manifest import ManifestV3, save_manifest_v3
+            manifest = ManifestV3()
+            manifest.record_attempt(
+                pass_index=pass_index,
+                plan_artifact="layout_plans",
+                trace_artifact="render_trace",
+            )
+            manifest.current["content"] = {"slides": len(plans)}
+            save_manifest_v3(final_pptx_path, manifest)
+            manifest_sidecar = str(Path(final_pptx_path).with_suffix(".manifest.json"))
+
             if qa_mode == "off":
                 return GenerationResult(
                     pptx_path=final_pptx_path,
-                    manifest_path=None,
+                    manifest_path=manifest_sidecar,
                     qa_report_path=None,
                     qa_status="pass",
                     preview_dir=None,
@@ -123,9 +135,9 @@ def run_generation_pipeline(
 
             preview_dir: str | None = None
             try:
-                preview = render_preview(final_pptx_path, engine=renderer_engine, dpi=target_dpi)
                 preview_dir = str(Path(output_path).parent / "preview")
                 Path(preview_dir).mkdir(parents=True, exist_ok=True)
+                preview = render_preview(final_pptx_path, output_dir=preview_dir, engine=renderer_engine, dpi=target_dpi)
                 for idx, png_path in enumerate(preview.slide_pngs):
                     dest = Path(preview_dir) / f"slide_{idx:03d}.png"
                     shutil.copy(png_path, dest)
@@ -139,7 +151,7 @@ def run_generation_pipeline(
                     artifacts={},
                 )
                 if qa_mode == "strict":
-                    raise PresentationQualityError(qa_report)
+                    raise PresentationQualityError(qa_report) from exc
                 break
 
             if reference_baseline_pngs:
@@ -165,7 +177,7 @@ def run_generation_pipeline(
             if qa_report.status == CheckOutcome.PASS:
                 return GenerationResult(
                     pptx_path=final_pptx_path,
-                    manifest_path=None,
+                    manifest_path=manifest_sidecar,
                     qa_report_path=None,
                     qa_status="pass",
                     preview_dir=preview_dir,
@@ -196,7 +208,7 @@ def run_generation_pipeline(
     status = "fail" if qa_report and qa_report.status == CheckOutcome.FAIL else "inconclusive"
     return GenerationResult(
         pptx_path=final_pptx_path,
-        manifest_path=None,
+        manifest_path=manifest_sidecar,
         qa_report_path=None,
         qa_status=status,
         preview_dir=None,

@@ -2,7 +2,7 @@
 name: pptx
 version: "2.0.0"
 description: |
-  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 14 种内容版式、12 套模板档案、3 套非卡片式版式家族、9 套传统主题、自然语言生成新模板、母版占位符填充和样例页逐形状克隆。
+  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 19 种内容版式、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取。
 ---
 
 # PPTX 智能制作
@@ -31,19 +31,27 @@ description: |
 |---|---|---|
 | 从头生成演示文稿 | 已落地 | `pptx_skill.auto_generate_ppt()` / `scripts/pptx_helper.py` |
 | 模板档案管理 | 已落地 | `scripts/template_engine.py list/generate/preview` |
+| 模板包下载与档案提取 | 已落地 | `pptx_skill.template_downloader.download_template_pack()` / `import_template()` |
 | 母版占位符生成（native） | 已落地 | `pptx_skill.reference_adapter.native_mode_adapter()` |
 | 样例页逐形状克隆（clone） | 已落地 | `pptx_skill.reference_adapter.clone_mode_adapter()` |
 | 扁平稿视觉重建（visual-rebuild） | 已落地 | `pptx_skill.visual_rebuild.visual_rebuild_adapter()` |
 | 约束式自适应排版 | 已落地 | `pptx_skill.layout_engine.solve_recipe()` |
 | 整本拆页与 beam search 节奏 | 已落地 | `pptx_skill.deck_planner.plan_deck()` |
 | 文字度量与字号适配 | 已落地 | `pptx_skill.text_metrics.measure_runs()` |
-| 语义 QA（溢出/重叠/对比度等） | 已落地 | `pptx_skill.semantic_qa.SemanticQAEngine` |
+| 语义 QA（四级：表格/图表/页面/整本） | 已落地 | `pptx_skill.semantic_qa.SemanticQAEngine` |
 | 渲染 QA 与视觉回归 | 已落地 | `pptx_skill.render_qa.compare_slide_to_baseline()` |
 | 白名单修复引擎 | 已落地 | `pptx_skill.repair_engine.propose_repairs()` |
 | 生成 → QA → 修复闭环 | 已落地 | `pptx_skill.generation_pipeline.run_generation_pipeline()` |
 | Manifest V3 读写 | 已落地 | `pptx_skill.manifest.load_manifest()` |
 | 定点文字/图片/颜色编辑 | 已落地 | `pptx_skill.ppt_edit.*` |
 | 页面增删移复制换版式 | 已落地 | `pptx_skill.ppt_pages.*` |
+| 10 种图表类型（多系列） | 已落地 | `pptx_skill.pptx_renderer` chart 节点 |
+| 富文本渲染（多段落/多 run/项目符号/超链接） | 已落地 | `pptx_skill.pptx_renderer` rich-text 节点 |
+| 表格增强样式（边框/条纹/填充/列宽） | 已落地 | `pptx_skill.pptx_renderer` table 节点 |
+| 形状增强样式（线条/阴影/渐变/旋转/内嵌文字） | 已落地 | `pptx_skill.pptx_renderer` shape 节点 |
+| 页眉页脚与页码 | 已落地 | `pptx_skill.pptx_renderer` deck_options |
+| 备注页与媒体（video/audio） | 已落地 | `pptx_skill.pptx_renderer` notes/media 节点 |
+| 字体配对系统（含 CJK） | 已落地 | `pptx_skill.pptx_renderer.FONTS` / `CJK_FONTS` |
 | 200 页 QA 标注数据集 | 已落地 | `pptx_skill.qa_dataset.generate_annotation_dataset()` |
 | Golden renders 基线 | 已落地 | `pptx_skill.golden_renders.render_golden_set()` |
 
@@ -172,14 +180,16 @@ auto_generate_ppt(
 
 版式选择规则：
 
-- 指标 → `dashboard`
+- 指标 → `dashboard` / `kpi_hero`
 - 时间节点 → `timeline`
 - 两侧信息 → `comparison`
 - 步骤 → `process`
 - 表格 → `table`
-- 引用 → `quote`
-- 多图 → `image_grid`
+- 引用 → `quote` / `testimonial`
+- 多图 → `image_grid` / `logo_wall`
 - 图文 → `text_image`
+- 四象限 → `matrix`
+- 问答 → `faq`
 - 普通要点 → `bullets`
 
 脚本入口仍可用：
@@ -280,7 +290,7 @@ print(manifest.manifest_schema_version)  # 3
 | `pptx_skill.deck_planner` | 整本 beam search 节奏规划 |
 | `pptx_skill.pagination` | bullets/table/timeline/process/image_grid 分页 |
 | `pptx_skill.text_metrics` | Pillow 字体度量、CJK 换行、字号二分搜索 |
-| `pptx_skill.semantic_qa` | 溢出/重叠/对比度/缺字体/图片畸变/空内容 |
+| `pptx_skill.semantic_qa` | 四级 QA：表格/图表/页面/整本（溢出/重叠/对比度/排版层级/色彩一致性） |
 | `pptx_skill.render_qa` | 像素级 perceptual diff、窗口密度、SSIM |
 | `pptx_skill.repair_engine` | 白名单修复动作与 profile override 合并 |
 | `pptx_skill.generation_pipeline` | plan → render → QA → repair 闭环 |
@@ -289,14 +299,15 @@ print(manifest.manifest_schema_version)  # 3
 | `pptx_skill.qa_dataset` | 200 页标注数据集生成器 |
 | `pptx_skill.golden_renders` | 每 role golden render 与 family deck |
 | `pptx_skill.manifest` | Manifest V3 读写与迁移 |
-| `pptx_skill.pptx_renderer` | 自适应渲染器（text/image/shape/table/chart） |
+| `pptx_skill.pptx_renderer` | 自适应渲染器（text/image/shape/table/chart/rich-text/media/notes/headers-footers） |
 | `pptx_skill.template_compiler` | TemplateProfileV2 编译与多样性闸门 |
+| `pptx_skill.template_downloader` | 模板包下载（GitHub/URL/本地）、PPTX 档案提取、远程包列表与搜索 |
 | `pptx_skill.design_schema` | V2 schema、token 解析与校验 |
 | `pptx_skill.image_crop` | contain/cover/smart crop + 真实 crop fractions |
 
 ## 版式与视觉原则
 
-- 使用 14 种版式形成节奏，不连续堆叠同一种内容页。
+- 使用 19 种版式形成节奏，不连续堆叠同一种内容页。
 - 让标题与正文产生明显字号跳跃，避免平均递减。
 - 控制主色数量，使用一个识别色和克制的辅助色。
 - 保留 20% 至 30% 留白，不用内容填满画布。

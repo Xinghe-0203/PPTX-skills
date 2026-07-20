@@ -69,7 +69,7 @@ def _view_issues(report: Any) -> list[_IssueView]:
         else:
             # SemanticQAReport DetectedIssue
             severity_value = issue.severity.value if hasattr(issue.severity, "value") else str(issue.severity)
-            slide_index = issue.details.get("slide_index", -1)
+            slide_index = issue.slide_index
             element_id = issue.node_id
             # node_id may be "slide/role"; try to extract element id from it.
             if element_id and "/" in element_id:

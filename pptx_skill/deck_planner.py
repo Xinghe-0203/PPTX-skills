@@ -200,11 +200,7 @@ def _plan_slide(
 ) -> SlidePlanResult:
     """Plan a single source slide: try single-page candidates, split if overloaded."""
     role = slide.role
-    recipes = (
-        builtin_recipes(role)
-        if role in {"bullets", "text_image", "dashboard"}
-        else builtin_recipes("bullets")
-    )
+    recipes = builtin_recipes(role)
     if not recipes:
         return SlidePlanResult(status="infeasible", candidates=[], blockers=[{"reason": "no recipes"}], diagnostics=[])
 
@@ -336,7 +332,7 @@ def plan_deck(
 
     # Beam search.
     beam: list[_BeamState] = [_BeamState(chosen=[], derived_slides=[], plans=[], accumulated_score=0.0)]
-    for idx, result in enumerate(per_slide):
+    for _idx, result in enumerate(per_slide):
         new_beam: list[_BeamState] = []
         for state in beam:
             prev_candidate = state.chosen[-1] if state.chosen else None

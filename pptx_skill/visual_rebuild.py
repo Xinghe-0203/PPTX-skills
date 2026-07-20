@@ -129,17 +129,20 @@ def _shape_to_element(shape_record: dict, slide_id: str, role: str) -> ElementSp
     if has_table:
         return ElementSpec(
             id=eid, kind="table", role="table",
-            content={"headers": [], "rows": []}, style_ref="component.body",
+            content={"headers": [], "rows": [], "placeholder": True},
+            style_ref="component.body",
         )
     if has_chart:
         return ElementSpec(
             id=eid, kind="chart", role="lead",
-            content={"items": []}, style_ref="component.metric",
+            content={"items": [], "placeholder": True},
+            style_ref="component.metric",
         )
     if shape_type == "PICTURE":
         return ElementSpec(
             id=eid, kind="image", role="hero",
-            content={"path": ""}, style_ref="component.hero",
+            content={"path": "", "placeholder": True},
+            style_ref="component.hero",
         )
     if text:
         # Heuristic role within the slide: largest font text -> title.

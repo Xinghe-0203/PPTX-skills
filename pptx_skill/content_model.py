@@ -170,8 +170,9 @@ class StableIdGenerator:
         """Return the candidate if unseen; deterministic callers must vary the path.
 
         If the same caller asks for the same lineage twice, the same ID is
-        returned. Only genuinely colliding independent generations receive a
-        suffix.
+        returned. Genuinely colliding independent generations will silently
+        share an ID — callers that need guaranteed uniqueness must vary
+        ``item_key`` or ``occurrence``.
         """
         if candidate in self._seen:
             return candidate
@@ -231,7 +232,7 @@ class ElementSpec:
     """A logical content element on a slide."""
 
     id: str
-    kind: Literal["text", "image", "shape", "table", "chart", "group"]
+    kind: Literal["text", "image", "shape", "table", "chart", "group", "video", "audio"]
     role: str
     content: dict[str, Any]
     style_ref: str
@@ -296,6 +297,7 @@ class LayoutPlan:
     local_score: float
     has_blocker: bool = False
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
+    background_color: str | None = None
 
 
 @dataclass

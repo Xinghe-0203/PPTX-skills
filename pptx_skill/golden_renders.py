@@ -38,6 +38,7 @@ ALL_ROLES = (
     "cover", "toc", "section", "bullets", "text_image", "full_image",
     "image_grid", "dashboard", "timeline", "comparison", "quote",
     "process", "table", "end",
+    "matrix", "kpi_hero", "faq", "testimonial", "logo_wall",
 )
 
 # Representative variant per role for the family deck.
@@ -53,6 +54,11 @@ FAMILY_DECK_SEQUENCE = [
     ("quote", "quote.centered"),
     ("process", "process.horizontal"),
     ("table", "table.standard"),
+    ("matrix", "matrix.quadrant"),
+    ("kpi_hero", "kpi_hero.split"),
+    ("faq", "faq.alternating"),
+    ("testimonial", "testimonial.centered"),
+    ("logo_wall", "logo_wall.grid3"),
     ("end", "end.thanks"),
 ]
 

@@ -34,6 +34,14 @@ STYLE_KEYWORDS = {
     "financial-luxe": ("finance", "legal", "金融", "财务", "法律", "投委会"),
     "creative-editorial": ("creative", "editorial", "brand", "创意", "品牌", "杂志"),
     "sustainability": ("sustainability", "environment", "esg", "可持续", "环保", "自然"),
+    "tech-startup": ("tech", "startup", "saas", "科技", "创业", "技术架构", "SaaS"),
+    "health-wellness": ("wellness", "养生", "心理", "关怀", "健康科普", "养生方案"),
+    "cyber-security": ("security", "cyber", "hack", "安全", "渗透", "防护", "黑客"),
+    "environmental": ("environmental", "ecology", "green", "生态", "绿色", "环保报告", "绿色能源"),
+    "luxury-brand": ("luxury", "premium", "brand", "奢侈", "精品", "高端定制", "尊贵"),
+    "education-vibrant": ("education", "vibrant", "课程", "教育", "知识", "培训", "活力"),
+    "government-modern": ("modern", "digital", "智慧", "数字化", "政务公开", "智慧城市"),
+    "creative-agency": ("agency", "visual", "前卫", "机构", "视觉传达", "大胆"),
 }
 
 LAYOUT_FAMILY_KEYWORDS = {
@@ -133,20 +141,43 @@ def validate_template_profile(profile: dict) -> None:
     theme = profile.get("theme")
     if not isinstance(theme, dict):
         raise ValueError("Template profile requires a 'theme' object")
-    required = ("bg", "primary", "accent", "text")
-    for key in required:
+    # Validate all 9 color swatches
+    required_colors = ("bg", "bg_alt", "primary", "secondary", "accent", "text", "text_muted", "white", "dark")
+    for key in required_colors:
         value = theme.get(key)
         if not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
             raise ValueError(f"theme.{key} must be a #RRGGBB color")
-    for layout in profile.get("layout_opts", {}):
-        if layout not in VALID_LAYOUTS:
-            raise ValueError(f"Unknown layout in layout_opts: {layout}")
-    for layout in profile.get("preferred_sequence", []):
+    # Validate layout_opts values are within reasonable ranges
+    layout_opts = profile.get("layout_opts", {})
+    if not isinstance(layout_opts, dict):
+        raise ValueError("layout_opts must be a dict")
+    for layout_name, opts in layout_opts.items():
+        if layout_name not in VALID_LAYOUTS:
+            raise ValueError(f"Unknown layout in layout_opts: {layout_name}")
+        if not isinstance(opts, dict):
+            raise ValueError(f"layout_opts.{layout_name} must be a dict")
+        for opt_key, opt_val in opts.items():
+            if isinstance(opt_val, (int, float)):
+                if opt_val < 0:
+                    raise ValueError(f"layout_opts.{layout_name}.{opt_key} must be non-negative, got {opt_val}")
+                if opt_val > 1000:
+                    raise ValueError(f"layout_opts.{layout_name}.{opt_key} seems unreasonably large: {opt_val}")
+    # Validate preferred_sequence only contains valid layout names
+    preferred_sequence = profile.get("preferred_sequence", [])
+    if not isinstance(preferred_sequence, list):
+        raise ValueError("preferred_sequence must be a list")
+    for layout in preferred_sequence:
         if layout not in VALID_LAYOUTS:
             raise ValueError(f"Unknown layout in preferred_sequence: {layout}")
     layout_family = profile.get("layout_family", "editorial_grid")
     if layout_family not in {"standard", "editorial_grid", "technical_axis", "poster_column"}:
         raise ValueError(f"Unknown layout_family: {layout_family}")
+    # Warn on missing optional fields (don't error)
+    optional_fields = ("id", "name", "description", "use_cases", "fonts")
+    for field in optional_fields:
+        if field not in profile:
+            import warnings
+            warnings.warn(f"Template profile is missing optional field '{field}'", stacklevel=2)
 
 
 def _slugify(value: str) -> str:

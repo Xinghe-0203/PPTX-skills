@@ -159,6 +159,124 @@ THEMES: dict[str, dict] = {
         "dark": _c("050A05"),
         "on_dark": True,
     },
+    "tech_blue": {
+        "name": "科技蓝",
+        "bg": _c("0A1628"), "bg_alt": _c("122240"),
+        "primary": _c("00A3E0"), "secondary": _c("4A6FA5"), "accent": _c("00D4FF"),
+        "text": _c("E8EDF3"), "text_muted": _c("7A8FA6"), "white": _c("FFFFFF"),
+        "dark": _c("050B14"),
+        "on_dark": True,
+    },
+    "warm_earth": {
+        "name": "暖土",
+        "bg": _c("F5F0E8"), "bg_alt": _c("E8DFD0"),
+        "primary": _c("C45B28"), "secondary": _c("8B7355"), "accent": _c("7A8B6F"),
+        "text": _c("2E2420"), "text_muted": _c("8C7E72"), "white": _c("FFFFFF"),
+        "dark": _c("1E1614"),
+        "on_dark": False,
+    },
+    "minimal_mono": {
+        "name": "极简单色",
+        "bg": _c("FFFFFF"), "bg_alt": _c("F5F5F5"),
+        "primary": _c("1A1A1A"), "secondary": _c("555555"), "accent": _c("888888"),
+        "text": _c("1A1A1A"), "text_muted": _c("999999"), "white": _c("FFFFFF"),
+        "dark": _c("000000"),
+        "on_dark": False,
+    },
+    "ocean_depth": {
+        "name": "深海",
+        "bg": _c("0B3D4C"), "bg_alt": _c("0F4F62"),
+        "primary": _c("4ECDC4"), "secondary": _c("2E8B8B"), "accent": _c("FF6B6B"),
+        "text": _c("E0F0EF"), "text_muted": _c("8BB8B5"), "white": _c("FFFFFF"),
+        "dark": _c("062830"),
+        "on_dark": True,
+    },
+    "sunset_glow": {
+        "name": "日落暖光",
+        "bg": _c("FFF8F0"), "bg_alt": _c("F5EDE0"),
+        "primary": _c("E85D26"), "secondary": _c("B87333"), "accent": _c("F4A460"),
+        "text": _c("2E2420"), "text_muted": _c("8C7E72"), "white": _c("FFFFFF"),
+        "dark": _c("1E1614"),
+        "on_dark": False,
+    },
+    "arctic_frost": {
+        "name": "极地霜",
+        "bg": _c("F0F4F8"), "bg_alt": _c("E0E8F0"),
+        "primary": _c("4A7C9B"), "secondary": _c("6B8FA8"), "accent": _c("B0C4DE"),
+        "text": _c("1F2937"), "text_muted": _c("7A8FA6"), "white": _c("FFFFFF"),
+        "dark": _c("0F1A28"),
+        "on_dark": False,
+    },
+    "cherry_blossom": {
+        "name": "樱花",
+        "bg": _c("FFF0F5"), "bg_alt": _c("F5E0EA"),
+        "primary": _c("C4627A"), "secondary": _c("9B6B7A"), "accent": _c("E8A0BF"),
+        "text": _c("2E2028"), "text_muted": _c("8C7280"), "white": _c("FFFFFF"),
+        "dark": _c("1E1018"),
+        "on_dark": False,
+    },
+    "cyber_punk": {
+        "name": "赛博朋克",
+        "bg": _c("0D0221"), "bg_alt": _c("1A0A3A"),
+        "primary": _c("FF2A6D"), "secondary": _c("7B2D8E"), "accent": _c("05D9E8"),
+        "text": _c("E8E0F0"), "text_muted": _c("8B7AA0"), "white": _c("FFFFFF"),
+        "dark": _c("060114"),
+        "on_dark": True,
+    },
+    "forest_canopy": {
+        "name": "森林冠层",
+        "bg": _c("1B3A2D"), "bg_alt": _c("244D3A"),
+        "primary": _c("7BC950"), "secondary": _c("4A8B3C"), "accent": _c("D4A017"),
+        "text": _c("E0F0E0"), "text_muted": _c("8BB88B"), "white": _c("FFFFFF"),
+        "dark": _c("0D2820"),
+        "on_dark": True,
+    },
+    "royal_purple": {
+        "name": "皇家紫",
+        "bg": _c("1A0A2E"), "bg_alt": _c("2A1A4E"),
+        "primary": _c("7B2D8E"), "secondary": _c("5A3D7A"), "accent": _c("D4AF37"),
+        "text": _c("E8E0F0"), "text_muted": _c("8B7AA0"), "white": _c("FFFFFF"),
+        "dark": _c("0A0418"),
+        "on_dark": True,
+    },
+    "desert_sand": {
+        "name": "沙漠沙",
+        "bg": _c("F4E4C1"), "bg_alt": _c("E8D4A0"),
+        "primary": _c("A0522D"), "secondary": _c("8B7355"), "accent": _c("40B5A0"),
+        "text": _c("2E2420"), "text_muted": _c("8C7E72"), "white": _c("FFFFFF"),
+        "dark": _c("1E1614"),
+        "on_dark": False,
+    },
+}
+
+
+FONTS: dict[str, dict[str, str]] = {
+    "editorial": {"heading": "Georgia", "body": "Calibri"},
+    "luxury": {"heading": "Playfair Display", "body": "Lato"},
+    "nature": {"heading": "Merriweather", "body": "Source Sans Pro"},
+    "neon_tech": {"heading": "Orbitron", "body": "Roboto"},
+    "coral_breeze": {"heading": "Nunito", "body": "Open Sans"},
+    "mono_red": {"heading": "Helvetica Neue", "body": "Helvetica Neue"},
+    "terracotta": {"heading": "Crimson Text", "body": "Lato"},
+    "indigo_charcoal": {"heading": "IBM Plex Sans", "body": "IBM Plex Sans"},
+    "forest_luxe": {"heading": "Cormorant Garamond", "body": "Montserrat"},
+    "tech_blue": {"heading": "Rajdhani", "body": "Roboto"},
+    "warm_earth": {"heading": "Lora", "body": "Source Sans Pro"},
+    "minimal_mono": {"heading": "Helvetica Neue", "body": "Helvetica Neue"},
+    "ocean_depth": {"heading": "Montserrat", "body": "Open Sans"},
+    "sunset_glow": {"heading": "Poppins", "body": "Nunito"},
+    "arctic_frost": {"heading": "IBM Plex Sans", "body": "IBM Plex Sans"},
+    "cherry_blossom": {"heading": "Quicksand", "body": "Nunito"},
+    "cyber_punk": {"heading": "Orbitron", "body": "Share Tech Mono"},
+    "forest_canopy": {"heading": "Cormorant Garamond", "body": "Source Sans Pro"},
+    "royal_purple": {"heading": "Cinzel", "body": "Lato"},
+    "desert_sand": {"heading": "Lora", "body": "Open Sans"},
+}
+
+CJK_FONTS: dict[str, str] = {
+    "heading": "Microsoft YaHei",
+    "body": "Microsoft YaHei",
+    "mono": "Consolas",
 }
 
 
@@ -267,6 +385,7 @@ def _detect_font_en():
 
 FONT_CN = _detect_font_cn()
 FONT_EN = _detect_font_en()
+_DEFAULT_FONT_SIZE = Pt(18)
 
 
 def _blank_layout(prs):
@@ -343,10 +462,10 @@ def _text_on(bg_color, dark=None, light=None):
     return light if _luminance(bg_color) < 0.55 else dark
 
 
-def _rounded_rect(slide, l, t, w, h, fill=None, line=None, radius_frac=0.08):
+def _rounded_rect(slide, left, t, w, h, fill=None, line=None, radius_frac=0.08):
     """圆角矩形（信息卡片用）。radius_frac 控制圆角占比。"""
     shp = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                 Inches(l), Inches(t), Inches(w), Inches(h))
+                                 Inches(left), Inches(t), Inches(w), Inches(h))
     if fill is not None:
         _solid(shp, fill)
     if line is None:
@@ -358,28 +477,28 @@ def _rounded_rect(slide, l, t, w, h, fill=None, line=None, radius_frac=0.08):
     return shp
 
 
-def _rect(slide, l, t, w, h, fill=None):
+def _rect(slide, left, t, w, h, fill=None):
     """直角矩形。"""
     shp = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
-                                 Inches(l), Inches(t), Inches(w), Inches(h))
+                                 Inches(left), Inches(t), Inches(w), Inches(h))
     if fill is not None:
         _solid(shp, fill)
     _no_line(shp)
     return shp
 
 
-def _oval(slide, l, t, w, h, fill=None):
+def _oval(slide, left, t, w, h, fill=None):
     shp = slide.shapes.add_shape(MSO_SHAPE.OVAL,
-                                 Inches(l), Inches(t), Inches(w), Inches(h))
+                                 Inches(left), Inches(t), Inches(w), Inches(h))
     if fill is not None:
         _solid(shp, fill)
     _no_line(shp)
     return shp
 
 
-def _textbox(slide, l, t, w, h, anchor=MSO_ANCHOR.TOP, wrap=True):
+def _textbox(slide, left, t, w, h, anchor=MSO_ANCHOR.TOP, wrap=True):
     """文本框，返回 text_frame。"""
-    tb = slide.shapes.add_textbox(Inches(l), Inches(t), Inches(w), Inches(h))
+    tb = slide.shapes.add_textbox(Inches(left), Inches(t), Inches(w), Inches(h))
     tf = tb.text_frame
     tf.word_wrap = wrap
     tf.vertical_anchor = anchor
@@ -391,10 +510,12 @@ def _textbox(slide, l, t, w, h, anchor=MSO_ANCHOR.TOP, wrap=True):
     return tf
 
 
-def _add_para(tf, text, *, first=False, size=Pt(18), color=None, bold=False,
+def _add_para(tf, text, *, first=False, size=None, color=None, bold=False,
              name=FONT_CN, align=PP_ALIGN.LEFT, space_before=0, space_after=0,
              level=0, line_spacing=1.15):
     """添加一个段落并设置样式。first=True 时复用首段。"""
+    if size is None:
+        size = _DEFAULT_FONT_SIZE
     p = tf.paragraphs[0] if first else tf.add_paragraph()
     p.text = text
     p.alignment = align
@@ -412,9 +533,9 @@ def _add_para(tf, text, *, first=False, size=Pt(18), color=None, bold=False,
     return p
 
 
-def _fit_image_in_box(slide, img_path, l, t, w, h, cover=True):
+def _fit_image_in_box(slide, img_path, left, t, w, h, cover=True):
     """
-    把图片放入 (l,t,w,h) 盒子，cover=True 裁剪填满，False 则居中适配留白。
+    把图片放入 (left,t,w,h) 盒子，cover=True 裁剪填满，False 则居中适配留白。
     返回 picture shape。若图片缺失则跳过返回 None。
     """
     if not img_path or not os.path.exists(img_path):
@@ -433,7 +554,7 @@ def _fit_image_in_box(slide, img_path, l, t, w, h, cover=True):
         if cover:
             # 填满盒子：图片严格落在盒子内，用真实 crop fractions 裁掉溢出部分。
             # 不再通过放大图片越出盒子模拟 cover（会遮挡相邻区域）。
-            pic = slide.shapes.add_picture(img_path, Inches(l), Inches(t),
+            pic = slide.shapes.add_picture(img_path, Inches(left), Inches(t),
                                            Inches(w), Inches(h))
             if img_ratio > box_ratio:
                 crop = 1.0 - box_ratio / img_ratio
@@ -447,12 +568,12 @@ def _fit_image_in_box(slide, img_path, l, t, w, h, cover=True):
         else:
             new_w = min(w, h * img_ratio)
             new_h = new_w / img_ratio
-            pl = l + (w - new_w) / 2
+            pl = left + (w - new_w) / 2
             pt = t + (h - new_h) / 2
             return slide.shapes.add_picture(img_path, Inches(pl), Inches(pt),
                                             Inches(new_w), Inches(new_h))
     # 无 Pillow 或读取失败，直接按盒子塞
-    return slide.shapes.add_picture(img_path, Inches(l), Inches(t),
+    return slide.shapes.add_picture(img_path, Inches(left), Inches(t),
                                     Inches(w), Inches(h))
 
 # ============================================================

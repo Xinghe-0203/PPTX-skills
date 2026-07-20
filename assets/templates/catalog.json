@@ -120,6 +120,86 @@
       "fonts": {"cn": "Microsoft YaHei", "en": "Arial"},
       "layout_opts": {"cover": {"title_size": 54}, "dashboard": {"metric_value_size": 36}, "timeline": {"axis_x_ratio": 0.56, "node_size": 0.34}},
       "preferred_sequence": ["cover", "full_image", "dashboard", "timeline", "process", "end"]
+    },
+    "tech-startup": {
+      "name": "科技创业",
+      "layout_family": "editorial_grid",
+      "description": "深蓝底色搭配电光蓝，现代科技感十足，适合科技公司与创业项目。",
+      "use_cases": ["科技创业", "SaaS产品", "技术架构"],
+      "theme": {"bg": "#0A1628", "bg_alt": "#122240", "primary": "#00A3E0", "secondary": "#4A6FA5", "accent": "#00D4FF", "text": "#E8EDF3", "text_muted": "#7A8FA6", "white": "#FFFFFF", "dark": "#050B14", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Rajdhani"},
+      "layout_opts": {"cover": {"title_size": 58, "title_y_ratio": 0.30}, "bullets": {"body_size": 16, "card_gap": 0.18}, "dashboard": {"metric_value_size": 36, "card_gap": 0.20}},
+      "preferred_sequence": ["cover", "section", "dashboard", "process", "comparison", "end"]
+    },
+    "health-wellness": {
+      "name": "健康养生",
+      "layout_family": "poster_column",
+      "description": "柔粉色系搭配玫瑰主色，温和治愈，适合医疗健康与养生主题。",
+      "use_cases": ["健康科普", "养生方案", "心理关怀"],
+      "theme": {"bg": "#FFF0F5", "bg_alt": "#F5E0EA", "primary": "#C4627A", "secondary": "#9B6B7A", "accent": "#E8A0BF", "text": "#2E2028", "text_muted": "#8C7280", "white": "#FFFFFF", "dark": "#1E1018", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Quicksand"},
+      "layout_opts": {"cover": {"title_size": 52, "title_y_ratio": 0.32}, "bullets": {"body_size": 17, "card_gap": 0.20}, "text_image": {"text_ratio": 0.50}},
+      "preferred_sequence": ["cover", "text_image", "bullets", "process", "quote", "end"]
+    },
+    "cyber-security": {
+      "name": "网络安全",
+      "layout_family": "technical_axis",
+      "description": "暗黑底色搭配霓虹洋红与电青色，赛博朋克风格，适合安全与黑客主题。",
+      "use_cases": ["网络安全", "渗透测试", "数据防护"],
+      "theme": {"bg": "#0D0221", "bg_alt": "#1A0A3A", "primary": "#FF2A6D", "secondary": "#7B2D8E", "accent": "#05D9E8", "text": "#E8E0F0", "text_muted": "#8B7AA0", "white": "#FFFFFF", "dark": "#060114", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Orbitron"},
+      "layout_opts": {"cover": {"title_size": 56, "title_y_ratio": 0.28}, "dashboard": {"metric_value_size": 38, "card_gap": 0.22}, "comparison": {"divider_x_ratio": 0.48, "vs_size": 16}},
+      "preferred_sequence": ["cover", "section", "dashboard", "comparison", "table", "end"]
+    },
+    "environmental": {
+      "name": "环保生态",
+      "layout_family": "editorial_grid",
+      "description": "深绿底色搭配亮绿与琥珀色，自然生态风格，适合环保与可持续发展。",
+      "use_cases": ["环保报告", "生态研究", "绿色能源"],
+      "theme": {"bg": "#1B3A2D", "bg_alt": "#244D3A", "primary": "#7BC950", "secondary": "#4A8B3C", "accent": "#D4A017", "text": "#E0F0E0", "text_muted": "#8BB88B", "white": "#FFFFFF", "dark": "#0D2820", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Cormorant Garamond"},
+      "layout_opts": {"cover": {"title_size": 54, "title_y_ratio": 0.30}, "dashboard": {"metric_value_size": 36, "card_gap": 0.20}, "timeline": {"axis_x_ratio": 0.50, "node_size": 0.32}},
+      "preferred_sequence": ["cover", "full_image", "dashboard", "timeline", "process", "end"]
+    },
+    "luxury-brand": {
+      "name": "奢侈品牌",
+      "layout_family": "poster_column",
+      "description": "深紫底色搭配紫罗兰与金色，尊贵奢华，适合高端品牌与精品展示。",
+      "use_cases": ["奢侈品牌", "精品展示", "高端定制"],
+      "theme": {"bg": "#1A0A2E", "bg_alt": "#2A1A4E", "primary": "#7B2D8E", "secondary": "#5A3D7A", "accent": "#D4AF37", "text": "#E8E0F0", "text_muted": "#8B7AA0", "white": "#FFFFFF", "dark": "#0A0418", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Cinzel"},
+      "layout_opts": {"cover": {"title_size": 60, "title_y_ratio": 0.34}, "quote": {"quote_size": 32, "deco_alpha": 0.10}, "text_image": {"text_ratio": 0.44, "image_padding": 0.06}},
+      "preferred_sequence": ["cover", "full_image", "text_image", "quote", "image_grid", "end"]
+    },
+    "education-vibrant": {
+      "name": "活力教育",
+      "layout_family": "editorial_grid",
+      "description": "暖白底色搭配焦橙与金色，活泼生动，适合教育培训与知识分享。",
+      "use_cases": ["教育培训", "知识分享", "课程设计"],
+      "theme": {"bg": "#FFF8F0", "bg_alt": "#F5EDE0", "primary": "#E85D26", "secondary": "#B87333", "accent": "#F4A460", "text": "#2E2420", "text_muted": "#8C7E72", "white": "#FFFFFF", "dark": "#1E1614", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Poppins"},
+      "layout_opts": {"cover": {"title_size": 54, "title_y_ratio": 0.30}, "bullets": {"body_size": 18, "card_gap": 0.22}, "process": {"max_steps": 5, "card_gap": 0.30}},
+      "preferred_sequence": ["cover", "toc", "section", "bullets", "process", "quote", "end"]
+    },
+    "government-modern": {
+      "name": "现代政务",
+      "layout_family": "technical_axis",
+      "description": "冰蓝底色搭配钢蓝与银色，清爽现代，适合政务公开与数字化治理。",
+      "use_cases": ["政务公开", "数字化治理", "智慧城市"],
+      "theme": {"bg": "#F0F4F8", "bg_alt": "#E0E8F0", "primary": "#4A7C9B", "secondary": "#6B8FA8", "accent": "#B0C4DE", "text": "#1F2937", "text_muted": "#7A8FA6", "white": "#FFFFFF", "dark": "#0F1A28", "on_dark": false},
+      "fonts": {"cn": "Microsoft YaHei", "en": "IBM Plex Sans"},
+      "layout_opts": {"cover": {"title_size": 50, "title_y_ratio": 0.36}, "bullets": {"body_size": 17, "card_gap": 0.16}, "table": {"body_size": 14}},
+      "preferred_sequence": ["cover", "toc", "section", "bullets", "table", "timeline", "end"]
+    },
+    "creative-agency": {
+      "name": "创意机构",
+      "layout_family": "poster_column",
+      "description": "暗黑底色搭配霓虹洋红与电青色，大胆前卫，适合创意机构与品牌设计。",
+      "use_cases": ["创意机构", "品牌设计", "视觉传达"],
+      "theme": {"bg": "#0D0221", "bg_alt": "#1A0A3A", "primary": "#FF2A6D", "secondary": "#7B2D8E", "accent": "#05D9E8", "text": "#E8E0F0", "text_muted": "#8B7AA0", "white": "#FFFFFF", "dark": "#060114", "on_dark": true},
+      "fonts": {"cn": "Microsoft YaHei", "en": "Orbitron"},
+      "layout_opts": {"cover": {"title_size": 64, "title_y_ratio": 0.26}, "text_image": {"text_ratio": 0.40, "image_padding": 0.04}, "quote": {"quote_size": 34, "deco_alpha": 0.08}},
+      "preferred_sequence": ["cover", "full_image", "text_image", "image_grid", "quote", "end"]
     }
   }
 }

@@ -154,15 +154,27 @@ def auto_generate_ppt(
 
     if layout_engine == "adaptive":
         from pptx_skill.generation_pipeline import run_generation_pipeline
-        return run_generation_pipeline(
-            title=title, subtitle=subtitle, sections=sections,
-            output_path=abs_output, template_profile=template_profile,
-            qa_mode=qa_mode, auto_repair=auto_repair,
+
+        content = adapt_legacy_sections(title, subtitle, sections, locale=lang or "zh-CN")
+
+        baseline_pngs = None
+        if reference_baseline:
+            baseline_dir = Path(reference_baseline)
+            if baseline_dir.is_dir():
+                baseline_pngs = sorted(str(p) for p in baseline_dir.glob("*.png"))
+
+        result = run_generation_pipeline(
+            content=content,
+            output_path=abs_output,
+            profile_state=template_profile,
+            qa_mode=qa_mode,
+            auto_repair=auto_repair,
             max_repair_passes=max_repair_passes,
-            renderer_engine=renderer_engine, target_dpi=target_dpi,
-            reference_baseline=reference_baseline,
-            return_result=return_result,
+            renderer_engine=renderer_engine,
+            target_dpi=target_dpi,
+            reference_baseline_pngs=baseline_pngs,
         )
+        return result
 
     # Legacy generation path.
     from pptx_helper import auto_generate_ppt as legacy_auto_generate_ppt

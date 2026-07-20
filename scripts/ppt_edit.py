@@ -39,7 +39,7 @@ def _save(prs: Presentation, path: str | Path) -> None:
 
 def _replace_cross_run(paragraph: Any, find: str, replacement: str) -> int:
     count = 0
-    while find:
+    while True:
         runs = list(paragraph.runs)
         full = "".join(run.text for run in runs)
         offsets = []
@@ -72,6 +72,8 @@ def _replace_cross_run(paragraph: Any, find: str, replacement: str) -> int:
             runs[index].text = ""
         runs[end_index].text = suffix
         count += 1
+        if find in replacement:
+            break
     return count
 
 

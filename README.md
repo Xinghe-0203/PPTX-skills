@@ -6,14 +6,20 @@
 
 ## 功能特性
 
-- **从零生成**：根据主题、章节、数据自动创建完整演示文稿，支持 14 种内容版式、12 套模板档案、3 套非卡片式几何语言。
+- **从零生成**：根据主题、章节、数据自动创建完整演示文稿，支持 19 种内容版式、20 套模板档案、3 套非卡片式几何语言、20 套传统主题、字体配对系统（含 CJK）。
 - **母版占位符生成（native）**：按企业母版或规范模板创建页面。
 - **样例页克隆（clone）**：高保真复制参考 PPT 的形状关系并替换内容。
 - **视觉重建（visual-rebuild）**：从扁平截图或复杂结构重建可编辑近似版本。
-- **约束式自适应排版**：基于 Kiwi 线性约束求解器的声明式 `LayoutRecipe`，覆盖 14 种 role 的全部 recipe。
+- **约束式自适应排版**：基于 Kiwi 线性约束求解器的声明式 `LayoutRecipe`，覆盖 19 种 role 的全部 recipe，含密度分级变体（sparse/dense/three_column 等）。
 - **整本规划**：`deck_planner` 使用 beam search 规划跨页节奏。
-- **语义与渲染 QA**：溢出/重叠/对比度检查、像素级 perceptual diff、SSIM、窗口密度。
+- **语义与渲染 QA**：溢出/重叠/对比度检查、像素级 perceptual diff、SSIM、窗口密度、表格/图表/页面/整本四级 QA、排版层级与色彩一致性检查。
 - **生成 → QA → 修复闭环**：`run_generation_pipeline` 自动迭代。
+- **富文本渲染**：多段落、多 run、项目符号、超链接。
+- **10 种图表类型**：column_clustered、column_stacked、bar_clustered、bar_stacked、line、line_markers、pie、doughnut、scatter、area，支持多系列。
+- **表格与形状增强**：表格边框/条纹/填充/列宽，形状线条/阴影/渐变/旋转/内嵌文字。
+- **页眉页脚与页码**：通过 `deck_options` 参数配置。
+- **备注页与媒体**：slide notes 支持，video/audio 媒体节点。
+- **模板下载**：GitHub/URL/本地源模板包下载、PPTX 档案提取、远程包列表与 GitHub 搜索。
 - **数据契约与 Manifest V3**：稳定 element ID、内嵌 XML + 侧写 `.manifest.json`。
 - **200 页 QA 标注数据集与 Golden Renders**：用于回归测试与视觉基线。
 
@@ -112,7 +118,9 @@ python scripts/reference_ppt.py generate reference.pptx --content content.json -
 │   ├── qa_dataset.py         # 200 页 QA 标注数据集
 │   ├── golden_renders.py     # 每 role golden render 与 family deck
 │   ├── manifest.py           # Manifest V3 读写
-│   └── template_compiler.py  # TemplateProfileV2 编译与多样性闸门
+│   ├── pptx_renderer.py       # 自适应渲染器（text/image/shape/table/chart/rich-text/media）
+│   ├── template_compiler.py   # TemplateProfileV2 编译与多样性闸门
+│   ├── template_downloader.py # 模板包下载与档案提取
 ├── scripts/                  # 命令行入口
 │   ├── pptx_helper.py        # 生成引擎
 │   ├── reference_ppt.py      # 参考稿分析与生成
@@ -141,24 +149,7 @@ python scripts/reference_ppt.py generate reference.pptx --content content.json -
 python -m unittest discover -s tests -v
 ```
 
-当前基线：**184 / 184 通过**。
-
-PR 级测试基线：
-
-| PR | 内容 | 测试基线 |
-|---|---|---|
-| PR0 | unittest 基线、`pptx_skill` 包壳、运行能力报告 | — |
-| PR1 | 核心数据模型、Manifest V3、兼容 facade | — |
-| PR2 | preview_renderer、image_crop、adaptive pptx_renderer | 40/40 |
-| PR3 | text_metrics、semantic_qa | 54/54 |
-| PR4 | layout_engine 约束求解 | 63/63 |
-| PR5 | render_qa、repair_engine、generation_pipeline | 75/75 |
-| PR6 | pagination、deck_planner beam search | 92/92 |
-| PR7 | TemplateProfileV2、编译器、V1/V2 迁移 | 117/117 |
-| PR8a | 14 role 全部 recipe、role-specific paginator | 138/138 |
-| PR8b | reference_adapter native/clone | 147/147 |
-| PR8c | visual_rebuild 真实自适应重建 | 164/164 |
-| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能 | 184/184 |
+当前基线：**185 / 185 通过**（含 chart/rich-text/table-styling/media/template-downloader 新测试）。
 
 ## 交付前检查
 
