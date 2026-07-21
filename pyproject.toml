@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pptx-skill"
-version = "4.0.0"
-description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — effects, connectors, equations, accessibility, protection, multimedia, and more"
+version = "5.0.0"
+description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — morph, zoom, OCR, SVG, batch, chart editing, color science, and more"
 readme = "SKILL.md"
 requires-python = ">=3.12"
 authors = [

@@ -106,6 +106,15 @@ pptx_skill/__init__.py
 - `equations.py` — OMML builder + LaTeX-to-OMML converter (fractions, radicals, n-ary, matrices)
 - `multimedia.py` — video/audio embedding with playback settings (loop, fullscreen, trim)
 - `groups.py` — shape grouping/ungrouping, z-order within groups
+- `zoom.py` — Slide Zoom, Section Zoom, Summary Zoom (interactive navigation thumbnails)
+- `morph.py` — Morph transition (p15 namespace), morph-by-object/word/char options
+- `transitions_ext.py` — 12 advanced transitions (wheel, ripple, honeycomb, vortex, shred, flip, gallery, pan, glitter, warp, wind, curtain) via p14 namespace
+- `batch.py` — batch/parallel processing (convert, watermark, recolor, inspect, stats) with ProcessPoolExecutor
+- `svg_import.py` — SVG-to-DrawingML converter (path/rect/circle/line/polygon → custGeom), fallback to PNG
+- `ocr.py` — OCR integration (Tesseract/EasyOCR/PaddleOCR), auto-caption (alt-text/text-box/notes)
+- `chart_edit.py` — chart data/style/type editing, series add/remove/rename, axis control, data labels, legend
+- `color.py` — color science (RGB/HSL/HSV/CMYK), palette extraction, harmony generators, gradient builder, batch recolor
+- `layout_sync.py` — alignment, distribution, snap-to-grid, layout templates, z-order, center-on-slide
 
 ## Data Flow: Content → Rendered PPTX
 
