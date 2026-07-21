@@ -753,8 +753,299 @@ _LEGEND_POSITION_MAP: dict[str, Any] = {
 }
 
 
+def _build_embedded_xlsx(binding: dict, is_xy: bool) -> bytes | None:
+    """Build a minimal xlsx workbook from chart binding data.
+
+    Returns the xlsx bytes, or *None* if openpyxl is not available.
+    """
+    try:
+        from io import BytesIO
+
+        from openpyxl import Workbook
+    except ImportError:
+        return None
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+
+    series_list = binding.get("series")
+
+    if is_xy:
+        # Scatter charts: columns are (X, Y) per series
+        # Header row: "X (series-0)", "Y (series-0)", "X (series-1)", ...
+        if series_list and isinstance(series_list, list):
+            headers: list[str] = []
+            data_rows: list[list[float | str]] = []
+            max_len = 0
+            for s_idx, s_dict in enumerate(series_list):
+                s_name = s_dict.get("name", f"series-{s_idx}")
+                headers.append(f"X ({s_name})")
+                headers.append(f"Y ({s_name})")
+                s_items = list(s_dict.get("items", []))
+                max_len = max(max_len, len(s_items))
+                for row_i in range(len(s_items)):
+                    while len(data_rows) <= row_i:
+                        data_rows.append([])
+                    it = s_items[row_i]
+                    x = float(it.get("x", it.get("value", 0)))
+                    y = float(it.get("y", 0))
+                    data_rows[row_i].extend([x, y])
+            # Pad rows to match header count
+            for row in data_rows:
+                while len(row) < len(headers):
+                    row.append("")
+            ws.append(headers)
+            for row in data_rows:
+                ws.append(row)
+        else:
+            items = list(binding.get("items", []))
+            ws.append(["X", "Y"])
+            for i, it in enumerate(items):
+                x = float(it.get("x", i))
+                y = float(it.get("y", it.get("value", 0)))
+                ws.append([x, y])
+    else:
+        # Category-based charts
+        # Header row: "" | series-0-name | series-1-name | ...
+        # Data rows:  category-label | value | value | ...
+        if series_list and isinstance(series_list, list):
+            headers = [""] + [
+                s_dict.get("name", f"series-{s_idx}")
+                for s_idx, s_dict in enumerate(series_list)
+            ]
+            ws.append(headers)
+            first_items = list(series_list[0].get("items", []))
+            for i in range(len(first_items)):
+                label = str(first_items[i].get("label", f"item-{i}"))
+                row = [label]
+                for s_dict in series_list:
+                    s_items = list(s_dict.get("items", []))
+                    val = (
+                        float(s_items[i].get("value", 0))
+                        if i < len(s_items)
+                        else 0.0
+                    )
+                    row.append(val)
+                ws.append(row)
+        else:
+            items = list(binding.get("items", []))
+            ws.append(["", "series"])
+            for i, it in enumerate(items):
+                label = str(it.get("label", f"item-{i}"))
+                value = float(it.get("value", 0))
+                ws.append([label, value])
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _embed_chart_workbook(chart_frame, binding: dict, is_xy: bool) -> None:
+    """Embed an Excel workbook into the chart part so the chart is
+    double-click-editable in PowerPoint.
+
+    This creates a minimal xlsx from the chart data, adds it as an
+    embedded-package relationship on the chart part, and updates the
+    chart XML to reference the workbook.
+    """
+    from lxml import etree
+
+    xlsx_bytes = _build_embedded_xlsx(binding, is_xy)
+    if xlsx_bytes is None:
+        log.info("openpyxl not available — skipping embedded workbook for chart")
+        return
+
+    chart_part = chart_frame.chart.part
+
+    # Add the xlsx as an embedded package part
+    xlsx_partname_str = chart_part.partname.replace("/chart", "/embeddings/chart_data")
+    xlsx_partname_str = xlsx_partname_str.replace(".xml", ".xlsx")
+    from pptx.opc.packuri import PackURI
+    from pptx.opc.package import Part
+
+    xlsx_part = Part(
+        partname=PackURI(xlsx_partname_str),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        blob=xlsx_bytes,
+        package=chart_part.package,
+    )
+
+    # Create relationship from chart part to the embedded xlsx
+    rel = chart_part.relate_to(
+        xlsx_part,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
+    )
+
+    # Update the chart XML to add the <c:externalData> reference.
+    # The chart part's root element is <c:chartSpace>; we access it
+    # via the private _element attribute (the public .element property
+    # does not exist on ChartPart).
+    chart_xml = chart_part._element
+    ns_c = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+    ns_r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    external_data = etree.SubElement(chart_xml, "{%s}externalData" % ns_c)
+    external_data.set("{%s}id" % ns_r, rel)
+    # Add <c:autoUpdate val="1"/> so PowerPoint refreshes from the workbook
+    etree.SubElement(
+        external_data, "{%s}autoUpdate" % ns_c
+    ).set("val", "1")
+
+
+def _apply_data_labels(chart_frame, data_labels: dict) -> None:
+    """Apply data-label settings to all series in the chart.
+
+    *data_labels* schema:
+        {
+            "show_value": True,
+            "show_category": False,
+            "show_series_name": False,
+            "position": "outEnd"  # optional
+        }
+    """
+    from pptx.enum.chart import XL_LABEL_POSITION
+    from pptx.util import Pt
+
+    _LABEL_POSITION_MAP: dict[str, str] = {
+        "outend": "OUTSIDE_END",
+        "outsideend": "OUTSIDE_END",
+        "inend": "INSIDE_END",
+        "insideend": "INSIDE_END",
+        "inbase": "INSIDE_BASE",
+        "insidebase": "INSIDE_BASE",
+        "center": "CENTER",
+        "above": "ABOVE",
+        "below": "BELOW",
+        "left": "LEFT",
+        "right": "RIGHT",
+        "bestfit": "BEST_FIT",
+    }
+
+    position_str = (data_labels.get("position") or "outEnd").lower().replace("_", "")
+    attr_name = _LABEL_POSITION_MAP.get(position_str, "OUTSIDE_END")
+    position_enum = getattr(XL_LABEL_POSITION, attr_name, XL_LABEL_POSITION.OUTSIDE_END)
+
+    chart = chart_frame.chart
+    show_value = data_labels.get("show_value", True)
+    show_category = data_labels.get("show_category", False)
+    show_series_name = data_labels.get("show_series_name", False)
+
+    try:
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        data_labels_obj = plot.data_labels
+        data_labels_obj.show_value = bool(show_value)
+        data_labels_obj.show_category_name = bool(show_category)
+        data_labels_obj.show_series_name = bool(show_series_name)
+        try:
+            data_labels_obj.number_format = "General"
+        except Exception:
+            pass
+        try:
+            data_labels_obj.font.size = Pt(9)
+        except Exception:
+            pass
+        try:
+            data_labels_obj.position = position_enum
+        except Exception:
+            # Some positions are invalid for certain chart types; ignore
+            pass
+    except Exception as exc:
+        log.warning("Failed to apply data labels: %s", exc)
+
+
+def _apply_insight_annotations(chart_frame, annotations: list[dict]) -> None:
+    """Add callout text annotations to specific data points.
+
+    *annotations* schema:
+        [
+            {"text": "▲ 23% YoY", "point_index": 0, "series_index": 0},
+            ...
+        ]
+    If *series_index* is omitted the first series is used.
+
+    This is implemented by setting the data-label text on the target point
+    to the annotation text, which creates a visible callout in PowerPoint.
+    """
+    from lxml import etree
+
+    if not annotations:
+        return
+
+    chart = chart_frame.chart
+    nsmap = {"c": "http://schemas.openxmlformats.org/drawingml/2006/chart",
+             "a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+
+    try:
+        plot = chart.plots[0]
+    except (IndexError, Exception):
+        log.warning("Cannot apply insight annotations — no plot found")
+        return
+
+    for ann in annotations:
+        text = ann.get("text", "")
+        if not text:
+            continue
+        point_idx = int(ann.get("point_index", 0))
+        series_idx = int(ann.get("series_index", 0))
+
+        try:
+            series = plot.series[series_idx]
+        except (IndexError, Exception):
+            log.warning(
+                "insight_annotations: series_index %d out of range", series_idx
+            )
+            continue
+
+        # Enable data labels on the point via python-pptx if possible,
+        # then patch the XML to set custom text.
+        try:
+            point = series.points[point_idx]
+            point.has_data_label = True
+            # Patch the XML: set custom text on the data label
+            # python-pptx creates <c:dLbl> elements; we need to ensure
+            # a <c:tx> with our annotation text exists.
+            dlbl = point.data_label
+            # Access the underlying XML element
+            dlbl_elem = dlbl._element
+            # Remove any existing <c:tx> to replace it
+            for existing_tx in dlbl_elem.findall("{%s}tx" % nsmap["c"]):
+                dlbl_elem.remove(existing_tx)
+            # Build <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>TEXT</a:t></a:r></a:p></c:rich></c:tx>
+            tx = etree.SubElement(dlbl_elem, "{%s}tx" % nsmap["c"])
+            rich = etree.SubElement(tx, "{%s}rich" % nsmap["c"])
+            etree.SubElement(rich, "{%s}bodyPr" % nsmap["a"])
+            etree.SubElement(rich, "{%s}lstStyle" % nsmap["a"])
+            p = etree.SubElement(rich, "{%s}p" % nsmap["a"])
+            pPr = etree.SubElement(p, "{%s}pPr" % nsmap["a"])
+            etree.SubElement(pPr, "{%s}defRPr" % nsmap["a"]).set("sz", "900")
+            r = etree.SubElement(p, "{%s}r" % nsmap["a"])
+            rPr = etree.SubElement(r, "{%s}rPr" % nsmap["a"])
+            rPr.set("lang", "en-US")
+            rPr.set("sz", "900")
+            rPr.set("dirty", "0")
+            t = etree.SubElement(r, "{%s}t" % nsmap["a"])
+            t.text = text
+            # Ensure <c:showVal> etc. are not overriding our custom text
+            for tag in ("showVal", "showCatName", "showSerName", "showPercent"):
+                elem = dlbl_elem.find("{%s}%s" % (nsmap["c"], tag))
+                if elem is not None:
+                    dlbl_elem.remove(elem)
+        except Exception as exc:
+            log.warning(
+                "insight_annotations: failed on point %d series %d: %s",
+                point_idx, series_idx, exc,
+            )
+
+
 def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
-    """Render a chart node with multiple chart types and multi-series support."""
+    """Render a chart node with multiple chart types and multi-series support.
+
+    Enhanced to support:
+    - Embedded Excel workbook for double-click-editability
+    - Data labels (show_value, show_category, show_series_name, position)
+    - Insight annotations (callout text on specific data points)
+    """
     from pptx.chart.data import CategoryChartData, XyChartData
     from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
     from pptx.util import Inches
@@ -824,6 +1115,12 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
         chart_type, left, top, width, height, chart_data
     )
 
+    # --- Embedded Excel workbook for double-click-editability ---
+    try:
+        _embed_chart_workbook(chart_frame, binding, is_xy)
+    except Exception as exc:
+        log.warning("Failed to embed chart workbook (chart still works): %s", exc)
+
     # --- Chart styling ---
     # --- Chart style (int 1-48) ---
     chart_style_val = style.get("chart_style", 2)
@@ -853,6 +1150,22 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
             chart_frame.chart.has_legend = False
         except Exception:
             pass
+
+    # --- Data labels ---
+    data_labels = binding.get("data_labels") or style.get("data_labels")
+    if data_labels and isinstance(data_labels, dict):
+        try:
+            _apply_data_labels(chart_frame, data_labels)
+        except Exception as exc:
+            log.warning("Failed to apply data labels: %s", exc)
+
+    # --- Insight annotations ---
+    insight_annotations = binding.get("insight_annotations")
+    if insight_annotations and isinstance(insight_annotations, list):
+        try:
+            _apply_insight_annotations(chart_frame, insight_annotations)
+        except Exception as exc:
+            log.warning("Failed to apply insight annotations: %s", exc)
 
     return RenderTraceEntry(
         render_node_id=node.id,

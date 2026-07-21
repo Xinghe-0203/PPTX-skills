@@ -419,6 +419,11 @@ from pptx_skill.export import (  # noqa: E402
     export_to_pdf,
     export_to_text,
 )
+from pptx_skill.html_import import (  # noqa: E402
+    detect_html_slides,
+    html_to_content_spec,
+    import_from_html,
+)
 from pptx_skill.smartart import (  # noqa: E402
     detect_smartart,
     extract_smartart_text,
@@ -449,6 +454,11 @@ from pptx_skill.table_styles import (  # noqa: E402
     set_table_banding,
     set_table_direction,
     unmerge_cells,
+)
+from pptx_skill.html_import import (  # noqa: E402
+    detect_html_slides,
+    html_to_content_spec,
+    import_from_html,
 )
 
 __version__ = "3.0.0"
@@ -800,6 +810,10 @@ __all__ = [
     "export_to_images",
     "export_to_pdf",
     "export_to_text",
+    # HTML Import
+    "detect_html_slides",
+    "html_to_content_spec",
+    "import_from_html",
     # SmartArt
     "detect_smartart",
     "extract_smartart_text",
@@ -828,4 +842,8 @@ __all__ = [
     "set_table_banding",
     "set_table_direction",
     "unmerge_cells",
+    # HTML Import
+    "detect_html_slides",
+    "html_to_content_spec",
+    "import_from_html",
 ]
