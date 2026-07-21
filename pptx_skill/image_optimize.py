@@ -23,11 +23,73 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 __all__ = [
+    "CompressionLevel",
     "compress_images",
     "convert_image_format",
     "get_image_stats",
     "remove_unused_media",
 ]
+
+# ---------------------------------------------------------------------------
+# Compression levels
+# ---------------------------------------------------------------------------
+
+class CompressionLevel:
+    """Predefined compression level constants for ``compress_images()``.
+
+    Each level maps to a set of default parameters (quality, max dimensions,
+    skip_small, PNG-to-JPEG conversion policy).  When a ``level`` is passed to
+    ``compress_images()``, these defaults are applied; any explicitly provided
+    keyword arguments override the level defaults.
+
+    Usage::
+
+        compress_images("deck.pptx", level="medium")
+        compress_images("deck.pptx", level="aggressive", quality=70)
+    """
+
+    CONSERVATIVE = "conservative"
+    MEDIUM = "medium"
+    AGGRESSIVE = "aggressive"
+
+    # Internal mapping: level -> (quality, max_width, max_height, skip_small, png_to_jpeg)
+    _PROFILES: dict[str, dict[str, object]] = {
+        "conservative": {
+            "quality": 85,
+            "max_width": 1920,
+            "max_height": 1080,
+            "skip_small": True,
+            "png_to_jpeg": False,
+        },
+        "medium": {
+            "quality": 75,
+            "max_width": 1600,
+            "max_height": 900,
+            "skip_small": True,
+            "png_to_jpeg": "non_transparent",
+        },
+        "aggressive": {
+            "quality": 60,
+            "max_width": 1280,
+            "max_height": 720,
+            "skip_small": False,
+            "png_to_jpeg": "non_transparent",
+        },
+    }
+
+    @classmethod
+    def is_valid(cls, level: str) -> bool:
+        return level in cls._PROFILES
+
+    @classmethod
+    def get_profile(cls, level: str) -> dict[str, object]:
+        if level not in cls._PROFILES:
+            raise ValueError(
+                f"Unknown compression level '{level}'; "
+                f"use one of: {', '.join(cls._PROFILES)}"
+            )
+        return dict(cls._PROFILES[level])
+
 
 # ---------------------------------------------------------------------------
 # XML namespace helpers
@@ -313,6 +375,98 @@ def _rename_media_file(
         media_to_slides[new_name] = media_to_slides.pop(old_name)
 
 
+def _verify_reference_integrity(pptx_path: Path) -> bool:
+    """Verify that every Target in every .rels file resolves to an actual file.
+
+    After writing a modified PPTX, this function unzips the archive and checks
+    that all relationship targets point to files that actually exist inside the
+    ZIP.  Returns ``True`` if all references are valid, ``False`` otherwise.
+    """
+    try:
+        with zipfile.ZipFile(pptx_path, "r") as zf:
+            all_files = set(zf.namelist())
+            rel_ns = f"{{{_REL_NS}}}Relationship"
+
+            for name in all_files:
+                if not name.endswith(".rels"):
+                    continue
+                try:
+                    content = zf.read(name)
+                except KeyError:
+                    continue
+                try:
+                    root = ET.fromstring(content)
+                except ET.ParseError:
+                    continue
+
+                # In OOXML, a rels file at "X/_rels/Y.rels" has targets
+                # relative to "X/" (the source part's directory).
+                # The special case "_rels/.rels" has targets relative to the
+                # package root.
+                source_dir = _source_dir_from_rels_name(name)
+
+                for rel in root.findall(rel_ns):
+                    target = rel.get("Target", "")
+                    if not target:
+                        continue
+                    # Skip external references (http/https/mailto)
+                    if target.startswith(("http://", "https://", "mailto:")):
+                        continue
+                    # Resolve relative path
+                    resolved = _resolve_rels_target(source_dir, target)
+                    if resolved not in all_files:
+                        return False
+        return True
+    except Exception:
+        return False
+
+
+def _source_dir_from_rels_name(rels_name: str) -> str:
+    """Derive the source part directory from a rels file name.
+
+    In OOXML, relationship files live in ``_rels/`` subdirectories.  The
+    targets inside are relative to the *source part's* directory, not the
+    ``_rels/`` directory itself.
+
+    Examples::
+
+        "_rels/.rels"                    -> ""   (package root)
+        "ppt/_rels/presentation.xml.rels" -> "ppt/"
+        "ppt/slides/_rels/slide1.xml.rels" -> "ppt/slides/"
+        "ppt/slideLayouts/_rels/slideLayout1.xml.rels" -> "ppt/slideLayouts/"
+    """
+    # Remove the "_rels/" segment and the filename to get the source dir
+    # e.g. "ppt/slides/_rels/slide1.xml.rels" -> "ppt/slides/"
+    if "/_rels/" in rels_name:
+        return rels_name.split("/_rels/")[0] + "/"
+    # Special case: "_rels/.rels" -> package root
+    if rels_name.startswith("_rels/"):
+        return ""
+    # Fallback: use the directory containing the rels file
+    return rels_name.rsplit("/", 1)[0] + "/" if "/" in rels_name else ""
+
+
+def _resolve_rels_target(source_dir: str, target: str) -> str:
+    """Resolve a relative Target path against the source part's directory.
+
+    Handles ``../`` segments and normalises the result.  Leading ``/`` means
+    the path is already absolute within the ZIP.
+    """
+    if target.startswith("/"):
+        return target.lstrip("/")
+
+    # Split into parts and resolve ".." segments
+    parts = (source_dir + target).split("/")
+    resolved: list[str] = []
+    for part in parts:
+        if part == "..":
+            if resolved:
+                resolved.pop()
+        elif part and part != ".":
+            resolved.append(part)
+    return "/".join(resolved)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -321,11 +475,12 @@ def _rename_media_file(
 def compress_images(
     prs_or_path: str | Path,
     *,
-    quality: int = 85,
-    max_width: int = 1920,
-    max_height: int = 1080,
+    level: str | None = None,
+    quality: int | None = None,
+    max_width: int | None = None,
+    max_height: int | None = None,
     format: str = "JPEG",
-    skip_small: bool = True,
+    skip_small: bool | None = None,
 ) -> dict[str, int | float]:
     """Compress all images in a PPTX presentation.
 
@@ -333,18 +488,31 @@ def compress_images(
     ----------
     prs_or_path : str | Path
         Path to the ``.pptx`` file.
-    quality : int
-        JPEG/PNG compression quality (1-100).  Defaults to 85.
-    max_width : int
-        Maximum pixel width; larger images are downscaled.  Defaults to 1920.
-    max_height : int
-        Maximum pixel height; larger images are downscaled.  Defaults to 1080.
+    level : str | None
+        Compression level preset: ``"conservative"``, ``"medium"``, or
+        ``"aggressive"``.  When set, the corresponding default values for
+        *quality*, *max_width*, *max_height*, *skip_small*, and PNG-to-JPEG
+        conversion are applied.  Any explicitly provided keyword arguments
+        override the level defaults.  ``None`` (default) uses the original
+        parameter defaults for backward compatibility.
+    quality : int | None
+        JPEG/PNG compression quality (1-100).  Overrides the level default
+        when explicitly provided.  Defaults to 85 when *level* is ``None``.
+    max_width : int | None
+        Maximum pixel width; larger images are downscaled.  Overrides the
+        level default when explicitly provided.  Defaults to 1920 when
+        *level* is ``None``.
+    max_height : int | None
+        Maximum pixel height; larger images are downscaled.  Overrides the
+        level default when explicitly provided.  Defaults to 1080 when
+        *level* is ``None``.
     format : str
         Output format -- ``"JPEG"`` (default, best for photos) or ``"PNG"``
         (for graphics with transparency).
-    skip_small : bool
-        If True (default), images already smaller than *max_width* x
-        *max_height* are left untouched.
+    skip_small : bool | None
+        If True, images already smaller than *max_width* x *max_height* are
+        left untouched.  Overrides the level default when explicitly provided.
+        Defaults to True when *level* is ``None``.
 
     Returns
     -------
@@ -352,20 +520,52 @@ def compress_images(
         ``{"total_images": N, "compressed": N, "skipped": N,
         "original_size_bytes": N, "new_size_bytes": N,
         "savings_percent": F}``
+
+    Raises
+    ------
+    ValueError
+        If *level* is not a recognised compression level, or if computed
+        quality is out of range.
+    RuntimeError
+        If reference integrity verification fails after writing.
     """
     from PIL import Image, ImageOps
 
     fmt = format.upper()
     if fmt not in ("JPEG", "PNG"):
         raise ValueError(f"Unsupported format '{format}'; use 'JPEG' or 'PNG'")
-    if not 1 <= quality <= 100:
-        raise ValueError(f"quality must be 1-100, got {quality}")
+
+    # Resolve effective parameters from level or defaults
+    if level is not None:
+        if not CompressionLevel.is_valid(level):
+            raise ValueError(
+                f"Unknown compression level '{level}'; "
+                f"use one of: conservative, medium, aggressive"
+            )
+        profile = CompressionLevel.get_profile(level)
+        png_to_jpeg: str | bool = profile["png_to_jpeg"]  # type: ignore[assignment]
+        eff_quality: int = quality if quality is not None else profile["quality"]  # type: ignore[assignment]
+        eff_max_width: int = max_width if max_width is not None else profile["max_width"]  # type: ignore[assignment]
+        eff_max_height: int = max_height if max_height is not None else profile["max_height"]  # type: ignore[assignment]
+        eff_skip_small: bool = skip_small if skip_small is not None else profile["skip_small"]  # type: ignore[assignment]
+    else:
+        # Backward-compatible defaults: the original behaviour was to convert
+        # non-transparent PNGs to JPEG when format="JPEG", so use the same
+        # policy as the "non_transparent" level setting.
+        png_to_jpeg = "non_transparent"
+        eff_quality = quality if quality is not None else 85
+        eff_max_width = max_width if max_width is not None else 1920
+        eff_max_height = max_height if max_height is not None else 1080
+        eff_skip_small = skip_small if skip_small is not None else True
+
+    if not 1 <= eff_quality <= 100:
+        raise ValueError(f"quality must be 1-100, got {eff_quality}")
 
     pptx_path = _resolve_path(prs_or_path)
     if not pptx_path.exists():
         raise FileNotFoundError(pptx_path)
 
-    _create_backup(pptx_path)
+    backup_path = _create_backup(pptx_path)
     data, infos = _read_zip(pptx_path)
     ct_root = _parse_content_types(data.get("[Content_Types].xml", b""))
     media_to_slides = _build_media_to_slides_map(data)
@@ -390,8 +590,28 @@ def compress_images(
             new_size += len(img_bytes)
             continue
 
-        # If output is JPEG but image has alpha, force PNG to preserve transparency
+        # Determine effective output format for this image
         effective_fmt = fmt
+
+        # PNG-to-JPEG conversion logic based on level
+        if current_fmt == "PNG" and fmt == "JPEG":
+            if not png_to_jpeg:
+                # CONSERVATIVE: keep PNG as PNG, do not convert to JPEG
+                effective_fmt = "PNG"
+            elif png_to_jpeg == "non_transparent":
+                # MEDIUM/AGGRESSIVE: convert non-transparent PNGs to JPEG
+                if not _has_alpha(img_bytes):
+                    effective_fmt = "JPEG"
+                else:
+                    effective_fmt = "PNG"
+            elif png_to_jpeg is True:
+                # Convert ALL non-transparent PNGs (same as "non_transparent")
+                if not _has_alpha(img_bytes):
+                    effective_fmt = "JPEG"
+                else:
+                    effective_fmt = "PNG"
+
+        # If output is JPEG but image has alpha, force PNG to preserve transparency
         if effective_fmt == "JPEG" and _has_alpha(img_bytes):
             effective_fmt = "PNG"
 
@@ -407,20 +627,20 @@ def compress_images(
         w, h = pil_img.size
 
         # Decide whether to skip
-        needs_resize = w > max_width or h > max_height
+        needs_resize = w > eff_max_width or h > eff_max_height
         needs_reencode = (
             effective_fmt != current_fmt
             or (effective_fmt == "JPEG" and current_fmt == "JPEG")
             # Re-encode JPEG to apply quality setting
         )
-        if skip_small and not needs_resize and not needs_reencode:
+        if eff_skip_small and not needs_resize and not needs_reencode:
             skipped += 1
             new_size += len(img_bytes)
             continue
 
         # Resize if needed
         if needs_resize:
-            ratio = min(max_width / w, max_height / h)
+            ratio = min(eff_max_width / w, eff_max_height / h)
             new_w = max(1, int(w * ratio))
             new_h = max(1, int(h * ratio))
             resample = Image.LANCZOS  # type: ignore[attr-defined]
@@ -441,7 +661,7 @@ def compress_images(
         # Encode
         buf = io.BytesIO()
         if effective_fmt == "JPEG":
-            pil_img.save(buf, "JPEG", quality=quality, optimize=True)
+            pil_img.save(buf, "JPEG", quality=eff_quality, optimize=True)
         elif effective_fmt == "PNG":
             pil_img.save(buf, "PNG", optimize=True)
         new_bytes = buf.getvalue()
@@ -477,6 +697,15 @@ def compress_images(
     # Write back [Content_Types].xml
     data["[Content_Types].xml"] = _serialize_content_types(ct_root)
     _write_zip(pptx_path, data, infos)
+
+    # Verify reference integrity after writing
+    if not _verify_reference_integrity(pptx_path):
+        # Restore from backup
+        shutil.copy2(backup_path, pptx_path)
+        raise RuntimeError(
+            "Reference integrity check failed after compression. "
+            "The original file has been restored from backup."
+        )
 
     savings = ((original_size - new_size) / original_size * 100) if original_size > 0 else 0.0
     return {

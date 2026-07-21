@@ -384,6 +384,7 @@ from pptx_skill.slide_master import (  # noqa: E402
     set_master_background,
 )
 from pptx_skill.image_optimize import (  # noqa: E402
+    CompressionLevel,
     compress_images,
     convert_image_format,
     get_image_stats,
@@ -407,6 +408,7 @@ from pptx_skill.diff import (  # noqa: E402
     PresentationDiff,
     SlideDiff,
     diff_presentations,
+    diff_presentations_visual,
     diff_slides,
     diff_text,
     format_diff,
@@ -779,6 +781,7 @@ __all__ = [
     "set_layout_background",
     "set_master_background",
     # Image Optimize
+    "CompressionLevel",
     "compress_images",
     "convert_image_format",
     "get_image_stats",
@@ -800,6 +803,7 @@ __all__ = [
     "PresentationDiff",
     "SlideDiff",
     "diff_presentations",
+    "diff_presentations_visual",
     "diff_slides",
     "diff_text",
     "format_diff",

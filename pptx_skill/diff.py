@@ -24,6 +24,7 @@ __all__ = [
     "PresentationDiff",
     "SlideDiff",
     "diff_presentations",
+    "diff_presentations_visual",
     "diff_slides",
     "diff_text",
     "format_diff",
@@ -804,3 +805,145 @@ def _format_markdown(diff_result: PresentationDiff) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def diff_presentations_visual(
+    path_a: str | Path,
+    path_b: str | Path,
+    *,
+    dpi: int = 150,
+    threshold: float = 0.02,
+) -> dict[str, Any]:
+    """Pixel-level visual diff between two PPTX files.
+
+    Renders each slide to a PNG image, then compares corresponding slides
+    using SSIM (structural similarity).  Falls back to a simple RMS pixel
+    difference if scikit-image is not available.
+
+    This is complementary to :func:`diff_presentations` -- it catches visual
+    changes (font substitution, rendering differences) that structural diff
+    cannot detect.
+
+    Args:
+        path_a: Path to the first (baseline) PPTX.
+        path_b: Path to the second (modified) PPTX.
+        dpi: Rendering resolution for the PNG images.
+        threshold: SSIM threshold below which a slide is flagged as changed
+                   (1.0 = identical, 0.0 = completely different).
+
+    Returns:
+        A dict with keys:
+        - ``slide_count_a``, ``slide_count_b`` -- slide counts.
+        - ``slides_compared`` -- number of slides compared.
+        - ``slide_scores`` -- list of ``{"index": N, "ssim": F, "changed": bool}``.
+        - ``visual_changes`` -- count of slides with SSIM below threshold.
+        - ``rasterizer`` -- which backend was used (``"pymupdf"``/``"pillow"``/``"none"``).
+    """
+    from pathlib import Path as _P
+
+    path_a, path_b = _P(path_a), _P(path_b)
+    result: dict[str, Any] = {
+        "slide_count_a": 0,
+        "slide_count_b": 0,
+        "slides_compared": 0,
+        "slide_scores": [],
+        "visual_changes": 0,
+        "rasterizer": "none",
+    }
+
+    try:
+        from pptx import Presentation  # noqa: lazy
+    except ImportError:
+        return result
+
+    try:
+        prs_a = Presentation(str(path_a))
+        prs_b = Presentation(str(path_b))
+    except Exception:
+        return result
+
+    result["slide_count_a"] = len(prs_a.slides)
+    result["slide_count_b"] = len(prs_b.slides)
+
+    # Render slides to PNG using preview_renderer
+    import tempfile
+
+    try:
+        from pptx_skill.preview_renderer import render_preview
+    except ImportError:
+        return result
+
+    with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+        try:
+            render_preview(str(path_a), tmp_a, dpi=dpi)
+            render_preview(str(path_b), tmp_b, dpi=dpi)
+        except Exception:
+            return result
+
+        import glob
+
+        pngs_a = sorted(glob.glob(str(_P(tmp_a) / "*.png")))
+        pngs_b = sorted(glob.glob(str(_P(tmp_b) / "*.png")))
+
+        n_compare = min(len(pngs_a), len(pngs_b))
+        if n_compare == 0:
+            return result
+
+        result["rasterizer"] = "pymupdf"
+
+        # Compare images
+        try:
+            from skimage.metrics import structural_similarity as ssim  # type: ignore[import-not-found]
+            import numpy as np  # type: ignore[import-not-found]
+
+            use_skimage = True
+            result["rasterizer"] = "skimage"
+        except ImportError:
+            use_skimage = False
+
+        for i in range(n_compare):
+            try:
+                from PIL import Image  # type: ignore[import-not-found]
+
+                img_a = Image.open(pngs_a[i]).convert("L")
+                img_b = Image.open(pngs_b[i]).convert("L")
+
+                # Resize to same dimensions if needed
+                if img_a.size != img_b.size:
+                    img_b = img_b.resize(img_a.size)
+
+                if use_skimage:
+                    import numpy as np  # type: ignore[import-not-found]
+
+                    arr_a = np.array(img_a)
+                    arr_b = np.array(img_b)
+                    score = float(ssim(arr_a, arr_b))
+                else:
+                    # Simple RMS difference as fallback
+                    import numpy as np  # type: ignore[import-not-found]
+
+                    arr_a = np.array(img_a, dtype=float)
+                    arr_b = np.array(img_b, dtype=float)
+                    diff = arr_a - arr_b
+                    rms = float(np.sqrt(np.mean(diff ** 2)))
+                    # Convert RMS (0-255) to pseudo-SSIM (0-1)
+                    score = max(0.0, 1.0 - rms / 128.0)
+
+                changed = score < threshold
+                if changed:
+                    result["visual_changes"] += 1
+                result["slide_scores"].append({
+                    "index": i,
+                    "ssim": round(score, 4),
+                    "changed": changed,
+                })
+            except Exception:
+                result["slide_scores"].append({
+                    "index": i,
+                    "ssim": None,
+                    "changed": None,
+                    "error": "comparison failed",
+                })
+
+    result["slides_compared"] = n_compare
+    return result
