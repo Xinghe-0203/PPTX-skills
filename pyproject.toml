@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pptx-skill"
-version = "3.0.0"
-description = "Comprehensive PPTX generation, editing, and manipulation toolkit for agent workflows"
+version = "4.0.0"
+description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — effects, connectors, equations, accessibility, protection, multimedia, and more"
 readme = "SKILL.md"
 requires-python = ">=3.12"
 authors = [
@@ -30,6 +30,9 @@ render-com = ["pywin32>=306,<400; platform_system == 'Windows'"]
 chart-editable = ["openpyxl>=3,<4"]
 vba-parse = ["olefile>=0.47,<1"]
 html-import = ["beautifulsoup4>=4,<5"]
+encrypt = ["msoffcrypto-tool>=4,<6"]
+ocr-easy = ["easyocr>=1,<2"]
+ocr-paddle = ["paddleocr>=2,<3", "paddlepaddle>=2,<3"]
 test = ["pytest>=8,<10", "hypothesis>=6,<7"]
 
 [project.scripts]
