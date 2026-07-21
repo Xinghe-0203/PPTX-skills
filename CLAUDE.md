@@ -97,6 +97,7 @@ pptx_skill/__init__.py
 - `smartart.py` — SmartArt detection, text extraction/editing, preservation across clone/merge
 - `vba.py` — VBA project detection, injection, extraction, macro-to-shape attachment
 - `table_styles.py` — 20 built-in table styles, cell merge/unmerge, borders, fills, add row/column
+- `html_import.py` — HTML-to-PPTX import with local snapshot underlay technique
 
 ## Data Flow: Content → Rendered PPTX
 
@@ -159,9 +160,9 @@ All editing functions create `.bak.pptx` backup before writing. Slide indices ar
 
 ## Layout Recipes & Roles
 
-19 roles: `cover, toc, section, bullets, text_image, full_image, image_grid, dashboard, timeline, comparison, quote, process, table, end, matrix, kpi_hero, faq, testimonial, logo_wall`
+24 roles: `cover, toc, section, bullets, text_image, full_image, image_grid, dashboard, timeline, comparison, quote, process, table, end, matrix, kpi_hero, faq, testimonial, logo_wall, swot, porter, pest, bmc, funnel`
 
-~47 recipe variants with density-graded options (sparse/dense for bullets, dashboard; three_column for comparison; vertical_dense for timeline; horizontal_dense for process; grid4 for image_grid; wide for table). Each new role has ≥2 variants.
+~57 recipe variants with density-graded options (sparse/dense for bullets, dashboard; three_column for comparison; vertical_dense for timeline; horizontal_dense for process; grid4 for image_grid; wide for table). Analytical framework roles: swot (quadrant/labeled), porter (diamond/horizontal), pest (grid/vertical), bmc (canvas/compact), funnel (stacked/narrow). Each role has ≥2 variants.
 
 When adding a new recipe:
 1. Define zones, constraints, content_limits in `layout_engine.py`
