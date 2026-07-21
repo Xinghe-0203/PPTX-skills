@@ -1162,6 +1162,27 @@ def render_layout_plans(
         except Exception as exc:
             log.warning("Failed to add slide notes for slide %d: %s", slide_index, exc)
 
+    # Apply deck-level transitions if requested
+    transition_cfg = opts.get("transition")
+    if transition_cfg:
+        from pptx_skill.transitions import apply_slide_transition, TRANSITION_TYPES
+
+        if isinstance(transition_cfg, str):
+            # Simple string: just the transition type
+            t_type = transition_cfg if transition_cfg in TRANSITION_TYPES else "fade"
+            for slide in prs.slides:
+                apply_slide_transition(slide, t_type, 700)
+        elif isinstance(transition_cfg, dict):
+            # Dict with detailed options: type, duration_ms, advance_ms
+            t_type = transition_cfg.get("type", "fade")
+            if t_type not in TRANSITION_TYPES:
+                log.warning("Unknown transition type %r in deck_options; falling back to 'fade'", t_type)
+                t_type = "fade"
+            t_duration = transition_cfg.get("duration_ms", 700)
+            t_advance = transition_cfg.get("advance_ms")
+            for slide in prs.slides:
+                apply_slide_transition(slide, t_type, t_duration, t_advance)
+
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     prs.save(output_path)
 

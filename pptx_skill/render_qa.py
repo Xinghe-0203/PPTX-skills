@@ -125,8 +125,11 @@ def _windowed_density_pillow(mask: Image.Image, window_size: int = 16) -> float:
 
 
 def _ssim_scikit(a: Image.Image, b: Image.Image) -> float:
-    import numpy as np
-    from skimage.metrics import structural_similarity as ssim
+    try:
+        import numpy as np
+        from skimage.metrics import structural_similarity as ssim
+    except ImportError:
+        return 0.0
 
     arr_a = np.array(a)
     arr_b = np.array(b)

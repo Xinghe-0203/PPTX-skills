@@ -658,6 +658,35 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
             {"body.max_items": 4, "body.min_font_size": 18},
         ))
         recipes.append(_recipe(
+            "bullets.with_icon",
+            "bullets",
+            "with_icon",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "icon_area": {"kind": "shape", "style": "component.body"},
+                "body": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Icon area — narrow left column for number/icon prefixes
+                {"terms": [{"var": "icon_area.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "icon_area.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "icon_area.width"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "icon_area.right"}, {"var": "icon_area.left", "coef": -1}, {"var": "icon_area.width", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "icon_area.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                # Body — text list to the right of icon column
+                {"terms": [{"var": "body.left"}, {"var": "icon_area.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "body.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "body.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "body.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"body.max_items": 7, "body.min_font_size": 15},
+        ))
+        recipes.append(_recipe(
             "bullets.dense",
             "bullets",
             "dense",
@@ -815,6 +844,42 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
             {"lead.max_metrics": 3, "support.min_font_size": 16},
         ))
         recipes.append(_recipe(
+            "dashboard.metric_hero",
+            "dashboard",
+            "metric_hero",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "hero_metric": {"kind": "text", "style": "component.metric"},
+                "hero_label": {"kind": "text", "style": "component.body"},
+                "metrics_row": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Hero metric — large KPI value centered
+                {"terms": [{"var": "hero_metric.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "hero_metric.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "hero_metric.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "hero_metric.height"}], "op": "==", "rhs": {"const": 120}},
+                {"terms": [{"var": "hero_metric.bottom"}, {"var": "hero_metric.top", "coef": -1}, {"var": "hero_metric.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Hero label — description below the large KPI
+                {"terms": [{"var": "hero_label.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "hero_label.top"}, {"var": "hero_metric.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "hero_label.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "hero_label.height"}], "op": "==", "rhs": {"const": 24}},
+                {"terms": [{"var": "hero_label.bottom"}, {"var": "hero_label.top", "coef": -1}, {"var": "hero_label.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Metrics row — supporting metrics at bottom
+                {"terms": [{"var": "metrics_row.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "metrics_row.top"}, {"var": "hero_label.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "metrics_row.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "metrics_row.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"hero_metric.max_lines": 1, "hero_metric.min_font_size": 60, "metrics_row.max_items": 4, "metrics_row.min_font_size": 14},
+        ))
+        recipes.append(_recipe(
             "dashboard.dense",
             "dashboard",
             "dense",
@@ -868,6 +933,35 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "hero.bottom"}, {"var": "hero.top", "coef": -1}, {"var": "hero.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
             ],
             {"title.max_lines": 2, "title.min_font_size": 36},
+        ))
+        recipes.append(_recipe(
+            "cover.statement",
+            "cover",
+            "statement",
+            {
+                "statement": {"kind": "text", "style": "component.title"},
+                "attribution": {"kind": "text", "style": "component.body"},
+                "footer": {"kind": "text", "style": "component.body"},
+            },
+            [
+                # Statement — large bold text centered, occupying top ~60%
+                {"terms": [{"var": "statement.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "statement.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "statement.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "statement.bottom"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                # Attribution — source/author below statement
+                {"terms": [{"var": "attribution.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "attribution.top"}, {"var": "statement.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.section"}},
+                {"terms": [{"var": "attribution.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "attribution.height"}], "op": "==", "rhs": {"const": 24}},
+                {"terms": [{"var": "attribution.bottom"}, {"var": "attribution.top", "coef": -1}, {"var": "attribution.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Footer — small text at bottom
+                {"terms": [{"var": "footer.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "footer.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+                {"terms": [{"var": "footer.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "footer.height"}], "op": "==", "rhs": {"const": 20}},
+            ],
+            {"statement.max_lines": 4, "statement.min_font_size": 36, "attribution.max_lines": 1, "footer.max_lines": 1},
         ))
         recipes.append(_recipe(
             "cover.poster",
@@ -1262,6 +1356,42 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
             ],
         ))
         recipes.append(_recipe(
+            "comparison.matrix",
+            "comparison",
+            "matrix",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "left_header": {"kind": "text", "style": "component.title"},
+                "right_header": {"kind": "text", "style": "component.title"},
+                "criteria": {"kind": "text-list", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Left header — left half of header row
+                {"terms": [{"var": "left_header.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "left_header.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "left_header.right"}], "op": "==", "rhs": {"ref": "canvas.center_x"}},
+                {"terms": [{"var": "left_header.height"}], "op": "==", "rhs": {"const": 36}},
+                {"terms": [{"var": "left_header.bottom"}, {"var": "left_header.top", "coef": -1}, {"var": "left_header.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Right header — right half of header row
+                {"terms": [{"var": "right_header.left"}, {"var": "left_header.right", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "right_header.top"}, {"var": "left_header.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                {"terms": [{"var": "right_header.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "right_header.height"}], "op": "==", "rhs": {"const": 36}},
+                {"terms": [{"var": "right_header.bottom"}, {"var": "right_header.top", "coef": -1}, {"var": "right_header.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Criteria — full-width text list below headers
+                {"terms": [{"var": "criteria.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "criteria.top"}, {"var": "left_header.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "criteria.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "criteria.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"criteria.max_items": 8, "criteria.min_font_size": 14, "left_header.max_lines": 2, "right_header.max_lines": 2},
+        ))
+        recipes.append(_recipe(
             "comparison.three_column",
             "comparison",
             "three_column",
@@ -1403,6 +1533,35 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "steps.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
             {"steps.max_items": 6, "steps.min_font_size": 14},
+        ))
+        recipes.append(_recipe(
+            "process.milestone",
+            "process",
+            "milestone",
+            {
+                "title": {"kind": "text", "style": "component.title"},
+                "milestones": {"kind": "text-list", "style": "component.body"},
+                "axis": {"kind": "shape", "style": "component.body"},
+            },
+            [
+                {"terms": [{"var": "title.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "title.top"}], "op": "==", "rhs": {"ref": "canvas.safe_top"}},
+                {"terms": [{"var": "title.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "title.height"}], "op": "==", "rhs": {"const": 48}},
+                {"terms": [{"var": "title.bottom"}, {"var": "title.top", "coef": -1}, {"var": "title.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Axis — horizontal timeline line at vertical center
+                {"terms": [{"var": "axis.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "axis.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "axis.top"}], "op": "==", "rhs": {"ref": "canvas.center_y"}},
+                {"terms": [{"var": "axis.height"}], "op": "==", "rhs": {"const": 4}},
+                {"terms": [{"var": "axis.bottom"}, {"var": "axis.top", "coef": -1}, {"var": "axis.height", "coef": -1}], "op": "==", "rhs": {"const": 0}},
+                # Milestones — text list above and below axis
+                {"terms": [{"var": "milestones.left"}], "op": "==", "rhs": {"ref": "canvas.safe_left"}},
+                {"terms": [{"var": "milestones.top"}, {"var": "title.bottom", "coef": -1}], "op": ">=", "rhs": {"token": "semantic.space.component"}},
+                {"terms": [{"var": "milestones.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
+                {"terms": [{"var": "milestones.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
+            ],
+            {"milestones.max_items": 6, "milestones.min_font_size": 14},
         ))
         recipes.append(_recipe(
             "process.horizontal_dense",

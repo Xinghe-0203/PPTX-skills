@@ -198,7 +198,7 @@ def _relative_luminance(hex_color: str) -> float:
     return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2])
 
 
-def v2_bundle_to_legacy_theme(bundle) -> dict[str, Any]:
+def v2_bundle_to_legacy_theme(bundle: CompiledTemplateBundleV2) -> dict[str, Any]:
     """Convert a compiled V2 bundle back into the legacy theme/fonts shape.
 
     The result is consumable by ``choose_theme``/``draw_*`` even though it
@@ -228,14 +228,14 @@ def v2_bundle_to_legacy_theme(bundle) -> dict[str, Any]:
     }
 
 
-def v2_bundle_to_legacy_fonts(bundle) -> dict[str, str]:
+def v2_bundle_to_legacy_fonts(bundle: CompiledTemplateBundleV2) -> dict[str, str]:
     resolved = bundle.tokens
     display = _lookup("primitive.font.family.display", resolved) or "Aptos Display"
     body = _lookup("primitive.font.family.body", resolved) or "Microsoft YaHei"
     return {"cn": body, "en": display}
 
 
-def v2_bundle_to_legacy_profile(bundle) -> dict[str, Any]:
+def v2_bundle_to_legacy_profile(bundle: CompiledTemplateBundleV2) -> dict[str, Any]:
     """Build the legacy ``profile`` dict (``theme`` + ``fonts`` + ``layout_opts``)."""
     family = (bundle.grammar or {}).get("family", "standard")
     layout_family = family if family in {"standard", "editorial_grid", "technical_axis", "poster_column"} else "editorial_grid"

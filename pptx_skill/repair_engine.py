@@ -12,6 +12,8 @@ from enum import StrEnum
 from typing import Any
 
 from pptx_skill.content_model import SlideSpec
+from pptx_skill.semantic_qa import SemanticQAReport
+from pptx_skill.visual_qa import QAReport
 
 
 class RepairActionKind(StrEnum):
@@ -88,7 +90,7 @@ def _view_issues(report: Any) -> list[_IssueView]:
 
 
 def propose_repairs(
-    qa_report: Any,
+    qa_report: SemanticQAReport | QAReport,
     slide_specs: list[SlideSpec],
     profile_state: dict[str, Any],
 ) -> list[RepairAction]:

@@ -187,11 +187,35 @@ def _download_file(url: str, dest: Path, timeout: int = _REQUEST_TIMEOUT) -> Non
             out.write(chunk)
 
 
+_REPO_RE = re.compile(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')
+_BRANCH_RE = re.compile(r'^[A-Za-z0-9_.:/-]+$')
+
+
+def _validate_repo_branch(repo: str, branch: str) -> None:
+    """Validate that *repo* and *branch* match expected formats."""
+    if not _REPO_RE.match(repo):
+        raise ValueError(
+            f"Invalid repo format {repo!r}; expected 'owner/repo' with "
+            f"alphanumeric characters, dots, hyphens and underscores"
+        )
+    if not _BRANCH_RE.match(branch):
+        raise ValueError(
+            f"Invalid branch format {branch!r}; expected alphanumeric "
+            f"characters, dots, hyphens, underscores, colons and slashes"
+        )
+
+
 def _github_api_list_dir(repo: str, subdir: str, branch: str) -> list[dict[str, Any]]:
     """List files in a GitHub repo directory via the Contents API."""
+    _validate_repo_branch(repo, branch)
     encoded_subdir = urllib.parse.quote(subdir.strip("/"), safe="/")
     url = f"{_GITHUB_API_BASE}/repos/{repo}/contents/{encoded_subdir}?ref={branch}"
-    return _fetch_json(url)
+    result = _fetch_json(url)
+    # GitHub API returns a single dict when the path points to a file;
+    # wrap it in a list so callers can iterate uniformly.
+    if isinstance(result, dict):
+        return [result]
+    return result
 
 
 def _github_raw_url(repo: str, path: str, branch: str) -> str:
@@ -264,6 +288,11 @@ def download_template_pack(source: str, output_dir: str, **kwargs: Any) -> dict[
             return result
         subdir = kwargs.get("subdir", "")
         branch = kwargs.get("branch", "main")
+        try:
+            _validate_repo_branch(repo, branch)
+        except ValueError as exc:
+            result["errors"].append(str(exc))
+            return result
         try:
             pptx_paths = _walk_github_dir(repo, subdir, branch)
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
@@ -363,8 +392,16 @@ def import_template(
     pptx = Path(pptx_path).resolve()
     if not pptx.exists():
         raise FileNotFoundError(f"PPTX file not found: {pptx}")
+    if not pptx.is_file():
+        raise ValueError(f"PPTX path is not a regular file: {pptx}")
     if not pptx.suffix.lower() == ".pptx":
         raise ValueError(f"Expected a .pptx file, got: {pptx.suffix}")
+    _MAX_IMPORT_SIZE = 50 * 1024 * 1024  # 50 MB
+    if pptx.stat().st_size > _MAX_IMPORT_SIZE:
+        raise ValueError(
+            f"PPTX file too large ({pptx.stat().st_size / (1024 * 1024):.1f} MB); "
+            f"maximum is {_MAX_IMPORT_SIZE // (1024 * 1024)} MB"
+        )
 
     profile_name = name or pptx.stem
 

@@ -12,6 +12,7 @@ from typing import Any
 
 from pptx_skill.content_model import CanvasSpec, ContentSpec, LayoutPlan, SlideSpec
 from pptx_skill.deck_planner import LayoutScoringConfig, plan_deck
+from pptx_skill.manifest import ManifestV3
 from pptx_skill.pptx_renderer import render_layout_plans
 from pptx_skill.preview_renderer import render_preview
 from pptx_skill.render_qa import RenderQAConfig, evaluate_render_against_baseline
@@ -34,7 +35,7 @@ class GenerationResult:
     preview_dir: str | None = None
     repair_passes: int = 0
     repair_log: list[dict] = field(default_factory=list)
-    manifest: Any | None = None
+    manifest: ManifestV3 | None = None
 
 
 def plan_deck_layouts(

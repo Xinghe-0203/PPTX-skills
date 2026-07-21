@@ -19,6 +19,7 @@ from typing import Any
 from pptx_skill.content_model import (
     CanvasSpec,
     ElementSpec,
+    LayoutPlan,
     SlideSpec,
 )
 from pptx_skill.layout_engine import (
@@ -67,7 +68,7 @@ class SlideRebuildPlan:
     detected_role: str
     chosen_recipe_id: str
     slide_spec: SlideSpec
-    layout_plan: Any  # LayoutPlan
+    layout_plan: LayoutPlan
     diagnostics: dict[str, Any] = field(default_factory=dict)
 
 

@@ -21,6 +21,8 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 
+# lxml is a transitive dependency via python-pptx; not listed directly in
+# pyproject.toml but always available when python-pptx is installed.
 from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
