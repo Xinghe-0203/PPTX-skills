@@ -15,7 +15,7 @@ python -m pip install -e .
 # Install with optional backends
 python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
 
-# Run full test suite (184 tests, ~250s)
+# Run full test suite (185 tests, ~300s)
 python -m pytest tests/ -ra
 
 # Run a single test file
@@ -84,6 +84,19 @@ pptx_skill/__init__.py
 - `template_downloader.py` — template pack download (GitHub/URL/local), PPTX archive extraction, remote pack listing & search
 - `visual_qa.py` — visual QA checks on rendered slides
 - `capability.py` — runtime environment capability detection and reporting
+- `transitions.py` — 18 slide transition types (fade/push/wipe/cover/split/dissolve/random/cut)
+- `animations.py` — 51 animation types (20 entrance, 15 exit, 15 emphasis, 1 motion path) via OOXML timing XML
+- `merge.py` — multi-deck merge with layout/media/rel-ID deduplication, slide extraction
+- `watermark.py` — text/image watermarks with opacity, tiling, z-ordering, removal
+- `sections.py` — section groups (add/remove/rename/move/collapse) via OOXML sectionLst
+- `slide_master.py` — slide master/layout query, clone, rename, placeholder ops, background settings
+- `image_optimize.py` — image compression, format conversion, unused media removal, stats
+- `comments.py` — speaker notes + review comments (add/list/delete/reply/resolve) via OOXML
+- `diff.py` — structural diff at slide/shape/text/image/layout level with shape matching
+- `export.py` — PDF/image/HTML/text/thumbnail export (LibreOffice/PyMuPDF/Pillow backends)
+- `smartart.py` — SmartArt detection, text extraction/editing, preservation across clone/merge
+- `vba.py` — VBA project detection, injection, extraction, macro-to-shape attachment
+- `table_styles.py` — 20 built-in table styles, cell merge/unmerge, borders, fills, add row/column
 
 ## Data Flow: Content → Rendered PPTX
 
