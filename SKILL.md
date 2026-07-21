@@ -1,8 +1,8 @@
 ---
 name: pptx
-version: "2.0.0"
+version: "3.0.0"
 description: |
-  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 19 种内容版式、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取。
+  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 24 种内容版式（含 5 种分析框架）、62 种版式配方、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取、18 种转场动画、51 种入场/退出/强调动画、多文件合并与幻灯片提取、文字/图片水印、节管理、母版/版式查询与克隆、图片压缩与优化、演讲者备注与审阅批注、结构化差异比较、多格式导出（PDF/图片/HTML/文本）、SmartArt 检测与编辑、VBA 宏注入与提取、20 种内置表格样式与单元格操作、HTML 导入。
 ---
 
 # PPTX 智能制作
@@ -17,6 +17,8 @@ description: |
 - 用户提供了扁平截图或复杂结构，需要重建可编辑近似版本。
 - 用户需要修改已有 PPT 的文字、图片、颜色、页面顺序或版式。
 - 用户需要把数据表格/指标/时间线/流程图做成可编辑图表或表格。
+- 用户需要合并多个 PPT、添加水印、设置转场/动画、导出 PDF/图片。
+- 用户需要从 HTML 幻灯片（Marp/Slidev/reveal.js）导入为可编辑 PPTX。
 
 ## 不适用场景
 
@@ -54,6 +56,20 @@ description: |
 | 字体配对系统（含 CJK） | 已落地 | `pptx_skill.pptx_renderer.FONTS` / `CJK_FONTS` |
 | 200 页 QA 标注数据集 | 已落地 | `pptx_skill.qa_dataset.generate_annotation_dataset()` |
 | Golden renders 基线 | 已落地 | `pptx_skill.golden_renders.render_golden_set()` |
+| 18 种转场动画 | 已落地 | `pptx_skill.transitions.apply_slide_transition()` / `apply_deck_transitions()` |
+| 51 种幻灯片动画（20 入场/15 退出/15 强调/1 运动路径） | 已落地 | `pptx_skill.animations.apply_animation()` / `apply_entrance_animation()` / `apply_exit_animation()` / `apply_emphasis_animation()` / `apply_motion_path()` |
+| 多文件合并与幻灯片提取 | 已落地 | `pptx_skill.merge.merge_presentations()` / `append_slides()` / `insert_slides()` / `extract_slides()` |
+| 文字/图片水印（透明度/平铺/层级/移除） | 已落地 | `pptx_skill.watermark.add_text_watermark()` / `add_image_watermark()` / `remove_watermark()` |
+| 节管理（增删改移折叠） | 已落地 | `pptx_skill.sections.add_section()` / `remove_section()` / `rename_section()` / `move_section()` / `collapse_section()` |
+| 母版/版式查询、克隆、占位符、背景 | 已落地 | `pptx_skill.slide_master.list_slide_masters()` / `clone_layout()` / `add_placeholder_to_layout()` / `set_master_background()` |
+| 图片压缩/格式转换/未用媒体清理 | 已落地 | `pptx_skill.image_optimize.compress_images()` / `convert_image_format()` / `remove_unused_media()` |
+| 演讲者备注与审阅批注（线程回复/解决） | 已落地 | `pptx_skill.comments.set_speaker_notes()` / `add_comment()` / `reply_to_comment()` / `resolve_comment()` |
+| 结构化差异比较（幻灯片/形状/文字/图片/版式） | 已落地 | `pptx_skill.diff.diff_presentations()` / `diff_slides()` / `diff_text()` |
+| 多格式导出（PDF/图片/HTML/文本/缩略图） | 已落地 | `pptx_skill.export.export_to_pdf()` / `export_to_images()` / `export_to_html()` / `export_to_text()` / `export_thumbnails()` |
+| SmartArt 检测/文本提取编辑/跨页保留 | 已落地 | `pptx_skill.smartart.detect_smartart()` / `extract_smartart_text()` / `populate_smartart_text()` / `preserve_smartart()` |
+| VBA 宏检测/注入/提取/形状绑定 | 已落地 | `pptx_skill.vba.has_vba_project()` / `inject_vba_project()` / `extract_vba_project()` / `attach_macro_to_shape()` |
+| 20 种内置表格样式 + 单元格合并/边框/填充/行列增删 | 已落地 | `pptx_skill.table_styles.apply_table_style()` / `merge_cells()` / `set_cell_border()` / `add_table_row()` |
+| HTML 幻灯片导入（Marp/Slidev/reveal.js） | 已落地 | `pptx_skill.html_import.import_from_html()` / `html_to_content_spec()` / `detect_html_slides()` |
 
 ## 前置依赖
 
@@ -98,6 +114,9 @@ python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
 4. **用户提供的是扁平图片、复杂 SmartArt/OLE 或不可复用结构**
    - 使用 `visual-rebuild` 路径；
    - 按截图重建可编辑元素并进行并排验收。
+5. **用户提供了 HTML 幻灯片（Marp/Slidev/reveal.js）**
+   - 使用 `html_import` 路径；
+   - 提取语义内容并生成可编辑 PPTX，可选叠加光栅化底图。
 
 处理用户提供的 PPT 时，完整阅读 [references/reference-ppt-workflow.md](references/reference-ppt-workflow.md)。
 修改已有文件时，完整阅读 [references/editing-workflow.md](references/editing-workflow.md)。
@@ -159,7 +178,7 @@ python scripts/reference_ppt.py analyze reference.pptx `
 - `clone`：复制样例页及其媒体/图表关系，再替换内容；
 - `visual-rebuild`：提取设计语言并重建。
 
-不要把“从参考稿提取主题色”当作“完全复刻”。当精确位置重要时，使用分析结果中的形状名称编写 shape-level plan。
+不要把"从参考稿提取主题色"当作"完全复刻"。当精确位置重要时，使用分析结果中的形状名称编写 shape-level plan。
 
 ### 4. 生成演示文稿
 
@@ -180,19 +199,24 @@ auto_generate_ppt(
 
 版式选择规则：
 
-- 指标 → `dashboard` / `kpi_hero`
+- 指标 → `dashboard` / `kpi_hero` / `dashboard.metric_hero`
 - 时间节点 → `timeline`
-- 两侧信息 → `comparison`
-- 步骤 → `process`
+- 两侧信息 → `comparison` / `comparison.matrix`
+- 步骤 → `process` / `process.milestone`
 - 表格 → `table`
 - 引用 → `quote` / `testimonial`
 - 多图 → `image_grid` / `logo_wall`
 - 图文 → `text_image`
-- 四象限 → `matrix`
+- 四象限 → `matrix` / `swot` / `swot.quadrant`
 - 问答 → `faq`
-- 普通要点 → `bullets`
+- 普通要点 → `bullets` / `bullets.with_icon`
+- 战略分析 → `porter` / `porter.diamond`
+- 环境分析 → `pest` / `pest.grid`
+- 商业模式 → `bmc` / `bmc.canvas`
+- 转化漏斗 → `funnel` / `funnel.stacked`
+- 封面宣言 → `cover.statement`
 
-> **注意**：`kpi_hero`、`testimonial`、`logo_wall`、`matrix`、`faq` 这 5 种 role 没有默认布局，使用时必须在 `SlideSpec` 或 `sections` 中显式指定 layout 名称（如 `kpi_hero.split`、`testimonial.centered`、`logo_wall.grid3`、`matrix.quadrant`、`faq.alternating` 等）。
+> **注意**：`kpi_hero`、`testimonial`、`logo_wall`、`matrix`、`faq`、`swot`、`porter`、`pest`、`bmc`、`funnel` 这 10 种 role 没有默认布局，使用时必须在 `SlideSpec` 或 `sections` 中显式指定 layout 名称（如 `kpi_hero.split`、`testimonial.centered`、`logo_wall.grid3`、`matrix.quadrant`、`faq.alternating`、`swot.quadrant`、`porter.diamond`、`pest.grid`、`bmc.canvas`、`funnel.stacked` 等）。
 
 脚本入口仍可用：
 
@@ -224,7 +248,7 @@ python scripts/render_slides.py output/report.pptx `
   --output output/report-preview --dpi 150
 ```
 
-逐页检查文字溢出、遮挡、裁图、对比度、层级、旧内容残留和模板一致性。至少执行两轮“生成 → 渲染 → 逐页检查 → 修正”，连续两轮没有阻断问题后再交付。
+逐页检查文字溢出、遮挡、裁图、对比度、层级、旧内容残留和模板一致性。至少执行两轮"生成 → 渲染 → 逐页检查 → 修正"，连续两轮没有阻断问题后再交付。
 
 ## 数据契约与 Manifest V3
 
@@ -268,6 +292,14 @@ print(manifest.manifest_schema_version)  # 3
   - `edit_text` / `edit_text_by_role` / `swap_image` / `recolor` / `swap_theme`。
 - 使用 `pptx_skill.ppt_pages` 增页、删页、移动、复制或重画单页：
   - `insert_slide` / `delete_slide` / `move_slide` / `duplicate_slide` / `replace_layout`。
+- 合并多个 PPT 或提取幻灯片：
+  - `merge_presentations()` / `append_slides()` / `insert_slides()` / `extract_slides()`。
+- 添加水印、转场、动画：
+  - `add_text_watermark()` / `add_image_watermark()` / `apply_slide_transition()` / `apply_animation()`。
+- 管理节结构：
+  - `add_section()` / `remove_section()` / `rename_section()` / `move_section()`。
+- 导出为 PDF/图片/HTML/文本：
+  - `export_to_pdf()` / `export_to_images()` / `export_to_html()` / `export_to_text()`。
 - 所有写操作自动生成最近一次 `.bak.pptx` 备份；修改失败时调用 `restore_backup()`。
 - 复杂页面先分析形状名称，再用 shape-level plan 或显式 Section 数据，不依赖模糊角色猜测。
 
@@ -283,6 +315,16 @@ print(manifest.manifest_schema_version)  # 3
 | QA 报 `blocker` | 溢出、重叠、越界、低对比度等 | 进入 repair 闭环，最多两轮；仍失败则明确返回 |
 | 渲染引擎不可用 | 未安装 LibreOffice/PyMuPDF/PowerPoint COM | 标记 unavailable，不影响结构/语义 QA；需要时再安装 |
 | 图片搜索失败 | Pixabay 网络或关键词问题 | 降级为本地图片或纯文字版式，不中断生成 |
+| `ValueError` (animations) | 形状无有效 ID，无法绑定动画 | 确保形状已添加到幻灯片且有有效 shape_id |
+| `FileNotFoundError` (merge/diff/export) | 源/目标 PPTX 文件路径不存在 | 检查文件路径，确认文件存在 |
+| `IndexError` (merge/sections/comments) | 幻灯片索引越界或节不存在 | 检查 1-based 索引是否在有效范围内 |
+| `ValueError` (watermark) | opacity 不在 [0, 1] 范围 | 传入 0.0–1.0 之间的浮点数 |
+| `ValueError` (image_optimize) | 不支持的格式或 quality 超范围 | 使用 JPEG/PNG，quality 1–100 |
+| `ValueError` (smartart) | 形状不是 SmartArt 或无法访问 diagramData | 先用 `detect_smartart()` 确认 |
+| `ValueError` (vba) | PPTX 无法作为 ZIP 读取或宏名无效 | 确认文件是有效 PPTX，宏名非空 |
+| `ValueError` / `RuntimeError` (table_styles) | 表格为空、无 tblGrid 或索引越界 | 确保表格有至少一行一列 |
+| `ValueError` (html_import) | HTML 文件不存在或格式无法识别 | 检查 HTML 路径和内容格式 |
+| `RuntimeError` (export) | 渲染后端不可用 | 安装 LibreOffice 或确认 COM 可用 |
 
 ## 模块索引
 
@@ -312,10 +354,24 @@ print(manifest.manifest_schema_version)  # 3
 | `pptx_skill.preview_renderer` | LibreOffice / PyMuPDF / Windows COM 渲染截图 |
 | `pptx_skill.visual_qa` | 渲染后视觉 QA 检查 |
 | `pptx_skill.capability` | 运行时环境能力检测与报告 |
+| `pptx_skill.transitions` | 18 种转场动画（fade/push/wipe/cover/split/dissolve/random/cut） |
+| `pptx_skill.animations` | 51 种幻灯片动画（20 入场/15 退出/15 强调/1 运动路径）via OOXML timing XML |
+| `pptx_skill.merge` | 多文件合并与幻灯片提取，布局/媒体/rel-ID 去重 |
+| `pptx_skill.watermark` | 文字/图片水印，透明度/平铺/层级/移除 |
+| `pptx_skill.sections` | 节管理（增删改移折叠）via OOXML sectionLst |
+| `pptx_skill.slide_master` | 母版/版式查询、克隆、重命名、占位符操作、背景设置 |
+| `pptx_skill.image_optimize` | 图片压缩、格式转换、未用媒体清理、统计 |
+| `pptx_skill.comments` | 演讲者备注 + 审阅批注（线程回复/解决）via OOXML |
+| `pptx_skill.diff` | 结构化差异比较（幻灯片/形状/文字/图片/版式级别） |
+| `pptx_skill.export` | PDF/图片/HTML/文本/缩略图导出（LibreOffice/PyMuPDF/Pillow 后端） |
+| `pptx_skill.smartart` | SmartArt 检测、文本提取/编辑、跨页保留 |
+| `pptx_skill.vba` | VBA 宏检测、注入、提取、宏-形状绑定 |
+| `pptx_skill.table_styles` | 20 种内置表格样式、单元格合并/拆分、边框/填充/行列增删 |
+| `pptx_skill.html_import` | HTML 幻灯片导入（Marp/Slidev/reveal.js），语义提取 + 可选光栅化底图 |
 
 ## 版式与视觉原则
 
-- 使用 19 种版式形成节奏，不连续堆叠同一种内容页。
+- 使用 24 种版式形成节奏，不连续堆叠同一种内容页。
 - 让标题与正文产生明显字号跳跃，避免平均递减。
 - 控制主色数量，使用一个识别色和克制的辅助色。
 - 保留 20% 至 30% 留白，不用内容填满画布。
@@ -332,6 +388,10 @@ print(manifest.manifest_schema_version)  # 3
 - 自动内容绑定适合简单封面和标题内容页；复杂仪表盘、流程图和多区域页面必须使用显式形状映射。
 - 无法从扁平截图恢复原始矢量、动画或不可见数据；应重建可编辑近似版本并明确说明。
 - Pixabay 搜索失败时降级为本地图片或纯文字版式，不中断生成。
+- 动画和转场通过直接操作 OOXML XML 实现，复杂组合动画需在 PowerPoint 中验证。
+- VBA 宏注入以二进制 `vbaProject.bin` 整体注入，无法编辑宏内容本身。
+- SmartArt 文本编辑通过操作 diagramData XML 实现，布局/样式变更需在 PowerPoint 中完成。
+- HTML 导入依赖可选的 Playwright 后端进行光栅化，无 Playwright 时仅提取语义文本。
 
 ## 研发状态
 
@@ -349,6 +409,8 @@ print(manifest.manifest_schema_version)  # 3
 | PR8b | reference_adapter native/clone、clone drift QA sidecar | 147/147 |
 | PR8c | visual_rebuild 真实自适应重建、参考差异预算 | 164/164 |
 | PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 184/184 |
+| PR10 | 12 新模块：animations、merge、watermark、sections、slide_master、image_optimize、comments、diff、export、smartart、vba、table_styles | — |
+| PR11 | 5 分析框架 role（swot/porter/pest/bmc/funnel）+ consulting 风格 recipe 变体 + html_import | — |
 
 ## 相关文档
 

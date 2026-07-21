@@ -145,7 +145,6 @@ def merge_cells(
     horizontal merges) or ``<a:vMerge val="1"/>`` (for vertical merges),
     or both for cells that are part of a 2-D merge region.
     """
-    from lxml import etree  # noqa: F811
 
     _validate_table_bounds(table, start_row, start_col, end_row, end_col)
 
@@ -243,7 +242,7 @@ def set_cell_border(
     if style == "none":
         ln = etree.SubElement(tcPr, f"{{{_A_NS}}}{tag}")
         ln.set("w", "0")
-        no_fill = etree.SubElement(ln, f"{{{_A_NS}}}noFill")
+        etree.SubElement(ln, f"{{{_A_NS}}}noFill")
         return
 
     # Normal border
@@ -325,7 +324,7 @@ def set_cell_fill(
         _r_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
         blip.set(f"{{{_r_ns}}}embed", "rId1")
         stretch = etree.SubElement(blip_fill, f"{{{_A_NS}}}stretch")
-        fillRect = etree.SubElement(stretch, f"{{{_A_NS}}}fillRect")
+        etree.SubElement(stretch, f"{{{_A_NS}}}fillRect")
 
     else:
         # No fill specified – explicit noFill
@@ -432,7 +431,7 @@ def add_table_row(table, *, at_index: int | None = None) -> None:
     for _ in range(n_cols):
         tc = etree.SubElement(new_tr, f"{{{_A_NS}}}tc")
         txBody = etree.SubElement(tc, f"{{{_A_NS}}}txBody")
-        bodyPr = etree.SubElement(txBody, f"{{{_A_NS}}}bodyPr")
+        etree.SubElement(txBody, f"{{{_A_NS}}}bodyPr")
         etree.SubElement(txBody, f"{{{_A_NS}}}lstStyle")
         p = etree.SubElement(txBody, f"{{{_A_NS}}}p")
         etree.SubElement(p, f"{{{_A_NS}}}endParaRPr")
@@ -486,12 +485,11 @@ def add_table_column(table, *, at_index: int | None = None) -> None:
     for tr in rows:
         new_tc = etree.Element(f"{{{_A_NS}}}tc")
         txBody = etree.SubElement(new_tc, f"{{{_A_NS}}}txBody")
-        bodyPr = etree.SubElement(txBody, f"{{{_A_NS}}}bodyPr")
+        etree.SubElement(txBody, f"{{{_A_NS}}}bodyPr")
         etree.SubElement(txBody, f"{{{_A_NS}}}lstStyle")
         p = etree.SubElement(txBody, f"{{{_A_NS}}}p")
         etree.SubElement(p, f"{{{_A_NS}}}endParaRPr")
 
-        existing_tcs = tr.findall(f"{{{_A_NS}}}tc")
         tr.insert(at_index, new_tc)
 
 

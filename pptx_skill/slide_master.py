@@ -181,7 +181,6 @@ def _ph_type_from_element(sp_elem: Any) -> str:
     Returns the ``type`` attribute value from ``p:nvSpPr/p:nvPr/p:ph``,
     defaulting to ``"obj"`` if no type is specified.
     """
-    from lxml import etree
 
     nvSpPr = sp_elem.find(f"{_P_NS_PREFIX}nvSpPr")
     if nvSpPr is None:
@@ -201,7 +200,6 @@ def _ph_index_from_element(sp_elem: Any) -> int | None:
     Returns the ``idx`` attribute value from ``p:nvSpPr/p:nvPr/p:ph``,
     or ``None`` if no index is specified.
     """
-    from lxml import etree
 
     nvSpPr = sp_elem.find(f"{_P_NS_PREFIX}nvSpPr")
     if nvSpPr is None:
@@ -228,7 +226,6 @@ def _layout_name(layout: Any) -> str:
     if name:
         return name
     # Fall back to parsing the XML
-    from lxml import etree
 
     xml_elem = layout._element
     cSld = xml_elem.find(f"{_P_NS_PREFIX}cSld")
@@ -244,7 +241,6 @@ def _master_name(master: Any) -> str:
     name = getattr(master, "name", None)
     if name:
         return name
-    from lxml import etree
 
     xml_elem = master._element
     cSld = xml_elem.find(f"{_P_NS_PREFIX}cSld")
@@ -380,7 +376,7 @@ def _set_image_background_on_part(part: Any, xml_elem: Any,
     blip = etree.SubElement(blipFill, f"{_A_NS_PREFIX}blip")
     blip.set(f"{{{_R_NS}}}embed", rId)
     stretch = etree.SubElement(blipFill, f"{_A_NS_PREFIX}stretch")
-    fillRect = etree.SubElement(stretch, f"{_A_NS_PREFIX}fillRect")
+    etree.SubElement(stretch, f"{_A_NS_PREFIX}fillRect")
 
     etree.SubElement(bgPr, f"{_A_NS_PREFIX}effectLst")
 
@@ -454,7 +450,6 @@ def list_layouts(prs_or_path: Any, *, master_index: int = 0) -> list[LayoutInfo]
                     ph_types.append("obj")
         except Exception:
             # Fallback: parse XML directly
-            from lxml import etree
 
             xml_elem = layout._element
             cSld = xml_elem.find(f"{_P_NS_PREFIX}cSld")
@@ -510,7 +505,6 @@ def get_layout_by_name(prs_or_path: Any, name: str) -> LayoutInfo | None:
                         else:
                             ph_types.append("obj")
                 except Exception:
-                    from lxml import etree
 
                     xml_elem = layout._element
                     cSld = xml_elem.find(f"{_P_NS_PREFIX}cSld")
@@ -547,7 +541,6 @@ def analyze_layout(layout: Any) -> dict[str, Any]:
         Each placeholder entry contains ``type``, ``index``, ``left``,
         ``top``, ``width``, ``height`` (all in EMU).
     """
-    from lxml import etree
 
     name = _layout_name(layout)
     master = layout.slide_master
@@ -843,7 +836,6 @@ def delete_layout(prs_or_path: Any, layout_name: str, *,
         ValueError: If the layout is in use by one or more slides.
         IndexError: If *master_index* is out of range.
     """
-    from lxml import etree
 
     prs = _open_prs(prs_or_path)
     path = _resolve_path(prs_or_path)
@@ -911,7 +903,6 @@ def rename_layout(prs_or_path: Any, old_name: str, new_name: str,
         ValueError: If the layout is not found or *new_name* already exists.
         IndexError: If *master_index* is out of range.
     """
-    from lxml import etree
 
     prs = _open_prs(prs_or_path)
     path = _resolve_path(prs_or_path)
@@ -1083,7 +1074,7 @@ def add_placeholder_to_layout(layout: Any, ph_type: str,
         bodyPr = etree.SubElement(txBody, f"{_A_NS_PREFIX}bodyPr")
         if ph_type == "title":
             bodyPr.set("anchor", "ctr")
-        lstStyle = etree.SubElement(txBody, f"{_A_NS_PREFIX}lstStyle")
+        etree.SubElement(txBody, f"{_A_NS_PREFIX}lstStyle")
         p = etree.SubElement(txBody, f"{_A_NS_PREFIX}p")
         if ph_type == "title":
             endParaRPr = etree.SubElement(p, f"{_A_NS_PREFIX}endParaRPr")
@@ -1100,7 +1091,6 @@ def remove_placeholder_from_layout(layout: Any, ph_index: int) -> None:
     Raises:
         ValueError: If no placeholder with the given index is found.
     """
-    from lxml import etree
 
     xml_elem = layout._element
     cSld = xml_elem.find(f"{_P_NS_PREFIX}cSld")
@@ -1133,7 +1123,6 @@ def list_placeholders(layout: Any) -> list[dict[str, Any]]:
         A list of dicts, each with keys ``type``, ``index``, ``left``,
         ``top``, ``width``, ``height`` (positions in EMU).
     """
-    from lxml import etree
 
     result: list[dict[str, Any]] = []
 

@@ -31,7 +31,7 @@ import logging
 import os
 import shutil
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -647,7 +647,7 @@ def add_comment(
     path = _ensure_path_on_disk(prs_or_path)
     pos_x = int(left * _EMU_PER_INCH)
     pos_y = int(top * _EMU_PER_INCH)
-    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_utc = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Read all zip entries into memory
     zip_data = _read_zip_to_memory(path)

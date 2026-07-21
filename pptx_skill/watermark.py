@@ -9,7 +9,6 @@ be identified and removed later.
 from __future__ import annotations
 
 import logging
-import math
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +63,6 @@ def _save_prs(prs: Any, path: str | Path | None) -> None:
     """Save *prs* back to *path*, creating a backup first."""
     if path is None:
         return
-    from pptx import Presentation  # noqa: F811 – re-import guard
 
     p = Path(path)
     bak = p.with_suffix(".bak.pptx")
@@ -285,7 +283,6 @@ def add_text_watermark(
     Returns:
         Number of watermark shapes created.
     """
-    from pptx import Presentation
     from pptx.dml.color import RGBColor
     from pptx.util import Emu, Pt
 
@@ -315,12 +312,6 @@ def add_text_watermark(
         positions = _tile_positions(position, slide_width, slide_height, shape_width, shape_height, tile)
 
         for left, top in positions:
-            # Get a blank layout
-            try:
-                layout = prs.slide_layouts[6]
-            except IndexError:
-                layout = prs.slide_layouts[-1]
-
             # Add text box
             txBox = slide.shapes.add_textbox(
                 left=Emu(left),
@@ -391,7 +382,6 @@ def add_image_watermark(
     Returns:
         Number of watermark shapes created.
     """
-    from pptx import Presentation
     from pptx.util import Emu
 
     _validate_opacity(opacity)
@@ -460,7 +450,6 @@ def remove_watermark(
     Returns:
         Number of watermark shapes removed.
     """
-    from pptx import Presentation
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -500,7 +489,6 @@ def list_watermarks(
         A list of dicts with keys ``slide_index`` (0-based), ``shape_name``,
         ``shape_type``, ``left``, ``top``, ``width``, ``height``.
     """
-    from pptx import Presentation
 
     prs = _open_prs(prs_or_path)
     results: list[dict[str, Any]] = []

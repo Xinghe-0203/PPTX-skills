@@ -29,10 +29,9 @@ import logging
 import os
 import re
 import tempfile
-import urllib.request
 import urllib.parse
+import urllib.request
 from html.parser import HTMLParser
-from pathlib import Path
 from typing import Any
 
 from pptx_skill.content_model import (
@@ -826,7 +825,6 @@ def _add_background_image(slide, image_path: str, slide_width_pt: float, slide_h
 def _add_table_to_slide(slide, headers: list[str], rows: list[list[str]],
                         left_pt: float, top_pt: float, width_pt: float, height_pt: float) -> None:
     """Add a table to a python-pptx slide."""
-    from pptx.dml.color import RGBColor
     from pptx.util import Inches, Pt
 
     n_rows = len(rows) + (1 if headers else 0)
@@ -885,7 +883,6 @@ def _estimate_text_position(
     safe_left = 48.0
     safe_top = 36.0
     safe_right = 48.0
-    safe_bottom = 32.0
     content_width = canvas_width - safe_left - safe_right
 
     if tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
@@ -1012,7 +1009,7 @@ def detect_html_slides(html_path: str | os.PathLike[str], *, slide_selector: str
         return []
 
     try:
-        with open(html_path, "r", encoding="utf-8", errors="replace") as fh:
+        with open(html_path, encoding="utf-8", errors="replace") as fh:
             html_content = fh.read()
     except OSError:
         return []
@@ -1063,7 +1060,7 @@ def html_to_content_spec(
         return ContentSpec(id="html-import-empty", title="", subtitle="", slides=[])
 
     try:
-        with open(html_path, "r", encoding="utf-8", errors="replace") as fh:
+        with open(html_path, encoding="utf-8", errors="replace") as fh:
             html_content = fh.read()
     except OSError:
         return ContentSpec(id="html-import-empty", title="", subtitle="", slides=[])
@@ -1395,7 +1392,7 @@ def import_from_html(
         raise FileNotFoundError(f"HTML file not found: {html_path}")
 
     # Read HTML content
-    with open(html_path, "r", encoding="utf-8", errors="replace") as fh:
+    with open(html_path, encoding="utf-8", errors="replace") as fh:
         html_content = fh.read()
 
     # Split into slide chunks
