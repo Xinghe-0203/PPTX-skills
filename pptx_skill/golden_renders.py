@@ -63,7 +63,7 @@ FAMILY_DECK_SEQUENCE = [
 ]
 
 # Three geometry families representative decks (blueprint §12.4).
-GEOMETRY_FAMILIES = ("standard", "editorial_grid", "technical_axis")
+GEOMETRY_FAMILIES = ("standard", "editorial_grid", "technical_axis", "poster_column")
 
 
 @dataclass

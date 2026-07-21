@@ -7,6 +7,7 @@
 3. Section schema
 4. Template catalog
 5. Rendering and validation
+6. Adaptive pipeline and deck planning
 
 ## Built-in generation
 
@@ -81,7 +82,7 @@ Minimum profile structure:
 }
 ```
 
-All color values must use `#RRGGBB`. Valid layout names are `cover`, `toc`, `section`, `bullets`, `text_image`, `full_image`, `image_grid`, `dashboard`, `timeline`, `comparison`, `quote`, `process`, `table`, and `end`.
+All color values must use `#RRGGBB`. Valid layout roles are `cover`, `toc`, `section`, `bullets`, `text_image`, `full_image`, `image_grid`, `dashboard`, `timeline`, `comparison`, `quote`, `process`, `table`, `end`, `matrix`, `kpi_hero`, `faq`, `testimonial`, and `logo_wall`.
 
 Catalog and generated profiles can use three non-card layout families: `editorial_grid`, `technical_axis`, and `poster_column`. Natural-language generation selects a family from style cues instead of only changing colors. These families use sharp grids, hairlines, whitespace, asymmetric typography, data axes, or poster columns instead of generic rounded cards, decorative circles, oversized quote marks, `VS` badges, and decorative English kickers. Set `layout_family` to `standard` only when the older card-oriented system is intentional.
 
@@ -101,6 +102,9 @@ Catalog and generated profiles can use three non-card layout families: `editoria
 | `steps` | string list | Process steps |
 | `table_headers` | string list | Table headers |
 | `table_rows` | list list | Table rows |
+| `chart_type` | string | Chart type: `column_clustered`, `column_stacked`, `bar_clustered`, `bar_stacked`, `line`, `line_markers`, `pie`, `doughnut`, `scatter`, `area` |
+| `chart_categories` | string list | Chart category labels |
+| `chart_series` | object list | Chart series with `name` and `values` |
 | `left`, `right` | object | Two-sided comparison |
 | `quote`, `source` | string | Quotation page |
 | `layout_opts` | object | Per-slide layout overrides |
@@ -123,6 +127,39 @@ The catalog contains these built-in profiles:
 - `sustainability`
 
 Generated profiles are stored in `assets/templates/generated/` and become available by their profile ID.
+
+## Template download and import
+
+Download template packs from GitHub, direct URLs, or local directories:
+
+```python
+from pptx_skill import download_template_pack, import_template
+
+# Download from GitHub
+result = download_template_pack("github", "output/templates", repo="user/repo", branch="main")
+
+# Download from a direct URL
+result = download_template_pack("url", "output/templates", url="https://example.com/template.pptx")
+
+# Copy from a local directory
+result = download_template_pack("local", "output/templates", path="C:/templates")
+```
+
+Import a downloaded `.pptx` as a reusable V2 template profile:
+
+```python
+profile = import_template("output/templates/report.pptx", name="Client Brand")
+# Profile is saved to assets/templates/generated/ and usable by template_key
+```
+
+List curated remote template sources:
+
+```python
+from pptx_skill.template_downloader import list_remote_packs
+packs = list_remote_packs()
+```
+
+All download functions use stdlib `urllib` only (no `requests`). URLs are validated against private-network IPs for SSRF protection.
 
 ## Rendering and validation
 
@@ -176,3 +213,33 @@ deck = plan_deck(slides, CanvasSpec(959.976, 540), profile_state)
 ```
 
 The renderer writes one PPTX slide per derived `LayoutPlan` via `render_layout_plans`, and each `RenderTraceEntry` carries its `slide_index` so QA reports point back to the right slide.
+
+### deck_options
+
+`render_layout_plans` accepts a `deck_options` dict controlling deck-level features:
+
+| Key | Type | Default | Purpose |
+|---|---|---|---|
+| `show_slide_numbers` | bool | `True` | Show page numbers bottom-right |
+| `footer_text` | str | `""` | Centered footer text |
+| `header_text` | str | `""` | Left-aligned header text |
+| `slide_number_format` | str | `"{current}/{total}"` | Page number format string |
+| `theme` | dict | `None` | Theme dict with `text_muted`, `text` color keys |
+
+### New layout roles
+
+Five additional layout roles are available in the adaptive pipeline:
+
+| Role | Variants | Use |
+|---|---|---|
+| `matrix` | `matrix.quadrant`, `matrix.labeled` | Two-axis quadrant or labeled matrix |
+| `kpi_hero` | `kpi_hero.split`, `kpi_hero.full` | Large KPI with supporting detail |
+| `faq` | `faq.alternating`, `faq.stacked` | Question-answer pairs |
+| `testimonial` | `testimonial.centered`, `testimonial.card` | Customer quote with attribution |
+| `logo_wall` | `logo_wall.grid3`, `logo_wall.grid4` | Logo grid display |
+
+### Rich text and media
+
+Text nodes support multi-run formatting via the `runs` binding (list of run dicts with `text`, `bold`, `italic`, `color`, `size`, `href`). Paragraph-level formatting uses the `paragraphs` binding (list with `text`, `align`, `level`, `bullet`).
+
+Video and audio nodes are supported as element kinds `video` and `audio`. Video uses `binding["path"]` and optional `binding["poster"]` for a poster frame. Audio uses `binding["path"]` and optional `binding["mime_type"]` (default `"audio/mpeg"`). Both fall back to placeholder shapes when files are missing.

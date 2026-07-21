@@ -79,11 +79,21 @@ python scripts/reference_ppt.py compose reference.pptx `
 5. Keep every element editable unless the source itself is a flattened image.
 6. Render the result beside the reference and iterate.
 
+The adaptive pipeline also offers `visual_rebuild_adapter()` which parses the reference deck into `SlideSpec`s, picks a recipe per slide, solves geometry, and renders via `render_layout_plans` (not clone). This produces editable output with a reference-diff report bounded by a similarity budget.
+
 Extract a reusable profile:
 
 ```powershell
 python scripts/reference_ppt.py profile reference.pptx `
   --name "Client Brand" --output output/client-brand.json
+```
+
+Import the profile as a V2 template for reuse in future decks:
+
+```python
+from pptx_skill import import_template
+profile = import_template("reference.pptx", name="Client Brand")
+# Saved to assets/templates/generated/; usable as template_key="client-brand"
 ```
 
 ## Shape-level plan schema
@@ -126,4 +136,4 @@ Use explicit replacements for complex dashboards, diagrams, and slides with mult
 - Use absolute image paths.
 - Replace content by shape name when exact placement matters.
 - Re-render every generated page after text replacement because different text length can overflow.
-- Treat animations, macros, OLE objects, embedded workbooks, and complex SmartArt as special cases. Preserve them by cloning where possible and verify in PowerPoint.
+- Treat animations, macros, OLE objects, embedded workbooks, video/audio media, and complex SmartArt as special cases. Preserve them by cloning where possible and verify in PowerPoint.

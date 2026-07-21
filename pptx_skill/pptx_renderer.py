@@ -96,6 +96,15 @@ def _pt_to_inches(pt: float) -> float:
     return pt / 72.0
 
 
+_SAFE_HYPERLINK_SCHEMES = ("http://", "https://", "mailto:", "slide://")
+
+
+def _is_safe_hyperlink(href: str) -> bool:
+    """Check that a hyperlink URL uses a safe scheme."""
+    lower = href.lower().strip()
+    return any(lower.startswith(scheme) for scheme in _SAFE_HYPERLINK_SCHEMES)
+
+
 def _apply_text_style(run, style: dict[str, Any]) -> None:
     from pptx.dml.color import RGBColor
     from pptx.oxml.ns import qn
@@ -261,8 +270,8 @@ def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEnt
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
     textbox = slide.shapes.add_textbox(left, top, width, height)
     tf = textbox.text_frame
     tf.word_wrap = True
@@ -275,10 +284,19 @@ def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEnt
     bullet = binding.get("bullet")
 
     if paragraphs_data and isinstance(paragraphs_data, list):
+        # Warn if both paragraphs and runs are provided; runs are ignored
+        if runs_data and isinstance(runs_data, list):
+            log.warning(
+                "Both 'paragraphs' and 'runs' provided for node %s; 'runs' will be ignored",
+                node.id,
+            )
         # Multiple paragraphs
         for p_idx, para_dict in enumerate(paragraphs_data):
             if p_idx == 0:
                 p = tf.paragraphs[0]
+                # Clear phantom default run that python-pptx creates
+                for run in list(p.runs):
+                    p._p.remove(run._r)
             else:
                 p = tf.add_paragraph()
 
@@ -305,6 +323,9 @@ def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEnt
     elif runs_data and isinstance(runs_data, list):
         # Multi-run text in the first paragraph
         p = tf.paragraphs[0]
+        # Clear phantom default run that python-pptx creates
+        for run in list(p.runs):
+            p._p.remove(run._r)
         for run_dict in runs_data:
             run = p.add_run()
             run.text = run_dict.get("text", "")
@@ -317,10 +338,14 @@ def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEnt
             if "size" in run_dict:
                 run.font.size = Pt(run_dict["size"])
             if "href" in run_dict:
-                try:
-                    run.hyperlink.address = run_dict["href"]
-                except Exception as exc:
-                    log.warning("Failed to set hyperlink on run: %s", exc)
+                href = run_dict["href"]
+                if _is_safe_hyperlink(href):
+                    try:
+                        run.hyperlink.address = href
+                    except Exception as exc:
+                        log.warning("Failed to set hyperlink on run: %s", exc)
+                else:
+                    log.warning("Skipping unsafe hyperlink scheme: %s", href)
             # Also apply base resolved_style for any properties not overridden
             base_style = dict(node.resolved_style)
             # Don't override per-run settings
@@ -345,6 +370,9 @@ def _add_text_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEnt
             text = "\n".join(str(item) for item in binding["items"])
 
         p = tf.paragraphs[0]
+        # Clear phantom default run that python-pptx creates
+        for run in list(p.runs):
+            p._p.remove(run._r)
         run = p.add_run()
         run.text = text
         _apply_text_style(run, node.resolved_style)
@@ -379,8 +407,8 @@ def _add_image_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     path = node.content_binding.get("path", "")
     if not path or not Path(path).exists():
@@ -438,8 +466,8 @@ def _add_shape_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     shape_type = node.content_binding.get("shape_type", "rectangle")
     mso = getattr(MSO_SHAPE, shape_type.upper(), MSO_SHAPE.RECTANGLE)
@@ -563,6 +591,10 @@ def _set_cell_border(cell, border_pt: float = 0.5) -> None:
 
     border_names = ["lnL", "lnR", "lnT", "lnB"]
     for name in border_names:
+        # Remove any existing border element with the same tag to avoid duplicates
+        existing = tcPr.find(f"{{{ns}}}{name}")
+        if existing is not None:
+            tcPr.remove(existing)
         ln = etree.SubElement(tcPr, f"{{{ns}}}{name}")
         ln.set("w", str(int(border_pt * 12700)))
         solid_fill = etree.SubElement(ln, f"{{{ns}}}solidFill")
@@ -577,8 +609,8 @@ def _add_table_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     binding = node.content_binding or {}
     headers = list(binding.get("headers", []))
@@ -730,8 +762,8 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     binding = node.content_binding or {}
     style = node.resolved_style
@@ -841,15 +873,31 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
 # 7. Video / Audio media support
 # ---------------------------------------------------------------------------
 
+_VIDEO_MIME_MAP: dict[str, str] = {
+    ".mp4": "video/mp4",
+    ".avi": "video/avi",
+    ".mov": "video/quicktime",
+    ".wmv": "video/x-ms-wmv",
+    ".mkv": "video/x-matroska",
+    ".webm": "video/webm",
+}
+
+
+def _resolve_video_mime(video_path: str) -> str:
+    """Resolve a video MIME type from the file extension."""
+    ext = Path(video_path).suffix.lower()
+    return _VIDEO_MIME_MAP.get(ext, "video/mp4")
+
+
 def _add_video_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     """Render a video node using slide.shapes.add_movie()."""
-    from pptx.util import Inches
+    from pptx.util import Inches, Pt
 
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     binding = node.content_binding or {}
     video_path = binding.get("path", "")
@@ -870,14 +918,16 @@ def _add_video_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
         p.alignment = _align_from_str("center")
         run = p.add_run()
         run.text = "▶ Video"
-        run.font.size = Inches(0.3)
+        run.font.size = Pt(14)
         run.font.color.rgb = RGBColor(255, 255, 255)
     else:
         try:
             poster_image = poster_path if (poster_path and Path(poster_path).exists()) else None
+            mime_type = binding.get("mime_type") or _resolve_video_mime(video_path)
             shape = slide.shapes.add_movie(
                 video_path, left, top, width, height,
                 poster_frame_image=poster_image,
+                mime_type=mime_type,
             )
         except Exception as exc:
             log.warning("add_movie failed for %s, using placeholder: %s", video_path, exc)
@@ -910,6 +960,23 @@ def _add_video_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     )
 
 
+_AUDIO_MIME_MAP: dict[str, str] = {
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg",
+    ".m4a": "audio/mp4",
+    ".wma": "audio/x-ms-wma",
+    ".aac": "audio/aac",
+    ".flac": "audio/flac",
+}
+
+
+def _resolve_audio_mime(audio_path: str) -> str:
+    """Resolve an audio MIME type from the file extension."""
+    ext = Path(audio_path).suffix.lower()
+    return _AUDIO_MIME_MAP.get(ext, "audio/mpeg")
+
+
 def _add_audio_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     """Render an audio node using add_movie with audio MIME type.
 
@@ -923,8 +990,8 @@ def _add_audio_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
     top = Inches(_pt_to_inches(geom.top))
-    width = Inches(_pt_to_inches(geom.width))
-    height = Inches(_pt_to_inches(geom.height))
+    width = Inches(_pt_to_inches(max(geom.width, 1.0)))
+    height = Inches(_pt_to_inches(max(geom.height, 1.0)))
 
     binding = node.content_binding or {}
     path = binding.get("path", "")
@@ -946,7 +1013,7 @@ def _add_audio_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
         run.font.color.rgb = RGBColor(100, 100, 100)
     else:
         try:
-            mime = binding.get("mime_type", "audio/mpeg")
+            mime = binding.get("mime_type") or _resolve_audio_mime(path)
             shape = slide.shapes.add_movie(
                 path, left, top, width, height, mime_type=mime
             )

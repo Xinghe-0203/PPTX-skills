@@ -493,7 +493,16 @@ def solved_geometry_to_layout_plan(
                 z_order=idx,
             )
         )
-    return LayoutPlan(canvas=canvas, recipe_id=recipe.id, nodes=nodes, local_score=0.0)
+    # Resolve background color from tokens if available.
+    bg_color: str | None = None
+    _bg_token = tokens.get("primitive", {}).get("palette", {}).get("bg")
+    if isinstance(_bg_token, str):
+        bg_color = _bg_token
+    _bg_alt_token = tokens.get("primitive", {}).get("palette", {}).get("bg_alt")
+    if bg_color is None and isinstance(_bg_alt_token, str):
+        bg_color = _bg_alt_token
+
+    return LayoutPlan(canvas=canvas, recipe_id=recipe.id, nodes=nodes, local_score=0.0, background_color=bg_color)
 
 
 # ---------------------------------------------------------------------------
@@ -1552,6 +1561,7 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "bottom_right.top"}, {"var": "bottom_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
                 {"terms": [{"var": "bottom_right.bottom"}, {"var": "bottom_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
             ],
+            {"title.max_lines": 2, "top_left.max_lines": 4, "top_right.max_lines": 4, "bottom_left.max_lines": 4, "bottom_right.max_lines": 4},
         ))
         recipes.append(_recipe(
             "matrix.labeled",
@@ -1610,6 +1620,7 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "bottom_right.top"}, {"var": "bottom_left.top", "coef": -1}], "op": "==", "rhs": {"const": 0}},
                 {"terms": [{"var": "bottom_right.bottom"}, {"var": "bottom_left.bottom", "coef": -1}], "op": "==", "rhs": {"const": 0}},
             ],
+            {"title.max_lines": 2, "top_left.max_lines": 3, "top_right.max_lines": 3, "bottom_left.max_lines": 3, "bottom_right.max_lines": 3},
         ))
     elif role == "kpi_hero":
         recipes.append(_recipe(
@@ -1701,7 +1712,7 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "answers.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "answers.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
-            {"questions.max_items": 6, "questions.min_font_size": 14},
+            {"questions.max_items": 6, "questions.min_font_size": 14, "answers.max_items": 6, "answers.min_font_size": 14},
         ))
         recipes.append(_recipe(
             "faq.stacked",
@@ -1729,7 +1740,7 @@ def builtin_recipes(role: str) -> list[LayoutRecipe]:
                 {"terms": [{"var": "answers.right"}], "op": "==", "rhs": {"ref": "canvas.safe_right"}},
                 {"terms": [{"var": "answers.bottom"}], "op": "==", "rhs": {"ref": "canvas.safe_bottom"}},
             ],
-            {"questions.max_items": 4, "questions.min_font_size": 14},
+            {"questions.max_items": 4, "questions.min_font_size": 14, "answers.max_items": 4, "answers.min_font_size": 14},
         ))
     elif role == "testimonial":
         recipes.append(_recipe(

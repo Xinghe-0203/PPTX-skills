@@ -74,7 +74,7 @@ edit_section("output/report.pptx", index=2, changes={"bullets": ["新要点 A", 
 ### 3. 编辑外部 PPT（有损定点编辑）
 
 ```python
-from pptx_skill.ppt_edit import edit_text, swap_image, recolor
+from pptx_skill import edit_text, swap_image, recolor
 
 edit_text("reference.pptx", slide_index=0, find="旧标题", replace="新标题")
 recolor("reference.pptx", old_hex="#184E77", new_hex="#2D5016")
@@ -105,6 +105,7 @@ python scripts/reference_ppt.py generate reference.pptx --content content.json -
 ├── pptx_skill/               # 核心 Python 包
 │   ├── api.py                # 兼容 facade 与 GenerationResult
 │   ├── content_model.py      # ContentSpec / SlideSpec / ElementSpec
+│   ├── content_adapter.py    # 适配 legacy Section 到 ContentSpec
 │   ├── layout_engine.py      # LayoutRecipe + Kiwi 约束求解
 │   ├── deck_planner.py       # 整本 beam search 节奏规划
 │   ├── pagination.py         # bullets / table / timeline / process / image_grid 分页
@@ -118,9 +119,16 @@ python scripts/reference_ppt.py generate reference.pptx --content content.json -
 │   ├── qa_dataset.py         # 200 页 QA 标注数据集
 │   ├── golden_renders.py     # 每 role golden render 与 family deck
 │   ├── manifest.py           # Manifest V3 读写
-│   ├── pptx_renderer.py       # 自适应渲染器（text/image/shape/table/chart/rich-text/media）
-│   ├── template_compiler.py   # TemplateProfileV2 编译与多样性闸门
+│   ├── pptx_renderer.py      # 自适应渲染器（text/image/shape/table/chart/rich-text/media）
+│   ├── template_compiler.py  # TemplateProfileV2 编译与多样性闸门
 │   ├── template_downloader.py # 模板包下载与档案提取
+│   ├── template_v2_adapter.py # V1→V2 迁移与 V2→legacy 适配
+│   ├── design_schema.py      # V2 schema、token 解析与校验
+│   ├── image_crop.py         # contain / cover / smart crop
+│   ├── preview_renderer.py   # LibreOffice / PyMuPDF / Windows COM 渲染截图
+│   ├── visual_qa.py          # 渲染后视觉 QA 检查
+│   ├── capability.py         # 运行时环境能力检测与报告
+│   └── ...and more
 ├── scripts/                  # 命令行入口
 │   ├── pptx_helper.py        # 生成引擎
 │   ├── reference_ppt.py      # 参考稿分析与生成

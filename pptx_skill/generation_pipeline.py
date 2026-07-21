@@ -171,6 +171,11 @@ def run_generation_pipeline(
                     report = engine.check(plan)
                     issues.extend(report.issues)
                     checks.append(QACheckResult(check_id=f"semantic_slide_{idx}", outcome=CheckOutcome.PASS if report.passed else CheckOutcome.FAIL, confidence=1.0, evidence={"issues": len(report.issues)}, issue_codes=[i.kind for i in report.issues]))
+                # Deck-level QA check
+                deck_report = engine.check_deck(plans)
+                issues.extend(deck_report.deck_issues)
+                for deck_issue in deck_report.deck_issues:
+                    checks.append(QACheckResult(check_id=f"deck_{deck_issue.kind}", outcome=CheckOutcome.FAIL, confidence=1.0, evidence={"message": deck_issue.message}, issue_codes=[deck_issue.kind]))
                 status = CheckOutcome.PASS if all(i.severity.value != "blocker" for i in issues) else CheckOutcome.FAIL
                 qa_report = QAReport(status=status, checks=checks, issues=issues, render_result=None, metrics={}, artifacts={"preview_dir": preview_dir} if preview_dir else {})
 

@@ -192,6 +192,8 @@ auto_generate_ppt(
 - 问答 → `faq`
 - 普通要点 → `bullets`
 
+> **注意**：`kpi_hero`、`testimonial`、`logo_wall`、`matrix`、`faq` 这 5 种 role 没有默认布局，使用时必须在 `SlideSpec` 或 `sections` 中显式指定 layout 名称（如 `kpi_hero.split`、`testimonial.centered`、`logo_wall.grid3`、`matrix.quadrant`、`faq.alternating` 等）。
+
 脚本入口仍可用：
 
 ```powershell
@@ -274,7 +276,9 @@ print(manifest.manifest_schema_version)  # 3
 | 问题 | 典型原因 | 处理方式 |
 |---|---|---|
 | `ImportError: kiwisolver` | 未安装 adaptive 依赖 | `pip install -e ".[adaptive]"` 或回退 `layout_engine="legacy"` |
-| 求解器不可行（infeasible） | 内容超长、约束冲突或 recipe 不匹配 | 换 recipe、分页或放宽内容限制 |
+| `LayoutPlanningError` | 求解器不可行、内容超长、约束冲突或 recipe 不匹配 | 换 recipe、分页或放宽内容限制 |
+| `AdaptiveRendererError` | 渲染节点类型不支持、画布参数异常或渲染过程出错 | 检查节点类型与参数，回退 legacy 渲染 |
+| `ManifestError` | manifest 格式损坏、版本不兼容或读写失败 | 检查 manifest 版本，尝试 V2→V3 迁移或重新生成 |
 | 参考稿模式推荐 `visual-rebuild` | 母版/占位符不可用，形状都在页面上 | 按视觉重建路径执行，并给出相似度预算报告 |
 | QA 报 `blocker` | 溢出、重叠、越界、低对比度等 | 进入 repair 闭环，最多两轮；仍失败则明确返回 |
 | 渲染引擎不可用 | 未安装 LibreOffice/PyMuPDF/PowerPoint COM | 标记 unavailable，不影响结构/语义 QA；需要时再安装 |
@@ -286,6 +290,7 @@ print(manifest.manifest_schema_version)  # 3
 |---|---|
 | `pptx_skill.api` | 兼容 facade 与 `GenerationResult` |
 | `pptx_skill.content_model` | `ContentSpec`/`SlideSpec`/`ElementSpec` 数据模型 |
+| `pptx_skill.content_adapter` | 适配 legacy `Section` 对象到 `ContentSpec` |
 | `pptx_skill.layout_engine` | 声明式 `LayoutRecipe` + Kiwi 约束求解 |
 | `pptx_skill.deck_planner` | 整本 beam search 节奏规划 |
 | `pptx_skill.pagination` | bullets/table/timeline/process/image_grid 分页 |
@@ -304,6 +309,9 @@ print(manifest.manifest_schema_version)  # 3
 | `pptx_skill.template_downloader` | 模板包下载（GitHub/URL/本地）、PPTX 档案提取、远程包列表与搜索 |
 | `pptx_skill.design_schema` | V2 schema、token 解析与校验 |
 | `pptx_skill.image_crop` | contain/cover/smart crop + 真实 crop fractions |
+| `pptx_skill.preview_renderer` | LibreOffice / PyMuPDF / Windows COM 渲染截图 |
+| `pptx_skill.visual_qa` | 渲染后视觉 QA 检查 |
+| `pptx_skill.capability` | 运行时环境能力检测与报告 |
 
 ## 版式与视觉原则
 

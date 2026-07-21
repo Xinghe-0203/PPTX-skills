@@ -235,6 +235,7 @@ from pptx_skill.text_metrics import (  # noqa: E402
 )
 from pptx_skill.visual_qa import (  # noqa: E402
     CheckOutcome,
+    PresentationQualityError,
     QACheckResult,
     QAIssue,
     QAReport,
@@ -269,6 +270,7 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "AdaptiveRendererError",
     "ALL_ROLES",
     "GEOMETRY_FAMILIES",
     "GoldenIndex",
@@ -434,6 +436,11 @@ __all__ = [
     "swap_image",
     "swap_theme",
     "validate_template_profile",
+    "source_profile_from_intent",
+    "validate_source_profile",
+    "v2_bundle_to_legacy_fonts",
+    "v2_bundle_to_legacy_profile",
+    "v2_bundle_to_legacy_theme",
     "visual_rebuild_adapter",
     "VisualRebuildResult",
     "analyze_reference_deck",

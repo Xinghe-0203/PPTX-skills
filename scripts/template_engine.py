@@ -19,6 +19,7 @@ VALID_LAYOUTS = {
     "cover", "toc", "section", "bullets", "text_image", "full_image",
     "image_grid", "dashboard", "timeline", "comparison", "quote",
     "process", "table", "end",
+    "matrix", "kpi_hero", "faq", "testimonial", "logo_wall",
 }
 
 STYLE_KEYWORDS = {

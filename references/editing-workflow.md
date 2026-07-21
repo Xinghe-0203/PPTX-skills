@@ -5,8 +5,11 @@
 1. Safety and indexing
 2. Round-trip edits for generated decks
 3. Direct edits for external decks
-4. Page operations
-5. Restore and verify
+4. Rich text editing
+5. Media insertion
+6. Page operations
+7. Template download and import
+8. Restore and verify
 
 ## Safety and indexing
 
@@ -69,6 +72,18 @@ python scripts/ppt_edit.py theme deck.pptx --new forest_luxe
 
 If theme recognition returns an error, inspect the color inventory and use explicit `recolor` mappings. Do not force a guessed theme onto an unrelated external deck.
 
+## Rich text editing
+
+The adaptive pipeline supports multi-run rich text in text nodes. Each run dict can specify `bold`, `italic`, `color` (hex), `size` (pt), and `href` (hyperlink URL). Paragraph-level formatting supports `align` (left/center/right/justify), `level` (indent level, max 8), and `bullet` (custom bullet character).
+
+For round-trip edits on generated decks, modify the section content and regenerate. For direct edits on external decks, use `ppt_edit.py text` or `role` commands, which preserve existing run formatting where possible.
+
+## Media insertion
+
+Video and audio media are supported in the adaptive pipeline as element kinds `video` and `audio` in `SlideSpec.elements`. Specify the file path via `content["path"]`. Video supports an optional `content["poster"]` for a poster frame image. Audio supports an optional `content["mime_type"]` (default `"audio/mpeg"`).
+
+For direct edits on external decks, media insertion is not yet available in `ppt_edit.py`. Use `python-pptx` directly via `slide.shapes.add_movie()` for video, or `slide.shapes.add_movie()` with an audio MIME type for audio.
+
 ## Page operations
 
 Insert a page:
@@ -97,6 +112,22 @@ python scripts/ppt_pages.py replace-layout deck.pptx `
 ```
 
 Supply an explicit section JSON for complex pages. Automatic extraction only recovers a basic title and body.
+
+## Template download and import
+
+Download template packs from GitHub, direct URLs, or local directories, then import them as reusable profiles:
+
+```python
+from pptx_skill import download_template_pack, import_template
+
+# Download from GitHub
+result = download_template_pack("github", "output/templates", repo="user/repo")
+
+# Import a .pptx as a template profile
+profile = import_template("output/templates/report.pptx", name="Client Brand")
+```
+
+Imported profiles are saved to `assets/templates/generated/` and can be used by their profile ID as a `template_key`.
 
 ## Restore and verify
 

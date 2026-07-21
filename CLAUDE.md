@@ -61,6 +61,7 @@ pptx_skill/__init__.py
 **Modular layer** (`pptx_skill/`) — the new package, PR1–PR9:
 - `api.py` — compatibility facade wrapping both layers
 - `content_model.py` — zero-dependency core: `ContentSpec`, `SlideSpec`, `ElementSpec`, `LayoutPlan`, `PlannedNode`, `GeometrySpec`, `BBox`, `CanvasSpec`, `StableIdGenerator`
+- `content_adapter.py` — adapt legacy `Section` objects to `ContentSpec`
 - `layout_engine.py` — declarative `LayoutRecipe` + Kiwi constraint solver → `SolvedGeometry`
 - `deck_planner.py` — beam search over candidate bundles with transition penalties
 - `pagination.py` — role-specific paginators (bullets, table, timeline, process, image_grid)
@@ -80,6 +81,9 @@ pptx_skill/__init__.py
 - `golden_renders.py` — per-role golden renders and family decks
 - `image_crop.py` — contain/cover/smart crop
 - `preview_renderer.py` — LibreOffice / PyMuPDF / Windows COM rendering
+- `template_downloader.py` — template pack download (GitHub/URL/local), PPTX archive extraction, remote pack listing & search
+- `visual_qa.py` — visual QA checks on rendered slides
+- `capability.py` — runtime environment capability detection and reporting
 
 ## Data Flow: Content → Rendered PPTX
 
@@ -92,6 +96,9 @@ adapt_legacy_sections() or direct construction (content_adapter.py)
         ▼
 paginate_content_spec() → split dense slides   (pagination.py)
         │
+        ▼
+SemanticQAEngine.check() → pre-render checks  (semantic_qa.py)
+        │      (overflow / overlap / contrast / font / distortion)
         ▼
 plan_deck() → beam search                      (deck_planner.py)
   ├─ builtin_recipes(role) → LayoutRecipe[]    (layout_engine.py)
@@ -107,7 +114,7 @@ render_layout_plans(plans, output_path, deck_options)  (pptx_renderer.py)
 render_preview() → PNG via LibreOffice/COM     (preview_renderer.py)
         │
         ▼
-SemanticQAEngine.check() + render_qa           (semantic_qa.py, render_qa.py)
+render_qa → pixel-level perceptual diff, SSIM  (render_qa.py)
         │
         ▼  (if QA fails)
 propose_repairs() → apply_repairs()            (repair_engine.py)
@@ -141,7 +148,7 @@ All editing functions create `.bak.pptx` backup before writing. Slide indices ar
 
 19 roles: `cover, toc, section, bullets, text_image, full_image, image_grid, dashboard, timeline, comparison, quote, process, table, end, matrix, kpi_hero, faq, testimonial, logo_wall`
 
-~38 recipe variants with density-graded options (sparse/dense for bullets, dashboard; three_column for comparison; vertical_dense for timeline; horizontal_dense for process; grid4 for image_grid; wide for table). Each new role has ≥2 variants.
+~47 recipe variants with density-graded options (sparse/dense for bullets, dashboard; three_column for comparison; vertical_dense for timeline; horizontal_dense for process; grid4 for image_grid; wide for table). Each new role has ≥2 variants.
 
 When adding a new recipe:
 1. Define zones, constraints, content_limits in `layout_engine.py`
@@ -156,7 +163,7 @@ When adding a new recipe:
 - **No AI-style decoration**: no rounded cards, decorative circles, gradient glows, floating shadows, VS badges, oversized quote marks, meaningless English kickers. Use grids, fine rules, axes, whitespace, and real information hierarchy.
 - **AGPL risk**: `PyMuPDF` (render-pdf extra) is AGPL-3.0/commercial. Never make it a core dependency. See `THIRD_PARTY_NOTICES.md`.
 - **CJK-first**: font metrics, line-breaking, and continuation markers (`（续）`) target Chinese content. Tests use CJK strings.
-- **Anti-repeat layout**: if the last 2 used layouts match the candidate, switch to bullets/text_image/full_image/process.
+- **Anti-repeat layout**: `avoid_adjacent_same_signature` in deck_planner computes a geometry signature (role order + normalized bboxes + area ratios) for each plan; when two adjacent plans exceed the `adjacent_signature_threshold` (0.85 by default), a penalty is added to the beam search score, steering the planner away from consecutively similar layouts.
 - **20 themes** with font pairing (FONTS + CJK_FONTS dicts in pptx_helper.py).
 - **20 template profiles** in catalog (12 built-in + 8 new).
 - **10 chart types** supported (column, bar, line, pie, doughnut, scatter, area variants).

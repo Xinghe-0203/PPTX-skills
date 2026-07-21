@@ -163,6 +163,7 @@ class SemanticQAEngine:
         font_drift_pt: float = 4.0,
         layout_repetition_run: int = 3,
         section_break_min_slides: int = 5,
+        safe_margin_tolerance_pt: float = 2.0,
     ):
         self.min_contrast = min_contrast
         self.overlap_threshold_pt2 = overlap_threshold_pt2
@@ -175,6 +176,7 @@ class SemanticQAEngine:
         self.font_drift_pt = font_drift_pt
         self.layout_repetition_run = layout_repetition_run
         self.section_break_min_slides = section_break_min_slides
+        self.safe_margin_tolerance_pt = safe_margin_tolerance_pt
 
     def check(self, plan: LayoutPlan) -> SemanticQAReport:
         issues: list[DetectedIssue] = []
@@ -470,8 +472,11 @@ class SemanticQAEngine:
         col_widths = binding.get("col_widths", [])
         if not rows or not col_widths:
             return []
-        # Heuristic: average character width ~7pt for typical fonts
-        avg_char_width = 7.0
+
+        def _has_cjk(text: str) -> bool:
+            """Return True if text contains CJK or other wide characters."""
+            return any(ord(ch) > 0x2E80 for ch in text)
+
         issues: list[DetectedIssue] = []
         for row_idx, row in enumerate(rows):
             if not isinstance(row, (list, tuple)):
@@ -479,7 +484,9 @@ class SemanticQAEngine:
             for col_idx, cell in enumerate(row):
                 if col_idx >= len(col_widths):
                     continue
-                text = str(cell) if cell else ""
+                text = str(cell) if cell is not None else ""
+                # Use wider avg char width for CJK content
+                avg_char_width = 14.0 if _has_cjk(text) else 7.0
                 estimated_width = len(text) * avg_char_width
                 col_width = col_widths[col_idx]
                 if col_width > 0 and estimated_width > col_width:
@@ -606,10 +613,25 @@ class SemanticQAEngine:
             if node.decorative or not node.geometry:
                 continue
             if _bbox_outside_safe(node.geometry.bbox, plan.canvas):
+                # Compute how far outside the safe area the bbox extends
+                bbox = node.geometry.bbox
+                safe = plan.canvas.safe
+                overflow = max(
+                    safe.left - bbox.x,
+                    safe.top - bbox.y,
+                    (bbox.x + bbox.width) - (plan.canvas.width_pt - safe.right),
+                    (bbox.y + bbox.height) - (plan.canvas.height_pt - safe.bottom),
+                    0.0,
+                )
+                severity = (
+                    IssueSeverity.BLOCKER
+                    if overflow > self.safe_margin_tolerance_pt
+                    else IssueSeverity.WARNING
+                )
                 issues.append(
                     DetectedIssue(
                         kind=IssueKind.SAFE_MARGIN_VIOLATION,
-                        severity=IssueSeverity.BLOCKER,
+                        severity=severity,
                         node_id=node.id,
                         message=f"Node {node.id} extends outside safe margins",
                         details={
@@ -625,6 +647,8 @@ class SemanticQAEngine:
                                 "bottom": plan.canvas.safe.bottom,
                                 "left": plan.canvas.safe.left,
                             },
+                            "overflow_pt": overflow,
+                            "tolerance_pt": self.safe_margin_tolerance_pt,
                         },
                     )
                 )
@@ -634,10 +658,26 @@ class SemanticQAEngine:
         safe_area = plan.canvas.safe_width * plan.canvas.safe_height
         if safe_area <= 0:
             return []
+        content_nodes = [
+            n for n in plan.nodes if not n.decorative and n.geometry
+        ]
+        # If overlaps exist, the simple area sum double-counts overlapping
+        # regions, so skip the whitespace check to avoid false positives.
+        has_overlaps = False
+        for i in range(len(content_nodes)):
+            for j in range(i + 1, len(content_nodes)):
+                if _bbox_overlap(
+                    content_nodes[i].geometry.bbox,
+                    content_nodes[j].geometry.bbox,
+                ) > self.overlap_threshold_pt2:
+                    has_overlaps = True
+                    break
+            if has_overlaps:
+                break
+        if has_overlaps:
+            return []
         total_node_area = 0.0
-        for node in plan.nodes:
-            if node.decorative or not node.geometry:
-                continue
+        for node in content_nodes:
             total_node_area += node.geometry.bbox.area()
         covered_ratio = total_node_area / safe_area
         whitespace_ratio = 1.0 - covered_ratio
@@ -661,7 +701,14 @@ class SemanticQAEngine:
             ]
         return []
 
+    # Recipe IDs for slides that intentionally have no title
+    _NO_TITLE_RECIPES = ("cover.", "section.", "toc.", "end.", "full_image.")
+
     def _check_missing_title(self, plan: LayoutPlan) -> list[DetectedIssue]:
+        # Skip slides whose recipe intentionally has no title
+        recipe = plan.recipe_id or ""
+        if any(recipe.startswith(prefix) for prefix in self._NO_TITLE_RECIPES):
+            return []
         has_title = any(n.role == "title" for n in plan.nodes)
         if not has_title:
             return [
@@ -675,7 +722,7 @@ class SemanticQAEngine:
         return []
 
     def _check_excessive_elements(self, plan: LayoutPlan) -> list[DetectedIssue]:
-        node_count = len(plan.nodes)
+        node_count = sum(1 for n in plan.nodes if not n.decorative)
         if node_count > self.max_element_count:
             return [
                 DetectedIssue(
@@ -787,7 +834,10 @@ class SemanticQAEngine:
             return issues
         run_start = 0
         for i in range(1, len(plans)):
-            if plans[i].recipe_id != plans[run_start].recipe_id:
+            cur_id = plans[i].recipe_id
+            start_id = plans[run_start].recipe_id
+            # Skip None/empty recipe_ids — they break repetition runs
+            if not cur_id or not start_id or cur_id != start_id:
                 run_length = i - run_start
                 if run_length >= self.layout_repetition_run:
                     issues.append(
@@ -877,13 +927,41 @@ class SemanticQAEngine:
         if len(slide_primary_colors) < 2:
             return []
 
-        # Check if primary colors differ across slides
-        unique_colors = set(c for _, c in slide_primary_colors)
+        # Group colors by perceptual similarity (RGB distance ≤5 per channel)
+        def _colors_equivalent(c1: str, c2: str) -> bool:
+            """Treat two hex colors as equivalent if all RGB channels differ by ≤5."""
+            try:
+                r1, g1, b1 = _hex_to_rgb(c1)
+                r2, g2, b2 = _hex_to_rgb(c2)
+                return abs(r1 - r2) <= 5 and abs(g1 - g2) <= 5 and abs(b1 - b2) <= 5
+            except (ValueError, TypeError):
+                return c1 == c2
+
+        # Map each color to a canonical representative
+        canonical_map: dict[str, str] = {}
+        representatives: list[str] = []
+        for _, color in slide_primary_colors:
+            if color in canonical_map:
+                continue
+            matched = None
+            for rep in representatives:
+                if _colors_equivalent(color, rep):
+                    matched = rep
+                    break
+            if matched is not None:
+                canonical_map[color] = matched
+            else:
+                representatives.append(color)
+                canonical_map[color] = color
+
+        # Use canonical colors for drift detection
+        canonical_colors = [canonical_map[c] for _, c in slide_primary_colors]
+        unique_colors = set(canonical_colors)
         if len(unique_colors) <= 1:
             return []
 
         # Simple heuristic: if more than half the slides use a different primary, warn
-        color_counter = Counter(c for _, c in slide_primary_colors)
+        color_counter = Counter(canonical_colors)
         most_common_color, most_common_count = color_counter.most_common(1)[0]
         slides_with_different = len(slide_primary_colors) - most_common_count
 
