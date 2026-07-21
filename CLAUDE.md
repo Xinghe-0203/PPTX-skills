@@ -15,7 +15,7 @@ python -m pip install -e .
 # Install with optional backends
 python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
 
-# Run full test suite (185 tests, ~300s)
+# Run full test suite (213 tests, ~155s)
 python -m pytest tests/ -ra
 
 # Run a single test file
@@ -98,6 +98,14 @@ pptx_skill/__init__.py
 - `vba.py` — VBA project detection, injection, extraction, macro-to-shape attachment
 - `table_styles.py` — 20 built-in table styles, cell merge/unmerge, borders, fills, add row/column
 - `html_import.py` — HTML-to-PPTX import with local snapshot underlay technique
+- `effects.py` — 3D/bevel/glow/reflection/soft-edges/inner-shadow/perspective-shadow + 16 effect presets
+- `connectors.py` — lines, elbow/curved connectors, freeform paths, arrowheads, dash styles
+- `protection.py` — write-protection, password encryption (msoffcrypto), mark-as-final
+- `accessibility.py` — WCAG 2.1 audit, alt-text management, contrast checking, auto-fix
+- `metadata.py` — core document properties, custom properties (docProps/custom.xml), embedded fonts
+- `equations.py` — OMML builder + LaTeX-to-OMML converter (fractions, radicals, n-ary, matrices)
+- `multimedia.py` — video/audio embedding with playback settings (loop, fullscreen, trim)
+- `groups.py` — shape grouping/ungrouping, z-order within groups
 
 ## Data Flow: Content → Rendered PPTX
 
