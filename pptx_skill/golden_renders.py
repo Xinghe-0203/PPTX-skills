@@ -39,6 +39,7 @@ ALL_ROLES = (
     "image_grid", "dashboard", "timeline", "comparison", "quote",
     "process", "table", "end",
     "matrix", "kpi_hero", "faq", "testimonial", "logo_wall",
+    "swot", "porter", "pest", "bmc", "funnel",
 )
 
 # Representative variant per role for the family deck.
@@ -59,6 +60,11 @@ FAMILY_DECK_SEQUENCE = [
     ("faq", "faq.alternating"),
     ("testimonial", "testimonial.centered"),
     ("logo_wall", "logo_wall.grid3"),
+    ("swot", "swot.quadrant"),
+    ("porter", "porter.diamond"),
+    ("pest", "pest.grid"),
+    ("bmc", "bmc.canvas"),
+    ("funnel", "funnel.stacked"),
     ("end", "end.thanks"),
 ]
 

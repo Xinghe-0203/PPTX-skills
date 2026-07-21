@@ -20,10 +20,11 @@ VALID_LAYOUTS = {
     "image_grid", "dashboard", "timeline", "comparison", "quote",
     "process", "table", "end",
     "matrix", "kpi_hero", "faq", "testimonial", "logo_wall",
+    "swot", "porter", "pest", "bmc", "funnel",
 }
 
 STYLE_KEYWORDS = {
-    "strategy-consulting": ("consulting", "strategy", "咨询", "战略", "管理层"),
+    "strategy-consulting": ("consulting", "strategy", "咨询", "战略", "管理层", "swot", "porter", "pest", "bmc", "funnel", "分析框架", "商业模式", "五力", "漏斗"),
     "executive-dark": ("executive", "board", "董事会", "高管", "高端", "奢华"),
     "product-launch": ("product", "launch", "tech", "产品", "发布", "科技"),
     "data-story": ("data", "analytics", "dashboard", "数据", "经营", "分析"),
