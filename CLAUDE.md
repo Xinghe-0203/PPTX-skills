@@ -115,6 +115,9 @@ pptx_skill/__init__.py
 - `chart_edit.py` — chart data/style/type editing, series add/remove/rename, axis control, data labels, legend
 - `color.py` — color science (RGB/HSL/HSV/CMYK), palette extraction, harmony generators, gradient builder, batch recolor
 - `layout_sync.py` — alignment, distribution, snap-to-grid, layout templates, z-order, center-on-slide
+- `markdown_export.py` — Markdown export (text, tables, notes, chart data, metadata)
+- `video.py` — MP4/GIF video export via ffmpeg (crossfade transitions, speaker timing, per-slide duration)
+- `svg_export.py` — DrawingML-to-SVG converter (slides → SVG vector output with embedded images)
 
 ## Data Flow: Content → Rendered PPTX
 

@@ -463,7 +463,7 @@ from pptx_skill.html_import import (  # noqa: E402
     import_from_html,
 )
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 
 # --- New v4.0 modules ---
 from pptx_skill.effects import (  # noqa: E402
@@ -734,6 +734,25 @@ from pptx_skill.layout_sync import (  # noqa: E402
     send_to_back,
     set_z_order,
     snap_to_grid,
+)
+from pptx_skill.markdown_export import (  # noqa: E402
+    MarkdownOptions,
+    export_to_markdown,
+    extract_markdown_content,
+    slide_to_markdown,
+)
+from pptx_skill.video import (  # noqa: E402
+    VideoExportOptions,
+    VideoInfo,
+    check_ffmpeg,
+    export_to_gif,
+    export_to_video,
+    extract_audio_track,
+)
+from pptx_skill.svg_export import (  # noqa: E402
+    export_slide_to_svg,
+    export_to_svg,
+    shape_to_svg,
 )
 
 
@@ -1368,4 +1387,20 @@ __all__ = [
     "send_to_back",
     "set_z_order",
     "snap_to_grid",
+    # --- v5.1: Markdown Export ---
+    "MarkdownOptions",
+    "export_to_markdown",
+    "extract_markdown_content",
+    "slide_to_markdown",
+    # --- v5.1: Video Export ---
+    "VideoExportOptions",
+    "VideoInfo",
+    "check_ffmpeg",
+    "export_to_gif",
+    "export_to_video",
+    "extract_audio_track",
+    # --- v5.1: SVG Export ---
+    "export_slide_to_svg",
+    "export_to_svg",
+    "shape_to_svg",
 ]
