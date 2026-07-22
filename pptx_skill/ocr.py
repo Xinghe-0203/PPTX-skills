@@ -263,23 +263,27 @@ def _ocr_paddleocr(image_path: str, languages: list[str], min_confidence: float)
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _render_slide_to_image(prs, slide_index: int, dpi: int = 200) -> str:
@@ -336,7 +340,7 @@ def ocr_slide(
     -------
     list[OcrResult]
     """
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         all_results: list[OcrResult] = []
@@ -416,7 +420,7 @@ def ocr_presentation(
     dict[int, list[OcrResult]]
         Map of slide_index → OCR results.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         results: dict[int, list[OcrResult]] = {}
         slide_count = len(prs.slides)
@@ -465,7 +469,9 @@ def auto_caption_slide(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         results = ocr_slide(
@@ -490,7 +496,7 @@ def auto_caption_slide(
         else:
             raise ValueError(f"Unknown mode: {mode!r}. Use 'alt_text', 'text_box', or 'notes'.")
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def auto_caption_presentation(
@@ -508,7 +514,9 @@ def auto_caption_presentation(
     int
         Total number of shapes/elements updated.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         total = 0
         for idx in range(len(prs.slides)):
@@ -521,7 +529,7 @@ def auto_caption_presentation(
             )
         return total
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _apply_alt_text(slide, results: list[OcrResult], combined_text: str) -> int:

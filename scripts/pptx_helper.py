@@ -921,7 +921,7 @@ def layout_dashboard(prs, theme, ctx):
         _add_para(lf, m.get("label", ""), first=True, size=Pt(13),
                   color=theme["text_muted"], font_family=theme.get('font_body', FONT_CN))
         # 变化
-        chg = m.get("change", "")
+        chg = m.get("change") or m.get("delta", "")
         if chg:
             cf = _textbox(slide, cl + 0.3, card_top + 1.25, card_w - 0.6, 0.25)
             chg_color = _c("22C55E") if chg.startswith("+") else _c("EF4444") if chg.startswith("-") else theme["text_muted"]
@@ -964,7 +964,7 @@ def layout_dashboard(prs, theme, ctx):
                           fill=bar_colors[bi % len(bar_colors)], radius_frac=0.15)
             # 数值标签
             lf = _textbox(slide, bl, bt - 0.35, bar_w, 0.3)
-            _add_para(lf, metrics[bi].get("change", ""), first=True,
+            _add_para(lf, metrics[bi].get("change") or metrics[bi].get("delta", ""), first=True,
                       size=Pt(11), color=theme["text_muted"], font_family=theme.get('font_heading', FONT_EN),
                       align=PP_ALIGN.CENTER)
             # 底部标签

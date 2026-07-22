@@ -131,21 +131,27 @@ _NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
+
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
-    from pptx import Presentation
-    return Presentation(prs_or_path), True
+    """Open a Presentation from *prs_or_path*.
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
+    from pptx import Presentation
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
+
+
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 def _find_shape(slide, shape_name: str):
     for shape in slide.shapes:
@@ -256,7 +262,9 @@ def add_line(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -299,7 +307,7 @@ def add_line(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +340,9 @@ def add_connector(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape1 = _find_shape(slide, start_shape)
@@ -378,7 +388,7 @@ def add_connector(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def add_elbow_connector(prs_or_path, slide_index: int, *,
@@ -392,7 +402,9 @@ def add_elbow_connector(prs_or_path, slide_index: int, *,
     """Add an elbow (right-angle) connector between two shapes."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape1 = _find_shape(slide, start_shape)
@@ -441,7 +453,7 @@ def add_elbow_connector(prs_or_path, slide_index: int, *,
                                     start_arrow, end_arrow)
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def add_curved_connector(prs_or_path, slide_index: int, *,
@@ -455,7 +467,9 @@ def add_curved_connector(prs_or_path, slide_index: int, *,
     """Add a curved connector between two shapes."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape1 = _find_shape(slide, start_shape)
@@ -503,7 +517,7 @@ def add_curved_connector(prs_or_path, slide_index: int, *,
                                     start_arrow, end_arrow)
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -531,7 +545,9 @@ def add_curve(prs_or_path, slide_index: int, *,
     if len(points) < 2:
         raise ValueError("At least 2 points required for a curve")
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -594,7 +610,7 @@ def add_curve(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def add_freeform(prs_or_path, slide_index: int, *,
@@ -617,7 +633,9 @@ def add_freeform(prs_or_path, slide_index: int, *,
     if len(points) < 3:
         raise ValueError("At least 3 points required for a freeform shape")
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -683,7 +701,7 @@ def add_freeform(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +714,9 @@ def set_line_style(prs_or_path, slide_index: int, shape_name: str, *,
                    line_style: str | None = None,
                    dash_style: str | None = None) -> bool:
     """Set line style properties on an existing shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -709,7 +729,7 @@ def set_line_style(prs_or_path, slide_index: int, shape_name: str, *,
                                     dash_style, None, None)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_arrow_style(prs_or_path, slide_index: int, shape_name: str, *,
@@ -720,7 +740,9 @@ def set_arrow_style(prs_or_path, slide_index: int, shape_name: str, *,
     """Set arrowhead style on an existing line/connector shape."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -754,7 +776,7 @@ def set_arrow_style(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
@@ -765,7 +787,9 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -827,7 +851,7 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -836,7 +860,9 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
 def delete_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Delete a connector or line shape by name."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -846,14 +872,14 @@ def delete_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
         sp_tree.remove(shape._element)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineInfo]:
     """List all connectors and lines on a slide."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         results: list[ConnectorInfo | LineInfo] = []

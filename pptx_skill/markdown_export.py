@@ -42,18 +42,21 @@ class MarkdownOptions:
 
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
 def _bullet_char(style: str) -> str:
@@ -373,7 +376,7 @@ def extract_markdown_content(prs_or_path, *, options: MarkdownOptions | None = N
         Full Markdown string.
     """
     opts = options or MarkdownOptions()
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         parts = []
 

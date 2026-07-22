@@ -116,23 +116,27 @@ class ChartInfo:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_chart_shape(slide, shape_name: str):
@@ -175,7 +179,9 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
     list[dict]
         Each dict has keys: slide_index, name, chart_type, series_count.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         results = []
         slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
@@ -203,7 +209,9 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
 
 def get_chart_info(prs_or_path, slide_index: int, shape_name: str) -> ChartInfo | None:
     """Get detailed info about a specific chart."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -287,7 +295,9 @@ def edit_chart_data(
     bool
         True if the chart was modified.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -313,7 +323,7 @@ def edit_chart_data(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _set_series_values(chart, series_index: int, values: list[float]):
@@ -426,7 +436,9 @@ def add_chart_series(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -489,7 +501,7 @@ def add_chart_series(
 
         return new_idx
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_chart_series(
@@ -500,7 +512,9 @@ def remove_chart_series(
     series_index: int,
 ) -> bool:
     """Remove a series from a chart by index."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -529,7 +543,7 @@ def remove_chart_series(
                     return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def rename_chart_series(
@@ -543,7 +557,9 @@ def rename_chart_series(
     """Rename a chart series."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -580,7 +596,7 @@ def rename_chart_series(
                     return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -603,7 +619,9 @@ def set_chart_colors(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -641,7 +659,7 @@ def set_chart_colors(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_chart_style(
@@ -660,7 +678,9 @@ def set_chart_style(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -678,7 +698,7 @@ def set_chart_style(
         style.set("val", str(max(1, min(48, style_index))))
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_data_labels(
@@ -697,7 +717,9 @@ def set_data_labels(
     """Configure data labels on a chart."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -764,7 +786,7 @@ def set_data_labels(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_legend(
@@ -788,7 +810,9 @@ def set_legend(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -843,7 +867,7 @@ def set_legend(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -869,7 +893,9 @@ def set_axis_title(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -916,7 +942,7 @@ def set_axis_title(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_axis_range(
@@ -931,7 +957,9 @@ def set_axis_range(
     minor_unit: float | None = None,
 ) -> bool:
     """Set value axis range and units."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -975,7 +1003,7 @@ def set_axis_range(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_axis_number_format(
@@ -994,7 +1022,9 @@ def set_axis_number_format(
     format_code : str
         Excel-style format code, e.g. ``"#,##0"``, ``"0.0%"``, ``"$#,##0"``.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -1021,7 +1051,7 @@ def set_axis_number_format(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def toggle_gridlines(
@@ -1044,7 +1074,9 @@ def toggle_gridlines(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -1084,7 +1116,7 @@ def toggle_gridlines(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -1133,7 +1165,9 @@ def set_chart_type(
     if chart_type not in TYPE_TO_TAG:
         raise ValueError(f"Unknown chart type: {chart_type!r}. Valid: {sorted(TYPE_TO_TAG.keys())}")
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -1336,7 +1370,7 @@ def set_chart_type(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -1355,7 +1389,9 @@ def export_chart_data(
     dict
         ``{"categories": [...], "series": [{"name": ..., "values": [...]}, ...]}``
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         info = get_chart_info(prs, slide_index, shape_name)
         if info is None:
@@ -1386,7 +1422,9 @@ def import_chart_data(
     data : dict
         ``{"categories": [...], "series": [{"name": ..., "values": [...]}, ...]}``
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_chart_shape(slide, shape_name)
@@ -1433,4 +1471,4 @@ def import_chart_data(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)

@@ -69,11 +69,8 @@ class ProtectionInfo:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _compute_password_hash(password: str, *, spin_count: int = 100000,
@@ -129,7 +126,9 @@ def apply_write_protection(prs_or_path, *, password: str | None = None,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         pres_elem = prs._element
 
@@ -162,14 +161,16 @@ def apply_write_protection(prs_or_path, *, password: str | None = None,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_write_protection(prs_or_path) -> bool:
     """Remove all write protection from a presentation."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         pres_elem = prs._element
         pres_pr = pres_elem.find(f"{{{_NS_P}}}presentationPr")
@@ -183,7 +184,7 @@ def remove_write_protection(prs_or_path) -> bool:
                 found = True
         return found
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +200,9 @@ def mark_as_final(prs_or_path) -> bool:
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         # Set core property
         try:
@@ -211,12 +214,14 @@ def mark_as_final(prs_or_path) -> bool:
         _set_doc_security(prs, 4)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def unmark_as_final(prs_or_path) -> bool:
     """Remove the 'marked as final' status."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         try:
             if prs.core_properties.category == "Marked as Final":
@@ -226,12 +231,12 @@ def unmark_as_final(prs_or_path) -> bool:
         _set_doc_security(prs, 0)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def is_marked_final(prs_or_path) -> bool:
     """Check if the presentation is marked as final."""
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         try:
             if prs.core_properties.category == "Marked as Final":
@@ -417,7 +422,7 @@ def get_protection_info(prs_or_path) -> ProtectionInfo:
         if info.is_encrypted:
             return info  # Can't read encrypted files without password
 
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         pres_elem = prs._element
         pres_pr = pres_elem.find(f"{{{_NS_P}}}presentationPr")
@@ -445,11 +450,19 @@ def get_protection_info(prs_or_path) -> ProtectionInfo:
 # ---------------------------------------------------------------------------
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
-    from pptx import Presentation
-    return Presentation(prs_or_path), True
+    """Open a Presentation from *prs_or_path*.
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
+    from pptx import Presentation
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
+
+
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))

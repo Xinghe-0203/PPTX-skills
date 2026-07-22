@@ -233,7 +233,7 @@ class SectionsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = _make_blank_pptx(os.path.join(tmp, "sec.pptx"), num_slides=2)
 
-            info = add_section(path, "Intro", slide_index=0)
+            info = add_section(path, "Intro", start_slide=0)
             self.assertIsInstance(info, SectionInfo)
             self.assertEqual(info.name, "Intro")
 
@@ -246,7 +246,7 @@ class SectionsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = _make_blank_pptx(os.path.join(tmp, "sec.pptx"), num_slides=2)
 
-            add_section(path, "Old Name", slide_index=0)
+            add_section(path, "Old Name", start_slide=0)
             info = rename_section(path, 0, "New Name")
             self.assertEqual(info.name, "New Name")
 

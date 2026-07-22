@@ -11,7 +11,7 @@ Usage
 -----
 >>> from pptx_skill.sections import list_sections, add_section
 >>> sections = list_sections("deck.pptx")
->>> add_section("deck.pptx", "Introduction", slide_index=0)
+>>> add_section("deck.pptx", "Introduction", start_slide=0)
 """
 
 from __future__ import annotations
@@ -240,13 +240,13 @@ def add_section(
     prs_or_path: Any,
     name: str,
     *,
-    slide_index: int | None = None,
+    start_slide: int | None = None,
     before_section: int | None = None,
     after_section: int | None = None,
 ) -> SectionInfo:
     """Create a new section in the presentation.
 
-    Exactly one positioning hint should be provided. If *slide_index* is given,
+    Exactly one positioning hint should be provided. If *start_slide* is given,
     the section starts at that slide (0-based). If *before_section* is given,
     the new section is inserted before the section at that index. If
     *after_section* is given, the new section is inserted after the section at
@@ -255,7 +255,7 @@ def add_section(
     Args:
         prs_or_path: A ``Presentation`` object or file path (``str | Path``).
         name: The display name for the new section.
-        slide_index: 0-based slide index where this section starts.
+        start_slide: 0-based slide index where this section starts.
         before_section: Insert before this section index.
         after_section: Insert after this section index.
 
@@ -270,10 +270,10 @@ def add_section(
     prs = _open_prs(prs_or_path)
 
     # Validate that at most one positioning hint is given
-    hints = sum(x is not None for x in (slide_index, before_section, after_section))
+    hints = sum(x is not None for x in (start_slide, before_section, after_section))
     if hints > 1:
         raise ValueError(
-            "At most one of slide_index, before_section, after_section may be specified"
+            "At most one of start_slide, before_section, after_section may be specified"
         )
 
     section_lst = _get_section_lst(prs)
@@ -285,15 +285,15 @@ def add_section(
     section_elem.set("id", section_id)
 
     # Populate <p:sldIdLst> inside the section
-    if slide_index is not None:
-        sld_id_elem = _sld_id_for_index(prs, slide_index)
+    if start_slide is not None:
+        sld_id_elem = _sld_id_for_index(prs, start_slide)
         if sld_id_elem is None:
             sld_id_lst_elem = prs._element.find(f"{_P_NS_PREFIX}sldIdLst")
             n_slides = len(list(sld_id_lst_elem)) if sld_id_lst_elem is not None else 0
             if n_slides:
-                msg = f"slide_index {slide_index} out of range (0..{n_slides - 1})"
+                msg = f"start_slide {start_slide} out of range (0..{n_slides - 1})"
             else:
-                msg = "slide_index out of range (no slides in presentation)"
+                msg = "start_slide out of range (no slides in presentation)"
             raise IndexError(msg)
         # Add this slide and all subsequent slides that are not already
         # claimed by another section — but per OOXML convention, a section
@@ -305,8 +305,8 @@ def add_section(
         sld_id_copy.set("id", sld_id_elem.get("id", ""))
         sld_id_copy.set(_R_ID_ATTR, sld_id_elem.get(_R_ID_ATTR, ""))
 
-        # Also include slides after slide_index up to the next section boundary
-        _populate_section_slides(prs, section_elem, slide_index)
+        # Also include slides after start_slide up to the next section boundary
+        _populate_section_slides(prs, section_elem, start_slide)
     else:
         # Empty section (no slides yet)
         etree.SubElement(section_elem, _TAG_SLD_ID_LST)
@@ -321,10 +321,10 @@ def add_section(
     else:
         section_lst.append(section_elem)
 
-    # If slide_index was specified, trim the preceding section that may now
+    # If start_slide was specified, trim the preceding section that may now
     # contain slides that belong to this new section.
-    if slide_index is not None:
-        _trim_preceding_section(prs, section_lst, section_elem, slide_index)
+    if start_slide is not None:
+        _trim_preceding_section(prs, section_lst, section_elem, start_slide)
 
     # Save if opened from path
     _save_prs(prs, path)

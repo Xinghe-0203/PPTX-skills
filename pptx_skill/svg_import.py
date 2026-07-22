@@ -1718,34 +1718,28 @@ def _svg_dasharray_to_preset(dasharray: str) -> str | None:
 # Presentation helpers
 # ---------------------------------------------------------------------------
 
-def _is_presentation(obj: Any) -> bool:
-    """Check if *obj* is a python-pptx Presentation instance."""
-    try:
-        from pptx import Presentation as PrsCls
-        # python-pptx Presentation is a class in newer versions
-        if isinstance(PrsCls, type):
-            return isinstance(obj, PrsCls)
-    except ImportError:
-        pass
-    # Fallback: duck-type check
-    return hasattr(obj, "slides") and hasattr(obj, "save")
+def _is_presentation(obj) -> bool:
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
-def _open_prs(prs_or_path: Any) -> tuple[Any, bool]:
-    """Open a Presentation from an object or file path.
+def _open_prs(prs_or_path):
+    """Open a Presentation from *prs_or_path*.
 
-    Returns ``(prs, is_path)``.
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
     """
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs: Any, path: str | None, is_path: bool) -> None:
-    """Save a Presentation if it was opened from a path."""
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _compute_shape_bounds(path_data_list: list[PathData]) -> tuple[float, float, float, float]:
@@ -2102,7 +2096,9 @@ def import_svg(
             pd.name = f"{name}_{i}"
 
     # Open presentation
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -2166,7 +2162,7 @@ def import_svg(
             return group_name
 
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -2286,7 +2282,7 @@ def import_svg_as_image(
         tmp_path = tmp.name
 
     try:
-        prs, is_path = _open_prs(prs_or_path)
+        prs = _open_prs(prs_or_path)
         try:
             slide = prs.slides[slide_index]
             _name = name or f"SVG_Image_{len(slide.shapes)}"
@@ -2303,7 +2299,8 @@ def import_svg_as_image(
 
             return _name
         finally:
-            _save_prs(prs, prs_or_path if is_path else None, is_path)
+            if isinstance(prs_or_path, str):
+                prs.save(prs_or_path)
     finally:
         try:
             os.unlink(tmp_path)
@@ -2336,7 +2333,7 @@ def list_svg_shapes(
         Each dict has keys: ``name``, ``shape_type``, ``left``, ``top``,
         ``width``, ``height``, ``has_custom_geometry``.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         results: list[dict] = []

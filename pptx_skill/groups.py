@@ -44,23 +44,27 @@ class GroupInfo:
 
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_shape(slide, shape_name: str):
@@ -124,7 +128,9 @@ def group_shapes(prs_or_path, slide_index: int, *,
     if len(shape_names) < 2:
         raise ValueError("At least 2 shapes required for grouping")
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -182,7 +188,7 @@ def group_shapes(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
@@ -200,7 +206,9 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         sp_tree = slide.shapes._spTree
@@ -237,14 +245,14 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
 
         return child_names
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def list_groups(prs_or_path, slide_index: int) -> list[GroupInfo]:
     """List all group shapes on a slide."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         results = []
@@ -292,7 +300,7 @@ def list_groups(prs_or_path, slide_index: int) -> list[GroupInfo]:
 def list_group_children(prs_or_path, slide_index: int,
                         group_name: str) -> list[dict]:
     """List all children of a group shape with their properties."""
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         group = _find_shape(slide, group_name)
@@ -353,7 +361,9 @@ def add_to_group(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         group = _find_shape(slide, group_name)
@@ -370,7 +380,7 @@ def add_to_group(prs_or_path, slide_index: int, *,
         group._element.append(shape._element)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_from_group(prs_or_path, slide_index: int, *,
@@ -386,7 +396,9 @@ def remove_from_group(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         group = _find_shape(slide, group_name)
@@ -407,7 +419,7 @@ def remove_from_group(prs_or_path, slide_index: int, *,
 
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def move_in_group(prs_or_path, slide_index: int, *,
@@ -422,7 +434,9 @@ def move_in_group(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         group = _find_shape(slide, group_name)
@@ -465,4 +479,4 @@ def move_in_group(prs_or_path, slide_index: int, *,
         group._element.insert(actual_pos, child_elem)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)

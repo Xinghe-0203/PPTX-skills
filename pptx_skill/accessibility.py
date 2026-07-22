@@ -96,23 +96,27 @@ class AccessibilityReport:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_shape(slide, shape_name: str):
@@ -230,7 +234,9 @@ def get_alt_text(prs_or_path, slide_index: int, shape_name: str) -> str | None:
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -264,7 +270,9 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -282,14 +290,16 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
 
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_alt_text(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove alt text from a shape."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -307,7 +317,7 @@ def remove_alt_text(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +335,9 @@ def set_reading_order(prs_or_path, slide_index: int, shape_name: str,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -339,7 +351,7 @@ def set_reading_order(prs_or_path, slide_index: int, shape_name: str,
             return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +365,9 @@ def add_title_to_slide(prs_or_path, slide_index: int,
     If a title placeholder already exists, sets its text.
     Otherwise creates a hidden title text box.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
 
@@ -382,7 +396,7 @@ def add_title_to_slide(prs_or_path, slide_index: int,
     except Exception:
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def pt_to_emu(pt: float) -> int:
@@ -424,7 +438,9 @@ def audit_accessibility(prs_or_path, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         report = AccessibilityReport(total_slides=len(prs.slides))
         issues: list[AccessibilityIssue] = []
@@ -604,7 +620,9 @@ def fix_accessibility(prs_or_path, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         report = audit_accessibility(prs, check_reading_order=False, check_contrast=False)
         fixed: list[AccessibilityIssue] = []
@@ -652,4 +670,4 @@ def fix_accessibility(prs_or_path, *,
 
         return fixed
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)

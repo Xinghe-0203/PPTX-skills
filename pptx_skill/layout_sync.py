@@ -70,23 +70,27 @@ class LayoutTemplate:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_shape(slide, shape_name: str):
@@ -148,7 +152,9 @@ def align_shapes(
     if len(shape_names) < 2:
         raise ValueError("At least 2 shapes required for alignment")
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
 
@@ -197,7 +203,7 @@ def align_shapes(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _determine_reference(shapes, reference: str, shape_names: list[str]):
@@ -245,7 +251,9 @@ def distribute_shapes(
     if len(shape_names) < 2:
         return 0
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
 
@@ -309,7 +317,7 @@ def distribute_shapes(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +345,9 @@ def snap_to_grid(
     int
         Number of shapes snapped.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         count = 0
@@ -357,7 +367,7 @@ def snap_to_grid(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +402,9 @@ def copy_layout(
     int
         Number of shapes synchronized.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         source_slide = prs.slides[source_slide_index]
         target_slide = prs.slides[target_slide_index]
@@ -428,7 +440,7 @@ def copy_layout(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _copy_shape_style(source, target):
@@ -475,7 +487,7 @@ def create_layout_template(
     -------
     LayoutTemplate
     """
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         template = LayoutTemplate(name=name or f"Template from slide {slide_index}")
@@ -530,7 +542,9 @@ def apply_layout_template(
     int
         Number of shapes positioned.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         count = 0
@@ -562,12 +576,12 @@ def apply_layout_template(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def list_layout_templates(prs_or_path) -> list[LayoutTemplate]:
     """Create layout templates from all slides (one template per slide)."""
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         templates = []
         for idx in range(len(prs.slides)):
@@ -586,7 +600,9 @@ def bring_to_front(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     """Move a shape to the front (top of z-order)."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -599,14 +615,16 @@ def bring_to_front(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
         sp_tree.append(elem)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def send_to_back(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     """Move a shape to the back (bottom of z-order)."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -624,14 +642,16 @@ def send_to_back(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
             sp_tree.append(elem)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def move_up(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     """Move a shape one position up in z-order."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -649,14 +669,16 @@ def move_up(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
             return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def move_down(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     """Move a shape one position down in z-order."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -674,7 +696,7 @@ def move_down(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
             return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int) -> bool:
@@ -687,7 +709,9 @@ def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -712,7 +736,7 @@ def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -727,7 +751,9 @@ def match_size(
     target_names: list[str],
 ) -> int:
     """Match the size of target shapes to a source shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         source = _find_shape(slide, source_name)
@@ -745,7 +771,7 @@ def match_size(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def match_position(
@@ -756,7 +782,9 @@ def match_position(
     target_names: list[str],
 ) -> int:
     """Match the position of target shapes to a source shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         source = _find_shape(slide, source_name)
@@ -774,7 +802,7 @@ def match_position(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def center_on_slide(
@@ -791,7 +819,9 @@ def center_on_slide(
     center : str
         ``"horizontal"``, ``"vertical"``, or ``"both"``.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -809,4 +839,4 @@ def center_on_slide(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)

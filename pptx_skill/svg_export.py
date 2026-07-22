@@ -216,20 +216,10 @@ def _slide_background_color(slide: Any) -> str | None:
         from lxml import etree
 
         sld_elem = slide._element
-        bg_elem = sld_elem.find(
-            ".//{http://schemas.openxmlformats.org/presentationml/2006/main}bg"
-        )
-        if bg_elem is None:
-            bg_elem = sld_elem.find(
-                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}solidFill"
-            )
+        bg_elem = sld_elem.find(f"{{{_NS_P}}}bg")
         if bg_elem is not None:
-            for sf in bg_elem.iter(
-                "{http://schemas.openxmlformats.org/drawingml/2006/main}solidFill"
-            ):
-                srgb = sf.find(
-                    "{http://schemas.openxmlformats.org/drawingml/2006/main}srgbClr"
-                )
+            for sf in bg_elem.iter(f"{{{_NS_A}}}solidFill"):
+                srgb = sf.find(f"{{{_NS_A}}}srgbClr")
                 if srgb is not None and srgb.get("val"):
                     return f"#{srgb.get('val')}"
     except ImportError:
@@ -464,9 +454,7 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
                 tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
 
                 if tag == "moveTo":
-                    pts = child.findall(
-                        "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                    )
+                    pts = child.findall(f"{{{_NS_A}}}pt")
                     if pts:
                         pt = pts[0]
                         x = _emu_to_pt(int(pt.get("x", "0")) * sx // _EMU_PER_PT + offset_x)
@@ -474,9 +462,7 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
                         sub_path.append(f"M {_format_float(x)} {_format_float(y)}")
 
                 elif tag == "lnTo":
-                    pts = child.findall(
-                        "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                    )
+                    pts = child.findall(f"{{{_NS_A}}}pt")
                     if pts:
                         pt = pts[0]
                         x = _emu_to_pt(int(pt.get("x", "0")) * sx // _EMU_PER_PT + offset_x)
@@ -484,9 +470,7 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
                         sub_path.append(f"L {_format_float(x)} {_format_float(y)}")
 
                 elif tag == "cubicBezTo":
-                    pts = child.findall(
-                        "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                    )
+                    pts = child.findall(f"{{{_NS_A}}}pt")
                     if len(pts) >= 3:
                         coords: list[str] = []
                         for pt in pts:
@@ -496,9 +480,7 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
                         sub_path.append(f"C {coords[0]} {coords[1]} {coords[2]}")
 
                 elif tag == "quadBezTo":
-                    pts = child.findall(
-                        "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                    )
+                    pts = child.findall(f"{{{_NS_A}}}pt")
                     if len(pts) >= 2:
                         coords = []
                         for pt in pts:
@@ -553,7 +535,7 @@ def _text_frame_to_svg(text_frame: Any, x: float, y: float, width: float, height
     anchor = "top"
     try:
         body_pr = text_frame._txBody.find(
-            "{http://schemas.openxmlformats.org/drawingml/2006/main}bodyPr"
+            f"{{{_NS_A}}}bodyPr"
         )
         if body_pr is not None:
             anchor_val = body_pr.get("anchor", "t")
@@ -617,9 +599,7 @@ def _text_frame_to_svg(text_frame: Any, x: float, y: float, width: float, height
                 from lxml import etree
 
                 r_elem = run._r
-                ea = r_elem.find(
-                    ".//{http://schemas.openxmlformats.org/drawingml/2006/main}ea"
-                )
+                ea = r_elem.find(f".//{{{_NS_A}}}ea")
                 if ea is not None and ea.get("typeface"):
                     font_families.append(ea.get("typeface"))
             except Exception:
@@ -950,43 +930,29 @@ def _connector_to_svg(
     try:
         from lxml import etree
 
-        sp_pr = shape._element.find(
-            ".//{http://schemas.openxmlformats.org/drawingml/2006/main}spPr"
-        )
+        sp_pr = shape._element.find(f"{{{_NS_P}}}spPr")
         if sp_pr is not None:
-            cxn_sp = shape._element.find(
-                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}cxnSp"
-            )
-
             # Try to get the actual path from the connector XML
-            path_elems = sp_pr.findall(
-                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}path"
-            )
+            path_elems = sp_pr.findall(f".//{{{_NS_A}}}path")
             if path_elems:
                 d_parts: list[str] = []
                 for path_elem in path_elems:
                     for child in path_elem:
                         tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
                         if tag == "moveTo":
-                            pts = child.findall(
-                                "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                            )
+                            pts = child.findall(f"{{{_NS_A}}}pt")
                             if pts:
                                 px = _emu_to_pt(int(pts[0].get("x", "0")))
                                 py = _emu_to_pt(int(pts[0].get("y", "0")))
                                 d_parts.append(f"M {_format_float(px + x)} {_format_float(py + y)}")
                         elif tag == "lnTo":
-                            pts = child.findall(
-                                "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                            )
+                            pts = child.findall(f"{{{_NS_A}}}pt")
                             if pts:
                                 px = _emu_to_pt(int(pts[0].get("x", "0")))
                                 py = _emu_to_pt(int(pts[0].get("y", "0")))
                                 d_parts.append(f"L {_format_float(px + x)} {_format_float(py + y)}")
                         elif tag == "cubicBezTo":
-                            pts = child.findall(
-                                "{http://schemas.openxmlformats.org/drawingml/2006/main}pt"
-                            )
+                            pts = child.findall(f"{{{_NS_A}}}pt")
                             coords = []
                             for pt in pts:
                                 px = _emu_to_pt(int(pt.get("x", "0")))
@@ -1186,13 +1152,11 @@ def _collect_fonts_from_slide(slide: Any) -> set[str]:
 
                             r_elem = run._r
                             ea = r_elem.find(
-                                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}ea"
+                                f".//{{{_NS_A}}}ea"
                             )
                             if ea is not None and ea.get("typeface"):
                                 fonts.add(ea.get("typeface"))
-                            lat = r_elem.find(
-                                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}latin"
-                            )
+                            lat = r_elem.find(f".//{{{_NS_A}}}latin")
                             if lat is not None and lat.get("typeface"):
                                 fonts.add(lat.get("typeface"))
                         except Exception:

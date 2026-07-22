@@ -320,7 +320,7 @@ def extract_palette(prs_or_path, *, top_n: int = 10) -> list[ColorInfo]:
             color_counts[hex_val] = {"text": 0, "fill": 0, "line": 0, "background": 0}
         color_counts[hex_val][context] = color_counts[hex_val].get(context, 0) + 1
 
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         for slide in prs.slides:
             # Background
@@ -505,7 +505,9 @@ def apply_gradient(
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -574,14 +576,16 @@ def apply_gradient(
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_gradient(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove gradient fill from a shape (reverts to no fill)."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -600,12 +604,12 @@ def remove_gradient(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return True
         return False
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def list_gradients(prs_or_path, slide_index: int | None = None) -> list[GradientInfo]:
     """List all gradient fills in the presentation."""
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         results = []
         slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
@@ -688,7 +692,9 @@ def recolor_presentation(
         if not color_map:
             return 0
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         count = 0
         # Normalize map keys
@@ -759,7 +765,7 @@ def recolor_presentation(
 
         return count
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def swap_colors(
@@ -838,23 +844,27 @@ def _build_theme_color_map(prs_or_path, theme_key: str) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_shape(slide, shape_name: str):

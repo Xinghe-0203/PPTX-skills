@@ -68,23 +68,27 @@ class AudioInfo:
 
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def add_video(prs_or_path, slide_index: int, *,
@@ -131,7 +135,9 @@ def add_video(prs_or_path, slide_index: int, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         _name = name or f"Video {len(slide.shapes)}"
@@ -161,7 +167,7 @@ def add_video(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def add_audio(prs_or_path, slide_index: int, *,
@@ -190,7 +196,9 @@ def add_audio(prs_or_path, slide_index: int, *,
     str
         The shape name.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         _name = name or f"Audio {len(slide.shapes)}"
@@ -213,7 +221,7 @@ def add_audio(prs_or_path, slide_index: int, *,
 
         return _name
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _apply_media_playback(shape_elem, media_type: str, settings: dict):
@@ -263,7 +271,9 @@ def set_video_playback(prs_or_path, slide_index: int, shape_name: str, *,
                        play_across_slides: bool | None = None,
                        volume: int | None = None) -> bool:
     """Modify video playback settings on an existing video shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = None
@@ -291,7 +301,7 @@ def set_video_playback(prs_or_path, slide_index: int, shape_name: str, *,
         _update_media_playback(shape._element, "video", settings)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
@@ -301,7 +311,9 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
                        play_across_slides: bool | None = None,
                        volume: int | None = None) -> bool:
     """Modify audio playback settings on an existing audio shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = None
@@ -327,7 +339,7 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
         _update_media_playback(shape._element, "audio", settings)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def _update_media_playback(shape_elem, media_type: str, settings: dict):
@@ -421,7 +433,7 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
     slide_index : int, optional
         If provided, only list media on that slide. Otherwise list all.
     """
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         results = []
         slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
@@ -458,7 +470,9 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
 
 def remove_media(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove a media shape from a slide."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = None
@@ -473,4 +487,4 @@ def remove_media(prs_or_path, slide_index: int, shape_name: str) -> bool:
         sp_tree.remove(shape._element)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)

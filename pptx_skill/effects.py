@@ -230,26 +230,27 @@ _NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 
 def _is_presentation(obj) -> bool:
-    """Check if *obj* is a python-pptx Presentation."""
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    """Return (Presentation, is_path) tuple."""
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    """Save presentation if it was opened from a path."""
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _find_shape(slide, shape_name: str):
@@ -368,7 +369,9 @@ def apply_shadow(prs_or_path, slide_index: int, shape_name: str, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -422,7 +425,7 @@ def apply_shadow(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def apply_inner_shadow(prs_or_path, slide_index: int, shape_name: str, *,
@@ -451,7 +454,9 @@ def apply_perspective_shadow(prs_or_path, slide_index: int, shape_name: str, *,
     """Apply a perspective shadow effect with full transform control."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -494,14 +499,16 @@ def apply_perspective_shadow(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_shadow(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove all shadow effects from a shape."""
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -522,7 +529,7 @@ def remove_shadow(prs_or_path, slide_index: int, shape_name: str) -> bool:
                 found = True
         return found
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -546,7 +553,9 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -574,12 +583,14 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_glow(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove glow effect from a shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -593,7 +604,7 @@ def remove_glow(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return False
         return _remove_effect_by_tag(effect_lst, "glow")
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -634,7 +645,9 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -677,12 +690,14 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_reflection(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove reflection effect from a shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -696,7 +711,7 @@ def remove_reflection(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return False
         return _remove_effect_by_tag(effect_lst, "reflection")
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -714,7 +729,9 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -735,12 +752,14 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_soft_edges(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove soft edges effect from a shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -754,7 +773,7 @@ def remove_soft_edges(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return False
         return _remove_effect_by_tag(effect_lst, "softEdge")
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -790,7 +809,9 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
     """
     from lxml import etree
 
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -862,12 +883,14 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
 
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 def remove_3d_format(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove 3D formatting from a shape."""
-    prs, is_path = _open_prs(prs_or_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)
@@ -882,7 +905,7 @@ def remove_3d_format(prs_or_path, slide_index: int, shape_name: str) -> bool:
         sp_pr.remove(sp3d)
         return True
     finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+        _save_prs(prs, path)
 
 
 # ---------------------------------------------------------------------------
@@ -980,7 +1003,7 @@ def list_effects(prs_or_path, slide_index: int, shape_name: str) -> EffectInfo:
     """List all effects applied to a shape."""
     info = EffectInfo()
 
-    prs, is_path = _open_prs(prs_or_path)
+    prs = _open_prs(prs_or_path)
     try:
         slide = prs.slides[slide_index]
         shape = _find_shape(slide, shape_name)

@@ -89,23 +89,27 @@ class FontInfo:
 # ---------------------------------------------------------------------------
 
 def _is_presentation(obj) -> bool:
-    try:
-        from pptx import Presentation
-        return isinstance(obj, Presentation)
-    except ImportError:
-        return hasattr(obj, "slides")
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
 
 
 def _open_prs(prs_or_path):
-    if _is_presentation(prs_or_path):
-        return prs_or_path, False
+    """Open a Presentation from *prs_or_path*.
+
+    Accepts either an already-opened ``Presentation`` object or a file path.
+    Returns the ``Presentation`` object directly.
+    """
     from pptx import Presentation
-    return Presentation(prs_or_path), True
+
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs, path, is_path):
-    if is_path and path:
-        prs.save(path)
+def _save_prs(prs, path):
+    """Save *prs* back to *path* if *path* is not None."""
+    if path is not None:
+        prs.save(str(path))
 
 
 def _vt_type_for_value(value) -> str:
@@ -154,24 +158,21 @@ def get_metadata(prs_or_path) -> DocumentMetadata:
 
     Returns a ``DocumentMetadata`` with all available fields populated.
     """
-    prs, is_path = _open_prs(prs_or_path)
-    try:
-        meta = DocumentMetadata()
-        cp = prs.core_properties
-        meta.title = cp.title or ""
-        meta.subject = cp.subject or ""
-        meta.creator = cp.author or ""
-        meta.last_modified_by = cp.last_modified_by or ""
-        meta.description = cp.comments or ""
-        meta.keywords = cp.keywords or ""
-        meta.category = cp.category or ""
-        meta.created = cp.created
-        meta.modified = cp.modified
-        meta.revision = cp.revision or ""
-        meta.content_status = cp.content_status or ""
-        return meta
-    finally:
-        pass
+    prs = _open_prs(prs_or_path)
+    meta = DocumentMetadata()
+    cp = prs.core_properties
+    meta.title = cp.title or ""
+    meta.subject = cp.subject or ""
+    meta.creator = cp.author or ""
+    meta.last_modified_by = cp.last_modified_by or ""
+    meta.description = cp.comments or ""
+    meta.keywords = cp.keywords or ""
+    meta.category = cp.category or ""
+    meta.created = cp.created
+    meta.modified = cp.modified
+    meta.revision = cp.revision or ""
+    meta.content_status = cp.content_status or ""
+    return meta
 
 
 def set_metadata(prs_or_path, **kwargs) -> bool:
@@ -182,26 +183,27 @@ def set_metadata(prs_or_path, **kwargs) -> bool:
     ``description``, ``keywords``, ``category``, ``revision``,
     ``content_status``.
     """
-    prs, is_path = _open_prs(prs_or_path)
-    try:
-        cp = prs.core_properties
-        field_map = {
-            "title": "title",
-            "subject": "subject",
-            "creator": "author",
-            "last_modified_by": "last_modified_by",
-            "description": "comments",
-            "keywords": "keywords",
-            "category": "category",
-            "revision": "revision",
-            "content_status": "content_status",
-        }
-        for kwarg, prop_name in field_map.items():
-            if kwarg in kwargs:
-                setattr(cp, prop_name, kwargs[kwarg])
-        return True
-    finally:
-        _save_prs(prs, prs_or_path if is_path else None, is_path)
+    is_path = not _is_presentation(prs_or_path)
+    path = prs_or_path if is_path else None
+    prs = _open_prs(prs_or_path)
+    cp = prs.core_properties
+    field_map = {
+        "title": "title",
+        "subject": "subject",
+        "creator": "author",
+        "last_modified_by": "last_modified_by",
+        "description": "comments",
+        "keywords": "keywords",
+        "category": "category",
+        "revision": "revision",
+        "content_status": "content_status",
+    }
+    for kwarg, prop_name in field_map.items():
+        if kwarg in kwargs:
+            setattr(cp, prop_name, kwargs[kwarg])
+    if is_path and path is not None:
+        _save_prs(prs, path)
+    return True
 
 
 # ---------------------------------------------------------------------------
