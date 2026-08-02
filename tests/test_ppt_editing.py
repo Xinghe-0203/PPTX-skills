@@ -93,6 +93,46 @@ class PptEditingTests(unittest.TestCase):
             regenerate(project, other)
             self.assertTrue(other.exists())
 
+    def test_regenerate_preserves_slide_count_with_toc_inserted(self):
+        # When >3 sections auto_generate_ppt inserts a TOC page. The layouts
+        # sequence (cover,toc,...,end) must stay aligned with sections after
+        # the cover/toc/end are filtered out, so regenerate reproduces the
+        # same slide count instead of silently truncating via zip().
+        import copy
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        from pptx_helper import auto_generate_ppt as legacy_generate
+        from ppt_project import regenerate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            deck = directory / "deck.pptx"
+            legacy_generate(
+                title="多页",
+                sections=[
+                    {"title": f"第{i}页", "bullets": ["a", "b"]}
+                    for i in range(1, 5)
+                ],
+                output_path=str(deck),
+                theme_key="editorial",
+                auto_search_images=False,
+            )
+            project = load_project(deck)
+            # V2 manifest stores the full used_layouts incl. cover/toc/end.
+            self.assertIn("toc", project["layouts"])
+            mutated = copy.deepcopy(project)
+            mutated["sections"][2]["title"] = "改后"
+            out = directory / "regen.pptx"
+            regenerate(mutated, out)
+            result = Presentation(out)
+            # Original had cover + toc + 4 content + end = 7 slides.
+            self.assertEqual(len(result.slides), 7)
+            text = "\n".join(
+                shape.text for slide in result.slides for shape in slide.shapes
+                if getattr(shape, "has_text_frame", False)
+            )
+            self.assertIn("改后", text)
+
     def test_text_color_and_page_operations_create_backups(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
