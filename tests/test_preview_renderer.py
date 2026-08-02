@@ -32,6 +32,35 @@ class PreviewRendererTests(unittest.TestCase):
         self.assertFalse(result.slide_pngs)
         self.assertTrue(any("not found" in str(a.get("error", "")).lower() for a in result.attempts))
 
+    def test_auto_engine_preserves_concrete_errors(self):
+        # Regression guard: when no engine succeeds, the returned attempts
+        # must carry each backend's concrete error (e.g. "soffice not found")
+        # rather than a generic "not found or failed" that hides the cause.
+        from pptx_skill.preview_renderer import find_soffice
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            out = Path(tmp) / "preview"
+            auto_generate_ppt(
+                title="Errors",
+                sections=[{"title": "A", "bullets": ["1"]}],
+                output_path=str(path),
+                theme_key="editorial",
+                auto_search_images=False,
+            )
+            result = render_preview(str(path), output_dir=str(out), dpi=96, engine="auto")
+            if result.slide_pngs:
+                self.skipTest("an engine succeeded; error-preservation path not exercised")
+            self.assertFalse(result.slide_pngs)
+            # Every attempt must have a non-generic error string.
+            for attempt in result.attempts:
+                self.assertNotIn("not found or failed", str(attempt.get("error", "")))
+            # The LibreOffice attempt must mention soffice specifically when absent.
+            if not find_soffice():
+                lo = next((a for a in result.attempts if a.get("engine") == "libreoffice"), None)
+                self.assertIsNotNone(lo)
+                self.assertIn("soffice", str(lo.get("error", "")).lower())
+
     def test_legacy_wrapper(self):
         from pptx_skill import render_slides
 
