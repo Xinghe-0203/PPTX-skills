@@ -109,6 +109,8 @@ def add_video(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     video_path : str
         Path to the video file (.mp4, .avi, .wmv, .mov).
     left, top, width, height : float
@@ -138,8 +140,15 @@ def add_video(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         _name = name or f"Video {len(slide.shapes)}"
 
         # Add video as a picture shape with media relationship
@@ -186,6 +195,8 @@ def add_audio(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     audio_path : str
         Path to the audio file (.mp3, .wav, .wma, .m4a).
     hide_during_show : bool
@@ -199,8 +210,15 @@ def add_audio(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         _name = name or f"Audio {len(slide.shapes)}"
 
         # Add a small picture as placeholder for the audio icon
@@ -270,12 +288,25 @@ def set_video_playback(prs_or_path, slide_index: int, shape_name: str, *,
                        hide_during_show: bool | None = None,
                        play_across_slides: bool | None = None,
                        volume: int | None = None) -> bool:
-    """Modify video playback settings on an existing video shape."""
+    """Modify video playback settings on an existing video shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = None
         for s in slide.shapes:
             if s.name == shape_name:
@@ -310,12 +341,25 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
                        hide_during_show: bool | None = None,
                        play_across_slides: bool | None = None,
                        volume: int | None = None) -> bool:
-    """Modify audio playback settings on an existing audio shape."""
+    """Modify audio playback settings on an existing audio shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = None
         for s in slide.shapes:
             if s.name == shape_name:
@@ -378,6 +422,11 @@ def extract_video(prs_or_path, slide_index: int, shape_name: str,
                   output_path: str) -> bool:
     """Extract embedded video from a slide to a file.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Note: This only works if the video was embedded (not linked).
     """
     import zipfile
@@ -403,7 +452,13 @@ def extract_video(prs_or_path, slide_index: int, shape_name: str,
 
 def extract_audio(prs_or_path, slide_index: int, shape_name: str,
                   output_path: str) -> bool:
-    """Extract embedded audio from a slide to a file."""
+    """Extract embedded audio from a slide to a file.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     import zipfile
 
     path = prs_or_path if isinstance(prs_or_path, str) else None
@@ -431,12 +486,22 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
     Parameters
     ----------
     slide_index : int, optional
-        If provided, only list media on that slide. Otherwise list all.
+        If provided, only list media on that slide (1-based).
+        Otherwise list all.
     """
     prs = _open_prs(prs_or_path)
     try:
         results = []
-        slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
+        n_slides = len(prs.slides)
+
+        if slide_index is not None:
+            if slide_index < 1 or slide_index > n_slides:
+                raise IndexError(
+                    f"slide_index {slide_index} out of range (1..{n_slides})"
+                )
+            slides = [prs.slides[slide_index - 1]]
+        else:
+            slides = list(prs.slides)
 
         for idx, slide in enumerate(slides):
             for shape in slide.shapes:
@@ -444,7 +509,7 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
                     from pptx.enum.shapes import MSO_SHAPE_TYPE
                     if shape.shape_type == MSO_SHAPE_TYPE.MEDIA:
                         info = {
-                            "slide_index": idx if slide_index is None else slide_index,
+                            "slide_index": (slide_index if slide_index is not None else idx + 1),
                             "name": shape.name,
                             "left": shape.left / 914400,  # EMU to inches
                             "top": shape.top / 914400,
@@ -469,12 +534,25 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
 
 
 def remove_media(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove a media shape from a slide."""
+    """Remove a media shape from a slide.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = None
         for s in slide.shapes:
             if s.name == shape_name:

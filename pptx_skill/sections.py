@@ -11,7 +11,7 @@ Usage
 -----
 >>> from pptx_skill.sections import list_sections, add_section
 >>> sections = list_sections("deck.pptx")
->>> add_section("deck.pptx", "Introduction", start_slide=0)
+>>> add_section("deck.pptx", "Introduction", start_slide=1)
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class SectionInfo:
 
     Attributes:
         name: Section display name.
-        slide_indices: 0-based indices of slides belonging to this section.
+        slide_indices: 1-based indices of slides belonging to this section.
         section_id: Unique identifier (GUID-style string) stored in the XML.
     """
 
@@ -191,7 +191,10 @@ def _section_elem_at(section_lst: etree._Element, section_index: int) -> etree._
 
 
 def _build_section_info(prs: Any, section_elem: etree._Element) -> SectionInfo:
-    """Construct a :class:`SectionInfo` from a ``<p:section>`` element."""
+    """Construct a :class:`SectionInfo` from a ``<p:section>`` element.
+
+    Slide indices in the returned :class:`SectionInfo` are 1-based.
+    """
     name = section_elem.get("name", "")
     section_id = section_elem.get("id", "")
 
@@ -201,7 +204,7 @@ def _build_section_info(prs: Any, section_elem: etree._Element) -> SectionInfo:
         for sld_id in sld_id_lst.findall(_TAG_SLD_ID):
             idx = _slide_index_for_sld_id(prs, sld_id)
             if idx is not None:
-                slide_indices.append(idx)
+                slide_indices.append(idx + 1)  # convert 0-based to 1-based
 
     return SectionInfo(
         name=name,
@@ -247,7 +250,7 @@ def add_section(
     """Create a new section in the presentation.
 
     Exactly one positioning hint should be provided. If *start_slide* is given,
-    the section starts at that slide (0-based). If *before_section* is given,
+    the section starts at that slide (1-based). If *before_section* is given,
     the new section is inserted before the section at that index. If
     *after_section* is given, the new section is inserted after the section at
     that index. If no hint is provided, the section is appended at the end.
@@ -255,7 +258,7 @@ def add_section(
     Args:
         prs_or_path: A ``Presentation`` object or file path (``str | Path``).
         name: The display name for the new section.
-        start_slide: 0-based slide index where this section starts.
+        start_slide: 1-based slide index where this section starts (1 = first slide).
         before_section: Insert before this section index.
         after_section: Insert after this section index.
 
@@ -276,6 +279,15 @@ def add_section(
             "At most one of start_slide, before_section, after_section may be specified"
         )
 
+    # Validate start_slide range (1-based)
+    if start_slide is not None:
+        sld_id_lst_elem = prs._element.find(f"{_P_NS_PREFIX}sldIdLst")
+        n_slides = len(list(sld_id_lst_elem)) if sld_id_lst_elem is not None else 0
+        if start_slide < 1 or start_slide > n_slides:
+            if n_slides:
+                raise IndexError(f"start_slide {start_slide} out of range (1..{n_slides})")
+            raise IndexError("start_slide out of range (no slides in presentation)")
+
     section_lst = _get_section_lst(prs)
     section_id = _generate_section_id()
 
@@ -286,12 +298,14 @@ def add_section(
 
     # Populate <p:sldIdLst> inside the section
     if start_slide is not None:
-        sld_id_elem = _sld_id_for_index(prs, start_slide)
+        # Convert 1-based start_slide to 0-based for internal helpers
+        start_slide_0 = start_slide - 1
+        sld_id_elem = _sld_id_for_index(prs, start_slide_0)
         if sld_id_elem is None:
             sld_id_lst_elem = prs._element.find(f"{_P_NS_PREFIX}sldIdLst")
             n_slides = len(list(sld_id_lst_elem)) if sld_id_lst_elem is not None else 0
             if n_slides:
-                msg = f"start_slide {start_slide} out of range (0..{n_slides - 1})"
+                msg = f"start_slide {start_slide} out of range (1..{n_slides})"
             else:
                 msg = "start_slide out of range (no slides in presentation)"
             raise IndexError(msg)
@@ -306,7 +320,7 @@ def add_section(
         sld_id_copy.set(_R_ID_ATTR, sld_id_elem.get(_R_ID_ATTR, ""))
 
         # Also include slides after start_slide up to the next section boundary
-        _populate_section_slides(prs, section_elem, start_slide)
+        _populate_section_slides(prs, section_elem, start_slide_0)
     else:
         # Empty section (no slides yet)
         etree.SubElement(section_elem, _TAG_SLD_ID_LST)
@@ -324,7 +338,7 @@ def add_section(
     # If start_slide was specified, trim the preceding section that may now
     # contain slides that belong to this new section.
     if start_slide is not None:
-        _trim_preceding_section(prs, section_lst, section_elem, start_slide)
+        _trim_preceding_section(prs, section_lst, section_elem, start_slide_0)
 
     # Save if opened from path
     _save_prs(prs, path)
@@ -470,6 +484,7 @@ def remove_section(
     info = _build_section_info(prs, section_elem)
 
     # Remove slides if requested (iterate in reverse to keep indices stable)
+    # info.slide_indices are 1-based; _remove_slides_by_indices expects 1-based
     if remove_slides and info.slide_indices:
         _remove_slides_by_indices(prs, sorted(info.slide_indices, reverse=True))
 
@@ -495,14 +510,16 @@ def remove_section(
 
 
 def _remove_slides_by_indices(prs: Any, reverse_sorted_indices: list[int]) -> None:
-    """Remove slides at the given indices (must be sorted in reverse order)."""
+    """Remove slides at the given 1-based indices (must be sorted in reverse order)."""
     from pptx.oxml.ns import qn
 
     sld_id_lst = prs.slides._sldIdLst
     for idx in reverse_sorted_indices:
+        # Convert 1-based to 0-based
+        idx0 = idx - 1
         sld_id_elems = list(sld_id_lst)
-        if 0 <= idx < len(sld_id_elems):
-            sld_id = sld_id_elems[idx]
+        if 0 <= idx0 < len(sld_id_elems):
+            sld_id = sld_id_elems[idx0]
             rid = sld_id.get(qn("r:id"))
             if rid:
                 prs.part.drop_rel(rid)

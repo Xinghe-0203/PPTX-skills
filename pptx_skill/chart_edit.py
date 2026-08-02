@@ -172,7 +172,8 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
     Parameters
     ----------
     slide_index : int, optional
-        If provided, only list charts on that slide.
+        1-based slide index (1 = first slide).  If provided, only list charts
+        on that slide.
 
     Returns
     -------
@@ -184,7 +185,12 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
     prs = _open_prs(prs_or_path)
     try:
         results = []
-        slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
+        if slide_index is not None:
+            if slide_index < 1 or slide_index > len(prs.slides):
+                raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+            slides = [prs.slides[slide_index - 1]]
+        else:
+            slides = prs.slides
         for idx, slide in enumerate(slides):
             for shape in slide.shapes:
                 try:
@@ -208,12 +214,20 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
 
 
 def get_chart_info(prs_or_path, slide_index: int, shape_name: str) -> ChartInfo | None:
-    """Get detailed info about a specific chart."""
+    """Get detailed info about a specific chart.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return None
@@ -283,6 +297,8 @@ def edit_chart_data(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     series_index : int
         0-based index of the series to edit.
     values : list[float], optional
@@ -299,7 +315,9 @@ def edit_chart_data(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -429,6 +447,11 @@ def add_chart_series(
 ) -> int:
     """Add a new series to an existing chart.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Returns
     -------
     int
@@ -440,7 +463,9 @@ def add_chart_series(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return -1
@@ -511,12 +536,20 @@ def remove_chart_series(
     *,
     series_index: int,
 ) -> bool:
-    """Remove a series from a chart by index."""
+    """Remove a series from a chart by index.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -554,14 +587,22 @@ def rename_chart_series(
     series_index: int,
     new_name: str,
 ) -> bool:
-    """Rename a chart series."""
+    """Rename a chart series.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -614,6 +655,8 @@ def set_chart_colors(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     colors : list[str]
         Hex color strings (e.g. ``["#FF0000", "#00FF00"]``), one per series.
     """
@@ -623,7 +666,9 @@ def set_chart_colors(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -673,6 +718,8 @@ def set_chart_style(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     style_index : int
         Built-in chart style index (1–48).
     """
@@ -682,7 +729,9 @@ def set_chart_style(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -714,14 +763,22 @@ def set_data_labels(
     number_format: str | None = None,
     font_size: int | None = None,
 ) -> bool:
-    """Configure data labels on a chart."""
+    """Configure data labels on a chart.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -803,6 +860,8 @@ def set_legend(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     position : str
         Legend position: "b" (bottom), "t" (top), "l" (left), "r" (right), "tr" (top-right).
     overlay : bool
@@ -814,7 +873,9 @@ def set_legend(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -886,6 +947,8 @@ def set_axis_title(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     axis : str
         ``"value"`` (Y-axis) or ``"category"`` (X-axis).
     title : str, optional
@@ -897,7 +960,9 @@ def set_axis_title(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -956,12 +1021,20 @@ def set_axis_range(
     major_unit: float | None = None,
     minor_unit: float | None = None,
 ) -> bool:
-    """Set value axis range and units."""
+    """Set value axis range and units.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -1019,6 +1092,8 @@ def set_axis_number_format(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     format_code : str
         Excel-style format code, e.g. ``"#,##0"``, ``"0.0%"``, ``"$#,##0"``.
     """
@@ -1026,7 +1101,9 @@ def set_axis_number_format(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -1067,6 +1144,8 @@ def toggle_gridlines(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     major : bool, optional
         Show major gridlines.
     minor : bool, optional
@@ -1078,7 +1157,9 @@ def toggle_gridlines(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -1134,6 +1215,8 @@ def set_chart_type(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     chart_type : str
         Target chart type: "column", "bar", "line", "area", "pie", "doughnut",
         "scatter", "radar", "bubble".
@@ -1169,7 +1252,9 @@ def set_chart_type(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False
@@ -1384,6 +1469,11 @@ def export_chart_data(
 ) -> dict:
     """Export chart data as a plain dict.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Returns
     -------
     dict
@@ -1393,6 +1483,8 @@ def export_chart_data(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
         info = get_chart_info(prs, slide_index, shape_name)
         if info is None:
             return {}
@@ -1419,6 +1511,8 @@ def import_chart_data(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     data : dict
         ``{"categories": [...], "series": [{"name": ..., "values": [...]}, ...]}``
     """
@@ -1426,7 +1520,9 @@ def import_chart_data(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_chart_shape(slide, shape_name)
         if shape is None:
             return False

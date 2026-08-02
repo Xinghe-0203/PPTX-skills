@@ -108,6 +108,8 @@ def group_shapes(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shape_names : list of str
         Names of shapes to group. At least 2 shapes required.
     group_name : str, optional
@@ -131,8 +133,11 @@ def group_shapes(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
 
         # Find shape elements
@@ -196,6 +201,8 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shape_name : str
         Name of the group shape to ungroup.
 
@@ -209,8 +216,11 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
 
         # Find the group shape
@@ -249,12 +259,21 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
 
 
 def list_groups(prs_or_path, slide_index: int) -> list[GroupInfo]:
-    """List all group shapes on a slide."""
+    """List all group shapes on a slide.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         results = []
 
         for shape in slide.shapes:
@@ -299,10 +318,19 @@ def list_groups(prs_or_path, slide_index: int) -> list[GroupInfo]:
 
 def list_group_children(prs_or_path, slide_index: int,
                         group_name: str) -> list[dict]:
-    """List all children of a group shape with their properties."""
+    """List all children of a group shape with their properties.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         group = _find_shape(slide, group_name)
         if group is None:
             return []
@@ -354,6 +382,8 @@ def add_to_group(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     group_name : str
         Name of the target group.
     shape_name : str
@@ -364,8 +394,11 @@ def add_to_group(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         group = _find_shape(slide, group_name)
         shape = _find_shape(slide, shape_name)
         if group is None or shape is None:
@@ -389,6 +422,8 @@ def remove_from_group(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     group_name : str
         Name of the group.
     shape_name : str
@@ -399,8 +434,11 @@ def remove_from_group(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         group = _find_shape(slide, group_name)
         if group is None:
             return False
@@ -429,6 +467,8 @@ def move_in_group(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     new_index : int
         New position index within the group (0-based).
     """
@@ -437,8 +477,11 @@ def move_in_group(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         group = _find_shape(slide, group_name)
         if group is None:
             return False

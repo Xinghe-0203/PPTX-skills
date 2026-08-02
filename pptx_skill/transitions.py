@@ -249,3 +249,82 @@ def apply_deck_transitions(
     """
     for slide in prs.slides:
         apply_slide_transition(slide, transition_type, duration_ms)
+
+
+# ---------------------------------------------------------------------------
+# 3b. Path-based convenience overloads (accept file path, 1-based slide_index)
+# ---------------------------------------------------------------------------
+
+def _is_presentation(obj) -> bool:
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
+
+
+def add_transition(
+    prs_or_path,
+    slide_index: int,
+    transition_type: str = FADE,
+    duration_ms: int = 700,
+    advance_ms: int | None = None,
+) -> None:
+    """Apply a transition to a specific slide by 1-based index.
+
+    Accepts either an open ``Presentation`` object or a file path string.
+    When given a path, opens the file, applies the transition, and saves.
+
+    Parameters
+    ----------
+    prs_or_path : Presentation or str
+        An open Presentation object, or a path to a .pptx file.
+    slide_index : int
+        1-based slide index (1 = first slide).
+    transition_type : str
+        One of the transition type constants (default ``"fade"``).
+    duration_ms : int
+        Transition duration in milliseconds (default 700).
+    advance_ms : int, optional
+        Auto-advance time in milliseconds. ``None`` means manual advance.
+    """
+    from pptx import Presentation
+
+    is_path = not _is_presentation(prs_or_path)
+    prs = prs_or_path if not is_path else Presentation(str(prs_or_path))
+    try:
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
+        apply_slide_transition(slide, transition_type, duration_ms, advance_ms)
+    finally:
+        if is_path:
+            prs.save(str(prs_or_path))
+
+
+def add_deck_transitions(
+    prs_or_path,
+    transition_type: str = FADE,
+    duration_ms: int = 700,
+) -> None:
+    """Apply a consistent transition to all slides (path or Presentation).
+
+    Accepts either an open ``Presentation`` object or a file path string.
+    When given a path, opens the file, applies transitions, and saves.
+
+    Parameters
+    ----------
+    prs_or_path : Presentation or str
+        An open Presentation object, or a path to a .pptx file.
+    transition_type : str
+        One of the transition type constants (default ``"fade"``).
+    duration_ms : int
+        Transition duration in milliseconds (default 700).
+    """
+    from pptx import Presentation
+
+    is_path = not _is_presentation(prs_or_path)
+    prs = prs_or_path if not is_path else Presentation(str(prs_or_path))
+    try:
+        for slide in prs.slides:
+            apply_slide_transition(slide, transition_type, duration_ms)
+    finally:
+        if is_path:
+            prs.save(str(prs_or_path))

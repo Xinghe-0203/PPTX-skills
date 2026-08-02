@@ -202,8 +202,11 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
     """Attempt to convert *pptx_path* to PDF at *output_path*.
 
     Tries LibreOffice first (direct PDF conversion), then falls back to
-    PyMuPDF image-based PDF assembly.
+    PyMuPDF image-based PDF assembly.  Collects diagnostics from each
+    failed strategy so the final error is actionable.
     """
+    _errors: list[str] = []
+
     # --- Strategy 1: LibreOffice direct PDF conversion ----------------------
     soffice = find_soffice()
     if soffice:
@@ -231,16 +234,22 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
                     pdfs.sort(key=os.path.getmtime, reverse=True)
                     shutil.copy2(pdfs[0], output_path)
                     return output_path
-        except Exception:
-            pass
+                else:
+                    _errors.append("LibreOffice: conversion succeeded but no PDF found")
+            else:
+                _errors.append(f"LibreOffice exit {proc.returncode}: {(proc.stderr or '')[-300:]}")
+        except Exception as e:
+            _errors.append(f"LibreOffice: {e}")
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
+    else:
+        _errors.append("LibreOffice: not found on PATH")
 
     # --- Strategy 2: Render to images, then assemble PDF via PyMuPDF -------
     try:
         import fitz  # PyMuPDF
     except ImportError:
-        pass
+        _errors.append("PyMuPDF: not installed (pip install PyMuPDF)")
     else:
         img_dir = tempfile.mkdtemp(prefix="pptx_skill_pdf_imgs_")
         try:
@@ -255,8 +264,10 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
                 doc.save(output_path)
                 doc.close()
                 return output_path
-        except Exception:
-            pass
+            else:
+                _errors.append("PyMuPDF: render produced no slide images")
+        except Exception as e:
+            _errors.append(f"PyMuPDF: {e}")
         finally:
             shutil.rmtree(img_dir, ignore_errors=True)
 
@@ -264,7 +275,7 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
     try:
         from PIL import Image
     except ImportError:
-        pass
+        _errors.append("Pillow: not installed")
     else:
         img_dir = tempfile.mkdtemp(prefix="pptx_skill_pdf_imgs_")
         try:
@@ -286,14 +297,17 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
                     rest = images[1:]
                     first.save(output_path, "PDF", save_all=True, append_images=rest)
                     return output_path
-        except Exception:
-            pass
+            else:
+                _errors.append("Pillow: render produced no slide images")
+        except Exception as e:
+            _errors.append(f"Pillow: {e}")
         finally:
             shutil.rmtree(img_dir, ignore_errors=True)
 
     raise RuntimeError(
-        "No rendering backend available for PDF export. "
-        "Install LibreOffice, PyMuPDF (fitz), or Pillow."
+        "PDF export failed — all strategies exhausted. Diagnostics:\n  - " +
+        "\n  - ".join(_errors) +
+        "\nInstall LibreOffice, PyMuPDF (pip install PyMuPDF), or Pillow to enable PDF export."
     )
 
 

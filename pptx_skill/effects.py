@@ -352,6 +352,8 @@ def apply_shadow(prs_or_path, slide_index: int, shape_name: str, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shadow_type : str
         "outer", "inner", or "perspective".
     blur_rad : int, optional
@@ -372,8 +374,11 @@ def apply_shadow(prs_or_path, slide_index: int, shape_name: str, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -434,7 +439,13 @@ def apply_inner_shadow(prs_or_path, slide_index: int, shape_name: str, *,
                        direction: int | None = None,
                        alpha: int | None = None,
                        color: str | None = None) -> bool:
-    """Apply an inner shadow effect. Convenience wrapper for ``apply_shadow``."""
+    """Apply an inner shadow effect. Convenience wrapper for ``apply_shadow``.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     return apply_shadow(prs_or_path, slide_index, shape_name,
                         shadow_type="inner", blur_rad=blur_rad, dist=dist,
                         direction=direction, alpha=alpha, color=color)
@@ -451,14 +462,23 @@ def apply_perspective_shadow(prs_or_path, slide_index: int, shape_name: str, *,
                              kx: int | None = None,
                              ky: int | None = None,
                              algn: str | None = None) -> bool:
-    """Apply a perspective shadow effect with full transform control."""
+    """Apply a perspective shadow effect with full transform control.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -503,14 +523,23 @@ def apply_perspective_shadow(prs_or_path, slide_index: int, shape_name: str, *,
 
 
 def remove_shadow(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove all shadow effects from a shape."""
+    """Remove all shadow effects from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -544,6 +573,8 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     radius : int, optional
         Glow radius in EMU. Default 25400 (~2pt).
     color : str, optional
@@ -556,8 +587,11 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -587,12 +621,21 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
 
 
 def remove_glow(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove glow effect from a shape."""
+    """Remove glow effect from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -628,6 +671,8 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     blur_rad : int, optional
         Blur radius in EMU. Default 6350.
     dist : int, optional
@@ -648,8 +693,11 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -694,12 +742,21 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
 
 
 def remove_reflection(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove reflection effect from a shape."""
+    """Remove reflection effect from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -724,6 +781,8 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     radius : int, optional
         Soft edge radius in EMU. Default 50800 (~4pt).
     """
@@ -732,8 +791,11 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -756,12 +818,21 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
 
 
 def remove_soft_edges(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove soft edges effect from a shape."""
+    """Remove soft edges effect from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -792,6 +863,8 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     bevel_top : tuple or str, optional
         Top bevel as (width_emu, height_emu) tuple or BevelPreset constant name.
     bevel_bottom : tuple or str, optional
@@ -812,8 +885,11 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -887,12 +963,21 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
 
 
 def remove_3d_format(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove 3D formatting from a shape."""
+    """Remove 3D formatting from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -918,10 +1003,16 @@ def remove_effect(prs_or_path, slide_index: int, shape_name: str,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     effect_type : str
         One of "shadow", "inner_shadow", "outer_shadow", "glow",
         "reflection", "soft_edges", "3d".
     """
+    prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     if effect_type in ("shadow", "outer_shadow", "inner_shadow"):
         return remove_shadow(prs_or_path, slide_index, shape_name)
     if effect_type == "glow":
@@ -936,7 +1027,17 @@ def remove_effect(prs_or_path, slide_index: int, shape_name: str,
 
 
 def remove_effects(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove all effects from a shape."""
+    """Remove all effects from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
+    prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     results = []
     results.append(remove_shadow(prs_or_path, slide_index, shape_name))
     results.append(remove_glow(prs_or_path, slide_index, shape_name))
@@ -954,6 +1055,11 @@ def apply_effect_preset(prs_or_path, slide_index: int, shape_name: str,
                         preset_name: str) -> bool:
     """Apply a named effect preset to a shape.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Available presets: subtle_shadow, hard_shadow, perspective_shadow,
     inner_glow, neon_glow, red_glow, mirror_reflection, faded_reflection,
     soft_bevel, hard_bevel, metallic, glass, soft_edges, subtle_soft_edges,
@@ -963,6 +1069,11 @@ def apply_effect_preset(prs_or_path, slide_index: int, shape_name: str,
     if preset is None:
         raise ValueError(f"Unknown effect preset: {preset_name!r}. "
                          f"Available: {', '.join(sorted(EFFECT_PRESETS))}")
+
+    prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
 
     # Apply each effect in the preset
     success = True
@@ -1000,12 +1111,21 @@ def apply_effect_preset(prs_or_path, slide_index: int, shape_name: str,
 # ---------------------------------------------------------------------------
 
 def list_effects(prs_or_path, slide_index: int, shape_name: str) -> EffectInfo:
-    """List all effects applied to a shape."""
+    """List all effects applied to a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     info = EffectInfo()
 
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return info

@@ -26,10 +26,11 @@ from reference_ppt import (
 
 
 def _position(index: int, length: int, allow_end: bool = False) -> int:
-    position = 0 if index == 0 else index - 1
+    """Convert a 1-based *index* to a 0-based position for internal use."""
+    position = index - 1
     upper = length if allow_end else length - 1
     if not 0 <= position <= upper:
-        raise IndexError(f"Slide index out of range: {index}")
+        raise IndexError(f"slide_index {index} out of range (1..{length})")
     return position
 
 

@@ -535,6 +535,8 @@ def add_equation(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     omml_element : lxml Element
         An ``<m:oMath>`` element (from OmmlBuilder or convenience functions).
     left, top, width, height : float
@@ -552,8 +554,10 @@ def add_equation(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         _name = name or f"Equation {len(slide.shapes)}"
 
         # Create a text box
@@ -589,14 +593,21 @@ def add_display_equation(prs_or_path, slide_index: int, *,
     """Add a display (standalone) equation to a slide.
 
     Creates a ``<m:oMathPara>`` with center justification.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         _name = name or f"DisplayEq {len(slide.shapes)}"
 
         txBox = slide.shapes.add_textbox(left, top, width, height)
@@ -854,13 +865,20 @@ def _builder_to_plain_text(builder: OmmlBuilder) -> str:
 def list_equations(prs_or_path, slide_index: int) -> list[dict]:
     """List all equations on a slide.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Returns a list of dicts with keys: name, is_display, text_preview.
     """
     from lxml import etree
 
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         results = []
 
         for shape in slide.shapes:
@@ -901,14 +919,21 @@ def remove_equation(prs_or_path, slide_index: int, shape_name: str) -> bool:
     """Remove all equations from a specific shape.
 
     This removes the OMML elements but keeps the text box.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False

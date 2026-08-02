@@ -9,14 +9,14 @@ standard ``<p:transition>`` container.
 Usage
 -----
 >>> from pptx_skill.morph import set_morph_transition, set_morph_options
->>> set_morph_transition("deck.pptx", 1, option="full")
->>> set_morph_options("deck.pptx", 1, morph_by="char")
+>>> set_morph_transition("deck.pptx", 2, option="full")
+>>> set_morph_options("deck.pptx", 2, morph_by="char")
 
 Or with an already-opened Presentation object:
 
 >>> from pptx import Presentation
 >>> prs = Presentation("deck.pptx")
->>> set_morph_transition(prs, 0, option="full")
+>>> set_morph_transition(prs, 1, option="full")
 >>> # No save needed — caller controls the Presentation lifecycle
 """
 from __future__ import annotations
@@ -60,7 +60,7 @@ class MorphInfo:
     Attributes
     ----------
     slide_index : int
-        0-based slide index.
+        1-based slide index.
     option : str
         Morph option: ``"full"`` (morph all objects), ``"none"``
         (background only), or a specific shape name.
@@ -258,7 +258,7 @@ def set_morph_transition(
         provided the file is saved automatically (with a ``.bak.pptx``
         backup).
     slide_index : int
-        0-based index of the target slide.
+        1-based slide index (1 = first slide).
     option : str
         ``"full"`` (default) — morph all objects on the slide.
         ``"none"`` — background-only morph (no effect options emitted).
@@ -280,13 +280,13 @@ def set_morph_transition(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
 
-    if slide_index < 0 or slide_index >= len(prs.slides):
+    if slide_index < 1 or slide_index > len(prs.slides):
         raise IndexError(
             f"slide_index {slide_index} out of range "
-            f"(0–{len(prs.slides) - 1})"
+            f"(1..{len(prs.slides)})"
         )
 
-    slide = prs.slides[slide_index]
+    slide = prs.slides[slide_index - 1]
     sld = slide._element
 
     # Determine morph_by from any existing morph transition (preserve it)

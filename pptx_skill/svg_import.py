@@ -2016,7 +2016,7 @@ def import_svg(
     prs_or_path : Presentation or str
         A python-pptx Presentation object or a file path.
     slide_index : int
-        Zero-based slide index.
+        1-based slide index (1 = first slide).
     svg_path : str, optional
         Path to an SVG file.
     svg_content : str, optional
@@ -2099,8 +2099,15 @@ def import_svg(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
 
         group_name = name or f"SVG_Group_{len(slide.shapes)}"
@@ -2191,7 +2198,7 @@ def import_svg_as_image(
     prs_or_path : Presentation or str
         A python-pptx Presentation object or a file path.
     slide_index : int
-        Zero-based slide index.
+        1-based slide index (1 = first slide).
     svg_path : str
         Path to an SVG file.
     left : float
@@ -2283,8 +2290,15 @@ def import_svg_as_image(
 
     try:
         prs = _open_prs(prs_or_path)
+
+        n_slides = len(prs.slides)
+        if slide_index < 1 or slide_index > n_slides:
+            raise IndexError(
+                f"slide_index {slide_index} out of range (1..{n_slides})"
+            )
+
         try:
-            slide = prs.slides[slide_index]
+            slide = prs.slides[slide_index - 1]
             _name = name or f"SVG_Image_{len(slide.shapes)}"
 
             left_emu = _inch_to_emu(left)
@@ -2325,7 +2339,7 @@ def list_svg_shapes(
     prs_or_path : Presentation or str
         A python-pptx Presentation object or a file path.
     slide_index : int
-        Zero-based slide index.
+        1-based slide index (1 = first slide).
 
     Returns
     -------
@@ -2334,8 +2348,15 @@ def list_svg_shapes(
         ``width``, ``height``, ``has_custom_geometry``.
     """
     prs = _open_prs(prs_or_path)
+
+    n_slides = len(prs.slides)
+    if slide_index < 1 or slide_index > n_slides:
+        raise IndexError(
+            f"slide_index {slide_index} out of range (1..{n_slides})"
+        )
+
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         results: list[dict] = []
 
         for shape in slide.shapes:

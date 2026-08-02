@@ -1638,6 +1638,120 @@ def list_animations(slide: Any) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# 5b. Path-based convenience overloads (accept file path, 1-based slide_index)
+# ---------------------------------------------------------------------------
+
+def _is_presentation(obj) -> bool:
+    """Check whether *obj* is a ``Presentation`` instance without eager import."""
+    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
+
+
+def _open_prs(prs_or_path):
+    """Open a Presentation from *prs_or_path* (path or Presentation)."""
+    from pptx import Presentation
+    if _is_presentation(prs_or_path):
+        return prs_or_path
+    return Presentation(str(prs_or_path))
+
+
+def add_animation(
+    prs_or_path,
+    slide_index: int,
+    shape_name: str | None = None,
+    anim_type: str = "fade_in",
+    shape_index: int | None = None,
+    **kwargs: Any,
+) -> bool:
+    """Apply an animation to a shape by 1-based slide index and shape name/index.
+
+    Accepts either an open ``Presentation`` object or a file path string.
+    When given a path, opens the file, applies the animation, and saves.
+
+    Parameters
+    ----------
+    prs_or_path : Presentation or str
+        An open Presentation object, or a path to a .pptx file.
+    slide_index : int
+        1-based slide index (1 = first slide).
+    shape_name : str, optional
+        Name of the shape to animate. If None, uses shape_index.
+    anim_type : str
+        Animation type constant (default ``"fade_in"``).
+    shape_index : int, optional
+        0-based index into slide.shapes if shape_name is None.
+    **kwargs
+        Additional animation parameters (``duration_ms``, ``delay_ms``, etc.).
+
+    Returns
+    -------
+    bool
+        True if animation was applied, False if shape was not found.
+    """
+    is_path = not _is_presentation(prs_or_path)
+    prs = _open_prs(prs_or_path)
+    try:
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
+        shape = None
+        if shape_name is not None:
+            for s in slide.shapes:
+                if s.name == shape_name:
+                    shape = s
+                    break
+        elif shape_index is not None:
+            shapes = list(slide.shapes)
+            if 0 <= shape_index < len(shapes):
+                shape = shapes[shape_index]
+        if shape is None:
+            log.warning("Shape not found (name=%r, index=%r)", shape_name, shape_index)
+            return False
+        apply_animation(slide, shape, anim_type, **kwargs)
+        return True
+    finally:
+        if is_path:
+            prs.save(str(prs_or_path))
+
+
+def add_entrance_animation(
+    prs_or_path,
+    slide_index: int,
+    shape_name: str | None = None,
+    anim_type: str = "fade_in",
+    shape_index: int | None = None,
+    **kwargs: Any,
+) -> bool:
+    """Apply an entrance animation by 1-based slide index (path or Presentation).
+
+    Convenience path-based overload of :func:`apply_entrance_animation`.
+    See :func:`add_animation` for parameter details.
+    """
+    is_path = not _is_presentation(prs_or_path)
+    prs = _open_prs(prs_or_path)
+    try:
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
+        shape = None
+        if shape_name is not None:
+            for s in slide.shapes:
+                if s.name == shape_name:
+                    shape = s
+                    break
+        elif shape_index is not None:
+            shapes = list(slide.shapes)
+            if 0 <= shape_index < len(shapes):
+                shape = shapes[shape_index]
+        if shape is None:
+            return False
+        apply_entrance_animation(slide, shape, anim_type, **kwargs)
+        return True
+    finally:
+        if is_path:
+            prs.save(str(prs_or_path))
+
+
+# ---------------------------------------------------------------------------
 # 6. __all__
 # ---------------------------------------------------------------------------
 
@@ -1646,6 +1760,9 @@ __all__ = [
     "apply_animation",
     "apply_entrance_animation",
     "apply_exit_animation",
+    # Path-based overloads
+    "add_animation",
+    "add_entrance_animation",
     "apply_emphasis_animation",
     "apply_motion_path",
     "remove_animations",

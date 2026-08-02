@@ -13,8 +13,8 @@ consistency across slides:
 Quick start
 -----------
 >>> from pptx_skill.layout_sync import align_shapes, distribute_shapes
->>> align_shapes("deck.pptx", 0, shape_names=["Title", "Subtitle"], alignment="center_h")
->>> distribute_shapes("deck.pptx", 0, shape_names=["Box1", "Box2", "Box3"], direction="horizontal")
+>>> align_shapes("deck.pptx", 1, shape_names=["Title", "Subtitle"], alignment="center_h")
+>>> distribute_shapes("deck.pptx", 1, shape_names=["Box1", "Box2", "Box3"], direction="horizontal")
 """
 from __future__ import annotations
 
@@ -130,6 +130,8 @@ def align_shapes(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shape_names : list[str]
         Names of shapes to align. At least 2 required.
     alignment : str
@@ -155,8 +157,10 @@ def align_shapes(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
 
         # Find all shapes
         shapes = []
@@ -237,6 +241,8 @@ def distribute_shapes(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     direction : str
         ``"horizontal"`` or ``"vertical"``.
     gap : int, optional
@@ -254,8 +260,10 @@ def distribute_shapes(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
 
         shapes = []
         for name in shape_names:
@@ -335,6 +343,8 @@ def snap_to_grid(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     grid_size : int
         Grid size in EMU. Default is 1/8 inch (114300 EMU).
     shape_names : list[str], optional
@@ -348,8 +358,10 @@ def snap_to_grid(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         count = 0
 
         for shape in slide.shapes:
@@ -388,6 +400,10 @@ def copy_layout(
 
     Parameters
     ----------
+    source_slide_index : int
+        1-based slide index of the source slide (1 = first slide).
+    target_slide_index : int
+        1-based slide index of the target slide (1 = first slide).
     shape_mapping : dict[str, str], optional
         Map of source shape name → target shape name. If None, match by name.
     copy_size : bool
@@ -405,9 +421,14 @@ def copy_layout(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    n = len(prs.slides)
+    if source_slide_index < 1 or source_slide_index > n:
+        raise IndexError(f"source_slide_index {source_slide_index} out of range (1..{n})")
+    if target_slide_index < 1 or target_slide_index > n:
+        raise IndexError(f"target_slide_index {target_slide_index} out of range (1..{n})")
     try:
-        source_slide = prs.slides[source_slide_index]
-        target_slide = prs.slides[target_slide_index]
+        source_slide = prs.slides[source_slide_index - 1]
+        target_slide = prs.slides[target_slide_index - 1]
         count = 0
 
         # Build mapping
@@ -480,6 +501,8 @@ def create_layout_template(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shape_names : list[str], optional
         Specific shapes to include. If None, include all shapes.
 
@@ -488,8 +511,10 @@ def create_layout_template(
     LayoutTemplate
     """
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         template = LayoutTemplate(name=name or f"Template from slide {slide_index}")
 
         for shape in slide.shapes:
@@ -534,6 +559,8 @@ def apply_layout_template(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     shape_mapping : dict[str, str], optional
         Map of template shape name → slide shape name. If None, match by name.
 
@@ -545,8 +572,10 @@ def apply_layout_template(
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         count = 0
 
         for shape_info in template.shapes:
@@ -584,7 +613,7 @@ def list_layout_templates(prs_or_path) -> list[LayoutTemplate]:
     prs = _open_prs(prs_or_path)
     try:
         templates = []
-        for idx in range(len(prs.slides)):
+        for idx in range(1, len(prs.slides) + 1):
             template = create_layout_template(prs, idx, name=f"Slide {idx}")
             templates.append(template)
         return templates
@@ -597,14 +626,22 @@ def list_layout_templates(prs_or_path) -> list[LayoutTemplate]:
 # ---------------------------------------------------------------------------
 
 def bring_to_front(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
-    """Move a shape to the front (top of z-order)."""
+    """Move a shape to the front (top of z-order).
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -619,14 +656,22 @@ def bring_to_front(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
 
 
 def send_to_back(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
-    """Move a shape to the back (bottom of z-order)."""
+    """Move a shape to the back (bottom of z-order).
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -646,14 +691,22 @@ def send_to_back(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
 
 
 def move_up(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
-    """Move a shape one position up in z-order."""
+    """Move a shape one position up in z-order.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -673,14 +726,22 @@ def move_up(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
 
 
 def move_down(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
-    """Move a shape one position down in z-order."""
+    """Move a shape one position down in z-order.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -704,6 +765,8 @@ def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     position : int
         0 = back, -1 = front.
     """
@@ -712,8 +775,10 @@ def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -750,12 +815,20 @@ def match_size(
     source_name: str,
     target_names: list[str],
 ) -> int:
-    """Match the size of target shapes to a source shape."""
+    """Match the size of target shapes to a source shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         source = _find_shape(slide, source_name)
         if source is None:
             return 0
@@ -781,12 +854,20 @@ def match_position(
     source_name: str,
     target_names: list[str],
 ) -> int:
-    """Match the position of target shapes to a source shape."""
+    """Match the position of target shapes to a source shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         source = _find_shape(slide, source_name)
         if source is None:
             return 0
@@ -816,14 +897,18 @@ def center_on_slide(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     center : str
         ``"horizontal"``, ``"vertical"``, or ``"both"``.
     """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False

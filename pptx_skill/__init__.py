@@ -19,6 +19,7 @@ from ppt_edit import (  # noqa: E402
     edit_text,
     edit_text_by_role,
     edit_title,
+    find_replace_all,
     recolor,
     swap_image,
     swap_theme,
@@ -254,7 +255,7 @@ from pptx_skill.visual_rebuild import (  # noqa: E402
 # NOTE: html_import symbols are imported once above (L424); the previous
 # duplicate import block here was removed to avoid running the module twice.
 
-__version__ = "5.1.0"
+__version__ = "6.0.0"
 
 # --- New v4.0 modules ---
 _LAZY_IMPORTS: dict[str, str] = {
@@ -335,6 +336,9 @@ _LAZY_IMPORTS: dict[str, str] = {
     'apply_motion_path': 'animations:apply_motion_path',
     'list_animations': 'animations:list_animations',
     'remove_animations': 'animations:remove_animations',
+    # v6.0: path-based animation overloads
+    'add_animation': 'animations:add_animation',
+    'add_entrance_animation': 'animations:add_entrance_animation',
     # batch (10)
     'BatchResult': 'batch:BatchResult',
     'BatchStats': 'batch:BatchStats',
@@ -542,6 +546,10 @@ _LAZY_IMPORTS: dict[str, str] = {
     'export_to_markdown': 'markdown_export:export_to_markdown',
     'extract_markdown_content': 'markdown_export:extract_markdown_content',
     'slide_to_markdown': 'markdown_export:slide_to_markdown',
+    # markdown_import (3)
+    'from_markdown': 'markdown_import:from_markdown',
+    'import_markdown': 'markdown_import:import_markdown',
+    'markdown_to_sections': 'markdown_import:markdown_to_sections',
     # merge (5)
     'MergeResult': 'merge:MergeResult',
     'append_slides': 'merge:append_slides',
@@ -679,6 +687,9 @@ _LAZY_IMPORTS: dict[str, str] = {
     'WIPE_UP': 'transitions:WIPE_UP',
     'apply_deck_transitions': 'transitions:apply_deck_transitions',
     'apply_slide_transition': 'transitions:apply_slide_transition',
+    # v6.0: path-based transition overloads
+    'add_transition': 'transitions:add_transition',
+    'add_deck_transitions': 'transitions:add_deck_transitions',
     # transitions_ext (10)
     'ADVANCED_TRANSITIONS': 'transitions_ext:ADVANCED_TRANSITIONS',
     'AdvancedTransitionInfo': 'transitions_ext:AdvancedTransitionInfo',
@@ -717,6 +728,9 @@ _LAZY_IMPORTS: dict[str, str] = {
     'add_summary_zoom': 'zoom:add_summary_zoom',
     'list_zooms': 'zoom:list_zooms',
     'remove_zoom': 'zoom:remove_zoom',
+    # deck (unified high-level API)
+    'Deck': 'deck:Deck',
+    'open_deck': 'deck:open_deck',
 }
 
 def __getattr__(name: str):
@@ -844,6 +858,7 @@ __all__ = [
     "edit_title",
     "evaluate_render_against_baseline",
     "extract_template_profile",
+    "find_replace_all",
     "fit_text_to_height",
     "FitResult",
     "generate_from_reference",
@@ -1387,4 +1402,17 @@ __all__ = [
     "export_slide_to_svg",
     "export_to_svg",
     "shape_to_svg",
+    # --- v6.0: Unified Deck API ---
+    "Deck",
+    "open_deck",
+    # --- v6.0: Markdown Import ---
+    "from_markdown",
+    "import_markdown",
+    "markdown_to_sections",
+    # --- v6.0: Global find-replace ---
+    "find_replace_all",
+    # --- v6.0: Path-based transition/animation overloads ---
+    "add_transition",
+    "add_deck_transitions",
+    "add_entrance_animation",
 ]

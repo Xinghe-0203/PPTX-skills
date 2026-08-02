@@ -230,6 +230,11 @@ def check_contrast(color1: str, color2: str) -> tuple[float, bool]:
 def get_alt_text(prs_or_path, slide_index: int, shape_name: str) -> str | None:
     """Get the alt text (description) of a shape.
 
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+
     Returns None if no alt text is set.
     """
     from lxml import etree
@@ -237,8 +242,10 @@ def get_alt_text(prs_or_path, slide_index: int, shape_name: str) -> str | None:
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return None
@@ -263,6 +270,8 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     alt_text : str
         The alternative text description.
     title : str, optional
@@ -273,8 +282,10 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -294,14 +305,22 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
 
 
 def remove_alt_text(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove alt text from a shape."""
+    """Remove alt text from a shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -330,6 +349,8 @@ def set_reading_order(prs_or_path, slide_index: int, shape_name: str,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     order : int
         Reading order index (0-based). Lower values are read first.
     """
@@ -338,8 +359,10 @@ def set_reading_order(prs_or_path, slide_index: int, shape_name: str,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -364,12 +387,19 @@ def add_title_to_slide(prs_or_path, slide_index: int,
 
     If a title placeholder already exists, sets its text.
     Otherwise creates a hidden title text box.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
 
         # Check if there's already a title placeholder
         for shape in slide.shapes:
@@ -445,7 +475,7 @@ def audit_accessibility(prs_or_path, *,
         report = AccessibilityReport(total_slides=len(prs.slides))
         issues: list[AccessibilityIssue] = []
 
-        for slide_idx, slide in enumerate(prs.slides):
+        for slide_idx, slide in enumerate(prs.slides, start=1):
             has_title = False
             has_content = False
             shape_texts_colors: list[tuple[str, str, str]] = []  # (text, fg, bg)
@@ -557,7 +587,7 @@ def audit_accessibility(prs_or_path, *,
                     slide_index=slide_idx,
                     kind=IssueKind.MISSING_TITLE,
                     severity=IssueSeverity.ERROR,
-                    description=f"Slide {slide_idx + 1} has no title",
+                    description=f"Slide {slide_idx} has no title",
                     fix_available=True,
                     fix_description="Add a title placeholder to the slide",
                 ))
@@ -568,7 +598,7 @@ def audit_accessibility(prs_or_path, *,
                     slide_index=slide_idx,
                     kind=IssueKind.BLANK_SLIDE,
                     severity=IssueSeverity.INFO,
-                    description=f"Slide {slide_idx + 1} is blank",
+                    description=f"Slide {slide_idx} is blank",
                     fix_available=False,
                 ))
 
@@ -629,23 +659,23 @@ def fix_accessibility(prs_or_path, *,
 
         for issue in report.issues:
             if issue.kind == IssueKind.MISSING_ALT_TEXT and add_alt_text and issue.fix_available:
-                slide = prs.slides[issue.slide_index]
+                slide = prs.slides[issue.slide_index - 1]
                 shape = _find_shape(slide, issue.shape_name)
                 if shape is not None:
                     # Generate descriptive alt text
-                    auto_text = f"{alt_text_prefix} on slide {issue.slide_index + 1}"
+                    auto_text = f"{alt_text_prefix} on slide {issue.slide_index}"
                     if _is_image_shape(shape):
                         auto_text = f"{alt_text_prefix}: {shape.name}"
                     set_alt_text(prs, issue.slide_index, issue.shape_name, auto_text)
                     fixed.append(issue)
 
             elif issue.kind == IssueKind.MISSING_TITLE and add_titles and issue.fix_available:
-                auto_title = f"{title_prefix} {issue.slide_index + 1}"
+                auto_title = f"{title_prefix} {issue.slide_index}"
                 add_title_to_slide(prs, issue.slide_index, auto_title)
                 fixed.append(issue)
 
             elif issue.kind == IssueKind.MISSING_TABLE_HEADERS and fix_table_headers and issue.fix_available:
-                slide = prs.slides[issue.slide_index]
+                slide = prs.slides[issue.slide_index - 1]
                 shape = _find_shape(slide, issue.shape_name)
                 if shape is not None and _is_table_shape(shape):
                     try:

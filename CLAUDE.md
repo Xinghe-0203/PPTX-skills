@@ -15,7 +15,7 @@ python -m pip install -e .
 # Install with optional backends
 python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
 
-# Run full test suite (213 tests, ~155s)
+# Run full test suite (216 tests, ~190s)
 python -m pytest tests/ -ra
 
 # Run a single test file
@@ -35,6 +35,16 @@ mypy pptx_skill/
 ```
 
 All tests use `unittest.TestCase` (no pytest fixtures or conftest). CJK content is common in fixtures.
+
+## Unified API & CLI (v6.0)
+
+Three v6.0 additions simplify the 620+ free-function surface into user-friendly entry points:
+
+- **`Deck` class** (`pptx_skill/deck.py`): fluent wrapper. `from pptx_skill import Deck` → `Deck.open(path).add_watermark("DRAFT").add_notes(1, "...").add_transition(1, "fade").save()`. Handles file lifecycle, normalizes 1-based indexing, context-manager support (`with Deck.open(path) as d: ...`). Also `Deck.generate(...)` and `Deck.from_markdown(...)`.
+- **CLI** (`pptx_skill/cli.py`, entry point `pptx-skill`): `pptx-skill info|inspect|generate|from-markdown|render|edit|watermark|export|pages|merge|validate|template|capability`. Also `python -m pptx_skill <cmd>`.
+- **Markdown import** (`pptx_skill/markdown_import.py`): `markdown_to_sections(md_text)` / `import_markdown(md_path, output_path)` — parse Markdown outlines (headings, bullets, GFM tables, blockquotes, code blocks, YAML front-matter) into Section dicts.
+- **`find_replace_all(prs_or_path, find, replace)`**: global find-replace across all slides preserving run formatting.
+- **Path-based overloads**: `add_transition(path, slide_index, ...)` and `add_entrance_animation(path, slide_index, ...)` accept paths + 1-based indices (alongside the existing `apply_slide_transition(slide_obj, ...)`).
 
 ## Architecture: Dual-Layer System
 
@@ -118,6 +128,9 @@ pptx_skill/__init__.py
 - `markdown_export.py` — Markdown export (text, tables, notes, chart data, metadata)
 - `video.py` — MP4/GIF video export via ffmpeg (crossfade transitions, speaker timing, per-slide duration)
 - `svg_export.py` — DrawingML-to-SVG converter (slides → SVG vector output with embedded images)
+- `deck.py` — Unified high-level `Deck` class: fluent API wrapping generation/edit/watermark/transitions/notes/export into one chainable interface (`Deck.open/generate/from_markdown`, `.add_watermark().add_notes().add_transition().save()`)
+- `markdown_import.py` — Markdown import: parse Markdown outlines (# H1→cover, ## H2→section, bullets, GFM tables, blockquotes, code blocks, YAML front-matter) into Section dicts for `auto_generate_ppt`
+- `cli.py` — Unified CLI (`pptx-skill` command): subcommands `info`, `inspect`, `generate`, `from-markdown`, `render`, `edit`, `watermark`, `export`, `pages`, `merge`, `validate`, `template`, `capability`. Also `python -m pptx_skill`
 
 ## Data Flow: Content → Rendered PPTX
 

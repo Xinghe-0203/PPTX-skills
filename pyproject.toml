@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pptx-skill"
-version = "5.1.0"
-description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — morph, zoom, OCR, SVG, batch, video, chart editing, color science, and more"
+version = "6.0.0"
+description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — unified Deck API, CLI, Markdown import, constraint layout, 51 animations, morph transitions, OCR, SVG, batch, video, chart editing, color science, and more"
 readme = "SKILL.md"
 requires-python = ">=3.12"
 authors = [
@@ -36,6 +36,7 @@ ocr-paddle = ["paddleocr>=2,<3", "paddlepaddle>=2,<3"]
 test = ["pytest>=8,<10", "hypothesis>=6,<7"]
 
 [project.scripts]
+pptx-skill = "pptx_skill.cli:main"
 pptx-skill-capability = "pptx_skill.capability:main"
 
 [project.urls]

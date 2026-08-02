@@ -19,9 +19,9 @@ action jumps to the target slide.
 Usage
 -----
 >>> from pptx_skill.zoom import add_slide_zoom, add_section_zoom, add_summary_zoom
->>> add_slide_zoom("deck.pptx", 0, target_slide_index=2)
->>> add_section_zoom("deck.pptx", 0, section_name="Results")
->>> add_summary_zoom("deck.pptx", 0, section_names=["Intro", "Results"])
+>>> add_slide_zoom("deck.pptx", 1, target_slide_index=3)
+>>> add_section_zoom("deck.pptx", 1, section_name="Results")
+>>> add_summary_zoom("deck.pptx", 1, section_names=["Intro", "Results"])
 """
 from __future__ import annotations
 
@@ -77,9 +77,9 @@ class ZoomInfo:
 
     Attributes:
         name: Shape name assigned to the zoom thumbnail.
-        slide_index: 0-based index of the slide that contains the zoom shape.
+        slide_index: 1-based index of the slide that contains the zoom shape.
         zoom_type: One of ``"slide"``, ``"section"``, or ``"summary"``.
-        target_slide_index: 0-based index of the target slide, or ``None``.
+        target_slide_index: 1-based index of the target slide, or ``None``.
         target_section: Name of the target section, or ``None``.
         left: Left position in inches.
         top: Top position in inches.
@@ -668,9 +668,9 @@ def add_slide_zoom(
     prs_or_path : Presentation | str | Path
         An open ``Presentation`` object or a file path.
     slide_index : int
-        0-based index of the slide on which to place the zoom thumbnail.
+        1-based slide index (1 = first slide).
     target_slide_index : int
-        0-based index of the slide to zoom into.
+        1-based index of the slide to zoom into.
     left : float
         Left position of the thumbnail in inches (default 1.0).
     top : float
@@ -696,21 +696,25 @@ def add_slide_zoom(
     prs = _open_prs(prs_or_path)
 
     n_slides = len(prs.slides)
-    if not 0 <= slide_index < n_slides:
+    if slide_index < 1 or slide_index > n_slides:
         raise IndexError(
-            f"slide_index {slide_index} out of range (0..{n_slides - 1})"
+            f"slide_index {slide_index} out of range (1..{n_slides})"
         )
-    if not 0 <= target_slide_index < n_slides:
+    if target_slide_index < 1 or target_slide_index > n_slides:
         raise IndexError(
             f"target_slide_index {target_slide_index} out of range "
-            f"(0..{n_slides - 1})"
+            f"(1..{n_slides})"
         )
 
-    slide = prs.slides[slide_index]
-    shape_id = _next_shape_id(slide)
-    shape_name = f"SlideZoom_{target_slide_index + 1}"
+    # Internal helpers use 0-based indices
+    src_idx0 = slide_index - 1
+    tgt_idx0 = target_slide_index - 1
 
-    bg_color = _slide_bg_color_hex(prs, target_slide_index)
+    slide = prs.slides[src_idx0]
+    shape_id = _next_shape_id(slide)
+    shape_name = f"SlideZoom_{target_slide_index}"
+
+    bg_color = _slide_bg_color_hex(prs, tgt_idx0)
 
     shape_elem = _build_zoom_shape_xml(
         shape_id=shape_id,
@@ -719,18 +723,18 @@ def add_slide_zoom(
         top_emu=_inches_to_emu(top),
         width_emu=_inches_to_emu(width),
         height_emu=_inches_to_emu(height),
-        target_slide_index=target_slide_index,
+        target_slide_index=tgt_idx0,
         bg_color_hex=bg_color,
         zoom_type="slide",
         return_to_slide=return_to_slide,
-        source_slide_index=slide_index,
+        source_slide_index=src_idx0,
     )
 
     _insert_zoom_shape(slide, shape_elem)
 
     # Add return action on target slide if requested
-    if return_to_slide and slide_index != target_slide_index:
-        _add_return_action(prs, target_slide_index, slide_index)
+    if return_to_slide and src_idx0 != tgt_idx0:
+        _add_return_action(prs, tgt_idx0, src_idx0)
 
     _save_prs(prs, path)
 
@@ -764,7 +768,7 @@ def add_section_zoom(
     prs_or_path : Presentation | str | Path
         An open ``Presentation`` object or a file path.
     slide_index : int
-        0-based index of the slide on which to place the zoom thumbnail.
+        1-based slide index (1 = first slide).
     section_name : str
         The name of the section to zoom into.
     left : float
@@ -792,10 +796,13 @@ def add_section_zoom(
     prs = _open_prs(prs_or_path)
 
     n_slides = len(prs.slides)
-    if not 0 <= slide_index < n_slides:
+    if slide_index < 1 or slide_index > n_slides:
         raise IndexError(
-            f"slide_index {slide_index} out of range (0..{n_slides - 1})"
+            f"slide_index {slide_index} out of range (1..{n_slides})"
         )
+
+    # Internal helpers use 0-based indices
+    src_idx0 = slide_index - 1
 
     target_slide = _section_first_slide_index(prs, section_name)
     if target_slide is None:
@@ -803,7 +810,7 @@ def add_section_zoom(
             f"Section {section_name!r} not found or has no slides"
         )
 
-    slide = prs.slides[slide_index]
+    slide = prs.slides[src_idx0]
     shape_id = _next_shape_id(slide)
 
     # Sanitise section name for use as shape name
@@ -823,14 +830,14 @@ def add_section_zoom(
         bg_color_hex=bg_color,
         zoom_type="section",
         return_to_slide=True,
-        source_slide_index=slide_index,
+        source_slide_index=src_idx0,
     )
 
     _insert_zoom_shape(slide, shape_elem)
 
     # Section zoom always has return-to-source
-    if slide_index != target_slide:
-        _add_return_action(prs, target_slide, slide_index)
+    if src_idx0 != target_slide:
+        _add_return_action(prs, target_slide, src_idx0)
 
     _save_prs(prs, path)
 
@@ -838,7 +845,7 @@ def add_section_zoom(
         "Added section zoom on slide %d targeting section %r (slide %d, shape=%r)",
         slide_index,
         section_name,
-        target_slide,
+        target_slide + 1,
         shape_name,
     )
     return shape_name
@@ -866,7 +873,7 @@ def add_summary_zoom(
     prs_or_path : Presentation | str | Path
         An open ``Presentation`` object or a file path.
     slide_index : int
-        0-based index of the slide on which to place the summary zoom.
+        1-based slide index (1 = first slide).
     section_names : list[str] | None
         Explicit list of section names to include.  If ``None``, all sections
         in the presentation are included.
@@ -897,10 +904,13 @@ def add_summary_zoom(
     prs = _open_prs(prs_or_path)
 
     n_slides = len(prs.slides)
-    if not 0 <= slide_index < n_slides:
+    if slide_index < 1 or slide_index > n_slides:
         raise IndexError(
-            f"slide_index {slide_index} out of range (0..{n_slides - 1})"
+            f"slide_index {slide_index} out of range (1..{n_slides})"
         )
+
+    # Internal helpers use 0-based indices
+    src_idx0 = slide_index - 1
 
     # Resolve section names
     if section_names is None:
@@ -910,7 +920,7 @@ def add_summary_zoom(
         raise ValueError("No sections found in the presentation")
 
     # Validate all sections exist and have slides
-    targets: list[tuple[str, int]] = []  # (section_name, first_slide_index)
+    targets: list[tuple[str, int]] = []  # (section_name, first_slide_index 0-based)
     for sec_name in section_names:
         idx = _section_first_slide_index(prs, sec_name)
         if idx is None:
@@ -919,7 +929,7 @@ def add_summary_zoom(
             )
         targets.append((sec_name, idx))
 
-    slide = prs.slides[slide_index]
+    slide = prs.slides[src_idx0]
     shape_names: list[str] = []
 
     if layout == "grid":
@@ -951,15 +961,15 @@ def add_summary_zoom(
                 bg_color_hex=bg_color,
                 zoom_type="summary",
                 return_to_slide=True,
-                source_slide_index=slide_index,
+                source_slide_index=src_idx0,
             )
 
             _insert_zoom_shape(slide, shape_elem)
             shape_names.append(shape_name)
 
             # Add return action on target slide
-            if slide_index != target_idx:
-                _add_return_action(prs, target_idx, slide_index)
+            if src_idx0 != target_idx:
+                _add_return_action(prs, target_idx, src_idx0)
 
     elif layout == "list":
         item_h = min(1.2, (height - 0.15 * max(0, len(targets) - 1)) / max(1, len(targets)))
@@ -982,15 +992,15 @@ def add_summary_zoom(
                 bg_color_hex=bg_color,
                 zoom_type="summary",
                 return_to_slide=True,
-                source_slide_index=slide_index,
+                source_slide_index=src_idx0,
             )
 
             _insert_zoom_shape(slide, shape_elem)
             shape_names.append(shape_name)
 
             # Add return action on target slide
-            if slide_index != target_idx:
-                _add_return_action(prs, target_idx, slide_index)
+            if src_idx0 != target_idx:
+                _add_return_action(prs, target_idx, src_idx0)
     else:
         raise ValueError(f"Unknown layout {layout!r}; expected 'grid' or 'list'")
 
@@ -1013,7 +1023,7 @@ def remove_zoom(prs_or_path: Any, slide_index: int, shape_name: str) -> bool:
     prs_or_path : Presentation | str | Path
         An open ``Presentation`` object or a file path.
     slide_index : int
-        0-based index of the slide containing the zoom shape.
+        1-based slide index (1 = first slide).
     shape_name : str
         The name of the zoom shape to remove.
 
@@ -1031,12 +1041,12 @@ def remove_zoom(prs_or_path: Any, slide_index: int, shape_name: str) -> bool:
     prs = _open_prs(prs_or_path)
 
     n_slides = len(prs.slides)
-    if not 0 <= slide_index < n_slides:
+    if slide_index < 1 or slide_index > n_slides:
         raise IndexError(
-            f"slide_index {slide_index} out of range (0..{n_slides - 1})"
+            f"slide_index {slide_index} out of range (1..{n_slides})"
         )
 
-    slide = prs.slides[slide_index]
+    slide = prs.slides[slide_index - 1]
 
     # Find the shape by name and verify it is a zoom shape
     for shape in slide.shapes:
@@ -1067,7 +1077,7 @@ def list_zooms(prs_or_path: Any, slide_index: int | None = None) -> list[ZoomInf
     prs_or_path : Presentation | str | Path
         An open ``Presentation`` object or a file path.
     slide_index : int | None
-        If provided, only return zoom shapes on this slide (0-based).
+        If provided, only return zoom shapes on this slide (1-based).
         If ``None``, return zoom shapes from all slides.
 
     Returns
@@ -1077,14 +1087,20 @@ def list_zooms(prs_or_path: Any, slide_index: int | None = None) -> list[ZoomInf
     """
     prs = _open_prs(prs_or_path)
 
-    results: list[ZoomInfo] = []
     n_slides = len(prs.slides)
 
-    slide_range = [slide_index] if slide_index is not None else range(n_slides)
+    if slide_index is not None:
+        if slide_index < 1 or slide_index > n_slides:
+            raise IndexError(
+                f"slide_index {slide_index} out of range (1..{n_slides})"
+            )
+        slide_range = [slide_index - 1]
+    else:
+        slide_range = range(n_slides)
+
+    results: list[ZoomInfo] = []
 
     for idx in slide_range:
-        if not 0 <= idx < n_slides:
-            continue
         slide = prs.slides[idx]
         for shape in slide.shapes:
             if not _is_zoom_shape(shape._element):
@@ -1101,9 +1117,9 @@ def list_zooms(prs_or_path: Any, slide_index: int | None = None) -> list[ZoomInf
 
             info = ZoomInfo(
                 name=shape.name,
-                slide_index=idx,
+                slide_index=idx + 1,
                 zoom_type=zoom_type,
-                target_slide_index=target_idx,
+                target_slide_index=target_idx + 1 if target_idx is not None else None,
                 target_section=target_section,
                 left=left,
                 top=top,

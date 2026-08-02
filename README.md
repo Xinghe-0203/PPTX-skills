@@ -4,123 +4,66 @@
 >
 > Core principle: **always ship an editable `.pptx` and run render verification** -- not just code or XML checks.
 
-**v3.0** -- 50 Python files, 34,000+ lines, 390+ public APIs, 40 modules in `pptx_skill/`.
+![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.12+](https://img.shields.io/badge/python-3.12+-green) ![217 tests](https://img.shields.io/badge/tests-217-brightgreen) ![63 modules](https://img.shields.io/badge/modules-63-orange) ![620+ APIs](https://img.shields.io/badge/APIs-620+-purple)
+
+**v6.0.0** -- 63 Python modules, 620+ public APIs, 51 animations, 30 transitions, 24 layout roles, 20 themes, unified `Deck` class, unified CLI, Markdown import.
 
 ## Capabilities at a Glance
 
 | Category | Count |
 |---|---|
+| Python modules | 63 |
+| Public APIs | 620+ |
 | Layout roles | 24 |
 | Recipe variants | 62 |
 | Animation types | 51 (20 entrance, 15 exit, 15 emphasis, 1 motion path) |
-| Transition types | 18 |
+| Transition types | 30 (18 standard + 12 advanced) |
 | Themes | 20 |
 | Template profiles | 20 |
 | Chart types | 10 (with embedded Excel workbooks) |
 | Table styles | 20 built-in |
 | Analytical framework roles | 5 (SWOT, Porter, PEST, BMC, Funnel) |
+| Tests | 217 passing |
 
 ## Feature Overview
 
-- **Generation from scratch** -- auto-create full presentations from topics, sections, and data. 24 content roles, 62 recipe variants, 20 template profiles, 3 non-card geometric layout families, 20 traditional themes, font pairing with CJK support.
-- **Slide master generation (native)** -- create pages conforming to corporate masters or template standards.
-- **Reference slide cloning** -- high-fidelity copy of shape relationships from a reference PPT with content replacement.
-- **Visual rebuild** -- reconstruct editable approximations from flattened screenshots or complex structures.
-- **Constraint-based adaptive layout** -- declarative `LayoutRecipe` + Kiwi linear constraint solver covering all 24 roles with density-graded variants (sparse/dense/three_column/vertical_dense/horizontal_dense/grid4/wide, etc.).
-- **Deck-level planning** -- `deck_planner` uses beam search with anti-repeat signature penalties for cross-slide rhythm.
-- **Semantic + render QA** -- overflow/overlap/contrast/font checks, pixel-level perceptual diff, SSIM, window density, four-level QA (table/chart/page/deck), typographic hierarchy and color consistency.
+- **Unified `Deck` class** -- fluent high-level API wrapping 60+ modules into chainable methods: `Deck.open()`, `Deck.generate()`, `Deck.from_markdown()`, `.add_watermark()`, `.add_transition()`, `.add_animation()`, `.edit_text()`, `.save()`.
+- **Unified CLI** -- `pptx-skill <command>` for info, inspect, generate, from-markdown, render, edit, watermark, export, pages, merge, validate, template, capability.
+- **Markdown import** -- parse Markdown outlines into sections and generate PPTX in one step.
+- **Global find-replace** -- `find_replace_all()` across all slides with run-formatting preservation.
+- **Path-based overloads** -- `add_transition(path, slide_index, ...)` and `add_entrance_animation(path, slide_index, ...)` accept file paths or open `Presentation` objects, with standardized 1-based slide indexing.
+- **Generation from scratch** -- auto-create full presentations from topics, sections, and data. 24 content roles, 62 recipe variants, 20 template profiles, 20 themes, font pairing with CJK support.
+- **Constraint-based adaptive layout** -- declarative `LayoutRecipe` + Kiwi linear constraint solver covering all 24 roles with density-graded variants.
+- **Deck-level planning** -- beam search with anti-repeat signature penalties for cross-slide rhythm.
+- **Semantic + render QA** -- overflow/overlap/contrast/font checks, pixel-level perceptual diff, SSIM, window density.
 - **Generation-QA-repair loop** -- `run_generation_pipeline` iterates automatically (max 2 passes).
-- **Rich text** -- multi-paragraph, multi-run, bullet lists, hyperlinks.
-- **10 chart types** -- column_clustered, column_stacked, bar_clustered, bar_stacked, line, line_markers, pie, doughnut, scatter, area, with multi-series and embedded Excel workbooks.
-- **Table styling** -- borders, banding, cell fills, column widths, 20 built-in styles, cell merge/unmerge, add row/column.
-- **Shape styling** -- line/stroke, shadow, gradient, rotation, text inside shapes.
-- **Header, footer, and slide numbers** -- configured via `deck_options`.
-- **Speaker notes and media** -- slide notes, video/audio media nodes.
-- **Template download** -- GitHub/URL/local template packs, PPTX archive extraction, remote listing and search.
-- **Data contract and Manifest V3** -- stable element IDs, embedded XML + sidecar `.manifest.json`.
-- **200-page QA annotation dataset and golden renders** -- regression testing and visual baselines.
-
-## New in v3.0
-
-### Animations
-
-51 animation types via OOXML timing XML:
-- **Entrance** (20): appear, fly_in, float_up, zoom, grow_turn, swivel, bounce, fade_in, wipe_in, blinds_in, box_in, checkerboard_in, split_in, diagonal_in, random_bars_in, ascend, descend, spin_in, stretch_in, wheel_in
-- **Exit** (15): disappear, fly_out, float_down, zoom_out, shrink_turn, swivel_out, bounce_out, fade_out, wipe_out, blinds_out, box_out, checkerboard_out, split_out, diagonal_out, random_bars_out
-- **Emphasis** (15): grow_shrink, spin, pulse, color_change, teeter, desaturate, darken, lighten, transparency, object_color, font_color, brush_on_color, brush_on_underline, wave, fill_color
-- **Motion path** (1): bounce_end
-
-Animations support sequence ordering, delay, duration, click-trigger or auto-play, and can target text, shape, image, or table nodes.
-
-### Transitions
-
-18 slide transition types: fade, push (left/right/up/down), wipe (left/right/up/down), cover (left/right), split (horizontal_in/out, vertical_in/out), dissolve, random, cut. Configurable duration and advance timing.
-
-### Merge
-
-Multi-deck merge with layout/media/relationship-ID deduplication. Extract specific slides from source decks. Handles duplicate images, fonts, and theme conflicts automatically.
-
-### Watermark
-
-Text and image watermarks with configurable opacity, tiling, z-ordering (above/below content), and removal. Supports diagonal text watermarks and tiled image patterns.
-
-### Sections
-
-Section groups via OOXML `sectionLst`: add, remove, rename, move, and collapse sections. Sections organize the navigation pane in PowerPoint and support collapsible grouping.
-
-### Slide Master
-
-Slide master/layout query, clone, rename, placeholder operations (list, map content to placeholders), and background settings (solid fill, gradient, image). Enables programmatic control of master slides and layouts.
-
-### Image Optimize
-
-Image compression (JPEG quality, max dimension), format conversion (PNG/JPEG/WebP), unused media removal, and per-image stats reporting. Reduces file size without visual quality loss.
-
-### Comments
-
-Speaker notes and review comments via OOXML: add, list, delete, reply, and resolve comments. Full comment threading support with author and timestamp metadata.
-
-### Diff
-
-Structural diff at slide/shape/text/image/layout level with shape matching. Produces a structured diff report highlighting additions, removals, and modifications between two PPTX files.
-
-### Export
-
-PDF, image (PNG/JPEG), HTML, plain text, and thumbnail export. Supports LibreOffice, PyMuPDF, and Pillow backends with automatic fallback.
-
-### SmartArt
-
-SmartArt detection, text extraction and editing, and preservation across clone and merge operations. Reads SmartArt text from OOXML data model while preserving the visual diagram structure.
-
-### VBA
-
-VBA project detection, injection, extraction, and macro-to-shape attachment. Enables programmatic macro insertion for interactive presentations while preserving existing VBA projects.
-
-### Table Styles
-
-20 built-in table styles (light/medium/dark bands), cell merge/unmerge, custom borders, cell fills, add row/column operations. Full OOXML table style support.
-
-### HTML Import
-
-HTML-to-PPTX import using the *local snapshot underlay* technique: extracts semantic content from HTML (Marp, Slidev, reveal.js, LLM-generated slides), optionally renders as a background image via Playwright, and overlays editable native textboxes. Keeps text fully editable while preserving CSS fidelity.
-
-### Analytical Frameworks
-
-Five new layout roles for common business analysis frameworks:
-- **SWOT** (quadrant/labeled) -- strengths, weaknesses, opportunities, threats
-- **Porter** (diamond/horizontal) -- Porter's Five Forces
-- **PEST** (grid/vertical) -- political, economic, social, technological
-- **BMC** (canvas/compact) -- Business Model Canvas
-- **Funnel** (stacked/narrow) -- sales/marketing funnels
-
-Each role has at least 2 recipe variants.
+- **10 chart types** -- column, bar, line, pie, doughnut, scatter, area variants with multi-series and embedded Excel workbooks.
+- **Table styling** -- borders, banding, cell fills, 20 built-in styles, cell merge/unmerge, add row/column.
+- **51 animations** -- entrance, exit, emphasis, and motion path via OOXML timing XML.
+- **30 transitions** -- 18 standard + 12 advanced (wheel, ripple, honeycomb, vortex, shred, flip, gallery, pan, glitter, warp, wind, curtain) + morph transition.
+- **Multi-deck merge** -- layout/media/relationship-ID deduplication with conflict resolution.
+- **Watermarks** -- text and image watermarks with opacity, tiling, z-ordering, and removal.
+- **Sections, slide masters, SmartArt, VBA** -- full OOXML-level control.
+- **Export** -- PDF, images, HTML, Markdown, SVG, text, thumbnails, video (MP4/GIF via ffmpeg).
+- **Color science** -- RGB/HSL/HSV/CMYK, palette extraction, harmony generators, gradient builder.
+- **OCR** -- Tesseract/EasyOCR/PaddleOCR integration with auto-captioning.
+- **Batch processing** -- parallel convert, watermark, recolor, inspect, stats.
+- **Accessibility** -- WCAG 2.1 audit, alt-text management, contrast checking, auto-fix.
+- **Protection** -- write-protection, password encryption, mark-as-final.
+- **Template download** -- GitHub/URL/local template packs with remote listing and search.
 
 ## Installation
 
-Install in editable mode:
+Install in editable mode (core only -- needs just `python-pptx` and `Pillow`):
 
 ```powershell
 python -m pip install -e .
+```
+
+Install with optional backends:
+
+```powershell
+python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
 ```
 
 Check environment capabilities:
@@ -129,11 +72,21 @@ Check environment capabilities:
 python -m pptx_skill.capability
 ```
 
-Optional backends (install as needed):
+Optional extras:
 
-```powershell
-python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
-```
+| Extra | Provides |
+|---|---|
+| `adaptive` | Kiwi constraint solver for adaptive layout engine |
+| `schema` | Pydantic-based template schema validation |
+| `qa-image` | NumPy + scikit-image for perceptual diff / SSIM |
+| `render-pdf` | PyMuPDF for PDF export (AGPL -- see THIRD_PARTY_NOTICES.md) |
+| `render-com` | Windows COM rendering via pywin32 |
+| `chart-editable` | openpyxl for editable chart Excel workbooks |
+| `html-import` | BeautifulSoup4 for HTML-to-PPTX import |
+| `encrypt` | msoffcrypto-tool for password encryption |
+| `ocr-easy` | EasyOCR backend for OCR |
+| `ocr-paddle` | PaddleOCR backend for OCR |
+| `test` | pytest + hypothesis for running the test suite |
 
 > The core path requires only `python-pptx` and `Pillow`; all other backends are optional. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
@@ -147,244 +100,285 @@ from pptx_skill import auto_generate_ppt
 auto_generate_ppt(
     title="Market Expansion Strategy",
     subtitle="2026 Annual Plan",
-    sections=[...],
+    sections=[
+        {"title": "Market Overview", "bullets": ["TAM $50B", "CAGR 12%"]},
+        {"title": "Competitive Landscape", "bullets": ["Top 5 players", "Gap in mid-market"]},
+    ],
     output_path="output/report.pptx",
-    template_key="strategy-consulting",
+    theme_key="corporate_blue",
     auto_search_images=False,
 )
 ```
 
-### 2. Add animations and transitions
+### 2. Deck fluent API (new in v6.0)
 
 ```python
-from pptx_skill.animations import add_entrance_animation, ENTRANCE_TYPES
-from pptx_skill.transitions import add_transition, FADE
+from pptx_skill import Deck
 
-# Add fade-in animation to a shape
-add_entrance_animation("output/report.pptx", slide_index=1, shape_name="Title 1",
-                       animation_type="fade_in")
+# Generate from scratch, then chain edits
+deck = Deck.generate(
+    title="Q3 Review",
+    sections=[{"title": "Highlights", "bullets": ["Revenue +15%", "New 3 clients"]}],
+    output_path="output/q3.pptx",
+)
+deck.add_watermark("DRAFT", opacity=0.15, diagonal=True)
+deck.add_notes(1, "Opening remarks for the board.")
+deck.add_transition(1, "fade", duration_ms=500)
+deck.add_animation(slide_index=1, shape_name="Title 1", anim_type="fade_in")
+deck.save()
 
-# Add fade transition between slides
-add_transition("output/report.pptx", slide_index=1, transition_type=FADE, duration_ms=700)
+# Or open an existing file
+deck = Deck.open("output/report.pptx")
+deck.find_replace_all("Old Company", "New Company")
+deck.recolor("#184E77", "#2D5016")
+deck.save()
 ```
 
-### 3. Merge multiple decks
+### 3. Import from Markdown (new in v6.0)
 
 ```python
-from pptx_skill.merge import merge_decks
+from pptx_skill import import_markdown
 
-merge_decks(
-    paths=["deck_a.pptx", "deck_b.pptx", "deck_c.pptx"],
-    output_path="merged.pptx",
+# One-step: Markdown -> PPTX
+import_markdown("outline.md", output_path="output/deck.pptx", theme_key="corporate_blue")
+
+# Or two-step: parse sections, then generate
+from pptx_skill import markdown_to_sections, auto_generate_ppt
+
+sections = markdown_to_sections("outline.md")
+auto_generate_ppt(
+    title=sections[0]["title"],
+    sections=sections[1:],
+    output_path="output/deck.pptx",
 )
 ```
 
-### 4. Add a watermark
+Markdown mapping: `# H1` -> cover, `## H2` -> section/content slide, `### H3` -> content slide, `- bullet` -> bullets, `> quote` -> quote slide, GFM tables -> table slide, YAML front-matter -> title/subtitle/theme/lang.
 
-```python
-from pptx_skill.watermark import add_text_watermark
+### 4. Unified CLI (new in v6.0)
 
-add_text_watermark("output/report.pptx", text="CONFIDENTIAL",
-                   opacity=0.15, diagonal=True, font_size=48)
+```bash
+# Show summary info
+pptx-skill info deck.pptx
+
+# Generate from JSON sections
+pptx-skill generate --title "My Deck" --sections sections.json -o out.pptx
+
+# Generate from Markdown
+pptx-skill from-markdown outline.md -o out.pptx
+
+# Inspect structure
+pptx-skill inspect deck.pptx
+
+# Render slides as PNG
+pptx-skill render deck.pptx -o ./previews --dpi 150
+
+# Find-and-replace text
+pptx-skill edit deck.pptx --find-replace "Old:New"
+
+# Add watermark
+pptx-skill watermark deck.pptx --text "DRAFT" --opacity 0.15 --diagonal
+
+# Export to PDF
+pptx-skill export deck.pptx --pdf out.pdf
+
+# Delete a slide
+pptx-skill pages deck.pptx --delete 3
+
+# Merge multiple decks
+pptx-skill merge a.pptx b.pptx -o merged.pptx
+
+# Validate structure
+pptx-skill validate deck.pptx
+
+# List templates
+pptx-skill template list
+
+# Show capability report
+pptx-skill capability
 ```
 
-### 5. Export to PDF
+Also works as `python -m pptx_skill <command>`.
 
-```python
-from pptx_skill.export import export_pdf
-
-export_pdf("output/report.pptx", output_path="output/report.pdf")
-```
-
-### 6. Edit a skill-generated PPT (lossless round-trip)
+### 5. Edit a skill-generated PPT (lossless round-trip)
 
 ```python
 from pptx_skill import load_project, edit_section, regenerate
 
 project = load_project("output/report.pptx")
 edit_section("output/report.pptx", index=2, changes={"bullets": ["New point A", "New point B"]})
+regenerate(project)
 ```
 
-### 7. Edit an external PPT (best-effort targeted edits)
+### 6. Edit an external PPT (best-effort targeted edits)
 
 ```python
-from pptx_skill import edit_text, swap_image, recolor
+from pptx_skill import edit_text, recolor, swap_theme, find_replace_all
 
-edit_text("reference.pptx", slide_index=0, find="Old Title", replace="New Title")
+# Per-slide text replacement (1-based slide index)
+edit_text("reference.pptx", slide_index=1, find="Old Title", replace="New Title")
+
+# Global find-and-replace across all slides
+count = find_replace_all("reference.pptx", "Old Company", "New Company")
+
+# Recolor shapes
 recolor("reference.pptx", old_hex="#184E77", new_hex="#2D5016")
+
+# Swap theme
+swap_theme("reference.pptx", new_theme_key="corporate_blue")
 ```
 
-### 8. Import from HTML
+### 7. Add a watermark
 
 ```python
-from pptx_skill.html_import import import_from_html
+from pptx_skill import add_text_watermark
 
-import_from_html("slides.html", output_path="output/from_html.pptx", snapshot_underlay=True)
+add_text_watermark(
+    "output/report.pptx",
+    text="CONFIDENTIAL",
+    opacity=0.15,
+    rotation=-45,
+    font_size=48,
+)
 ```
 
-### 9. Diff two presentations
+### 8. Export to PDF / images / Markdown
 
 ```python
-from pptx_skill.diff import diff_presentations
+from pptx_skill import export_to_pdf, export_to_images, export_to_markdown
 
-report = diff_presentations("v1.pptx", "v2.pptx")
-for change in report["changes"]:
-    print(f"{change['level']}: {change['description']}")
+# Export to PDF
+export_to_pdf("output/report.pptx", "output/report.pdf", dpi=150)
+
+# Export slides as PNG images
+export_to_images("output/report.pptx", "output/slides/", dpi=150, format="PNG")
+
+# Export to Markdown
+export_to_markdown("output/report.pptx", output_path="output/report.md")
+```
+
+### 9. Merge multiple decks
+
+```python
+from pptx_skill import merge_presentations
+
+result = merge_presentations(
+    sources=["deck_a.pptx", "deck_b.pptx", "deck_c.pptx"],
+    output_path="merged.pptx",
+)
+print(f"Merged {result.sources_merged} files -> {result.output_path} ({result.total_slides} slides)")
+```
+
+### 10. Add transitions and animations
+
+```python
+from pptx_skill import add_transition, add_entrance_animation, FADE, FADE_IN
+
+# Path-based: accepts a file path or open Presentation (1-based slide index)
+add_transition("output/report.pptx", slide_index=1, transition_type=FADE, duration_ms=700)
+add_entrance_animation("output/report.pptx", slide_index=1, shape_name="Title 1", anim_type=FADE_IN)
+
+# Or use the slide/object-based API directly
+from pptx_skill import apply_slide_transition, apply_deck_transitions, apply_entrance_animation
+from pptx import Presentation
+
+prs = Presentation("output/report.pptx")
+apply_deck_transitions(prs, "fade", duration_ms=500)
+apply_entrance_animation(prs.slides[0], prs.slides[0].shapes[0], "fade_in")
+prs.save("output/report.pptx")
+```
+
+### 11. Inspect an external PPT
+
+```python
+from pptx_skill import inspect_ppt
+
+report = inspect_ppt("reference.pptx")
+print(f"{report['total_slides']} slides")
+for slide in report["slides"]:
+    print(f"  Slide {slide['index']}: {slide['guessed_layout']}")
 ```
 
 ## Core Concepts
 
 | Concept | Description |
 |---|---|
+| `Deck` | Unified fluent API wrapping 60+ modules. `Deck.open()`, `.generate()`, `.from_markdown()`, chainable methods. |
 | `ContentSpec` / `SlideSpec` / `ElementSpec` | Data model for deck/slide/element with stable `element_id`. |
 | `LayoutRecipe` | Declarative layout formula: variables, constraints, geometry signature; solved by Kiwi into `SolvedGeometry`. |
 | `TemplateProfileV2` | Three-layer token (design/semantic/component) template profile with V1 migration. |
 | `Manifest V3` | Per-generation record of content, layout plans, render trace, and repair attempts; embedded in pptx XML or sidecar `.manifest.json`. |
 | `Reference Modes` | `native` / `clone` / `visual-rebuild` strategies for handling reference decks. |
 | `ANIMATION_TYPES` | Catalog of 51 animation presets with OOXML preset class/ID/subtype mappings. |
-| `TRANSITION_TYPES` | Set of 18 transition presets with OOXML element mappings. |
+| `TRANSITION_TYPES` | Set of 18 standard transition presets; `ADVANCED_TRANSITIONS` adds 12 more. |
+| 1-based slide indexing | All public APIs use 1-based slide indices (slide 1 = first slide) across every module. |
 
-## Project Structure
+## Module List (63 modules)
 
-```
-.
-├── pptx_skill/                    # Core Python package (40 modules)
-│   ├── api.py                     # Compatibility facade and GenerationResult
-│   ├── content_model.py           # ContentSpec / SlideSpec / ElementSpec
-│   ├── content_adapter.py         # Adapt legacy Section to ContentSpec
-│   ├── layout_engine.py           # LayoutRecipe + Kiwi constraint solver (62 recipes, 24 roles)
-│   ├── deck_planner.py            # Deck-level beam search planning
-│   ├── pagination.py              # Role-specific paginators (bullets/table/timeline/process/image_grid)
-│   ├── text_metrics.py            # Font metrics, CJK line-breaking, font-size bisection
-│   ├── semantic_qa.py             # Overflow / overlap / contrast semantic checks
-│   ├── render_qa.py               # Pixel-level perceptual diff, SSIM
-│   ├── repair_engine.py           # Whitelist repair actions
-│   ├── generation_pipeline.py     # Plan -> render -> QA -> repair closed loop
-│   ├── manifest.py                # Manifest V3 read/write
-│   ├── design_schema.py           # V2 schema, token resolution and validation
-│   ├── template_compiler.py       # TemplateProfileV2 compilation with diversity gate
-│   ├── template_v2_adapter.py     # V1->V2 migration and V2->legacy adaptation
-│   ├── template_downloader.py     # Template pack download and archive extraction
-│   ├── reference_adapter.py       # Native / clone / visual-rebuild adapter dispatch
-│   ├── visual_rebuild.py          # Flattened deck parsing and adaptive rebuild
-│   ├── pptx_renderer.py           # Adaptive renderer (text/image/shape/table/chart/rich-text/media)
-│   ├── image_crop.py              # Contain / cover / smart crop
-│   ├── preview_renderer.py        # LibreOffice / PyMuPDF / Windows COM render
-│   ├── visual_qa.py               # Post-render visual QA checks
-│   ├── qa_dataset.py              # 200-page QA annotation dataset generator
-│   ├── golden_renders.py          # Per-role golden renders and family decks
-│   ├── capability.py              # Runtime environment capability detection
-│   ├── animations.py              # 51 animation types (entrance/exit/emphasis/motion path)
-│   ├── transitions.py             # 18 slide transition types
-│   ├── merge.py                   # Multi-deck merge with deduplication
-│   ├── watermark.py               # Text/image watermarks with opacity, tiling, z-order
-│   ├── sections.py                # Section groups (add/remove/rename/move/collapse)
-│   ├── slide_master.py            # Slide master/layout query, clone, placeholder ops
-│   ├── image_optimize.py          # Image compression, format conversion, unused media removal
-│   ├── comments.py                # Speaker notes + review comments
-│   ├── diff.py                    # Structural diff (slide/shape/text/image/layout)
-│   ├── export.py                  # PDF/image/HTML/text/thumbnail export
-│   ├── smartart.py                # SmartArt detection, text extraction/editing, preservation
-│   ├── vba.py                     # VBA project detection, injection, extraction
-│   ├── table_styles.py            # 20 built-in table styles, cell merge, borders, fills
-│   ├── html_import.py             # HTML-to-PPTX with local snapshot underlay
-│   └── __init__.py                # Package init, sys.path bridge, re-exports
-├── scripts/                       # CLI entry points (legacy layer)
-│   ├── pptx_helper.py             # Generation engine
-│   ├── reference_ppt.py           # Reference deck analysis and generation
-│   ├── template_engine.py         # Template profile management
-│   ├── render_slides.py           # Screenshot rendering CLI
-│   ├── ppt_project.py             # L1 manifest round-trip
-│   ├── ppt_inspect.py             # L2 external PPT inspection
-│   ├── ppt_edit.py                # L3 targeted edits
-│   ├── ppt_pages.py               # L4 page-level operations
-│   ├── layout_variants.py         # Non-card layout families
-│   └── pixabay_search.py          # Pixabay image search
-├── references/                    # Detailed workflow documentation
-│   ├── reference-ppt-workflow.md
-│   ├── editing-workflow.md
-│   ├── engine-api.md
-│   └── quality-checklist.md
-├── tests/                         # Unit and E2E tests
-├── SKILL.md                       # Skill usage manual (agent-facing)
-├── THIRD_PARTY_NOTICES.md         # Third-party dependencies and licenses
-└── pyproject.toml
-```
-
-## Data Flow
-
-```
-ContentSpec / SlideSpec / ElementSpec          (content_model.py)
-        |
-        v
-adapt_legacy_sections() or direct construction (content_adapter.py)
-        |
-        v
-paginate_content_spec() -> split dense slides  (pagination.py)
-        |
-        v
-SemanticQAEngine.check() -> pre-render checks  (semantic_qa.py)
-        |      (overflow / overlap / contrast / font / distortion)
-        v
-plan_deck() -> beam search                      (deck_planner.py)
-  +- builtin_recipes(role) -> LayoutRecipe[]    (layout_engine.py)
-  +- solve_recipe(recipe, canvas, tokens)       (layout_engine.py, kiwisolver)
-  |      -> SolvedGeometry
-  +- solved_geometry_to_layout_plan()
-        |      -> LayoutPlan with PlannedNode[]
-        v
-render_layout_plans(plans, output_path, deck_options)  (pptx_renderer.py)
-        |      -> RenderResult with RenderTraceEntry[]
-        |      deck_options: show_slide_numbers, footer_text, header_text, theme
-        v
-add_transition() / add_animation()              (transitions.py / animations.py)
-        v
-add_watermark() / add_sections() / ...          (watermark.py / sections.py / ...)
-        v
-render_preview() -> PNG via LibreOffice/COM     (preview_renderer.py)
-        |
-        v
-render_qa -> pixel-level perceptual diff, SSIM  (render_qa.py)
-        |
-        v  (if QA fails)
-propose_repairs() -> apply_repairs()            (repair_engine.py)
-        |      -> loop back to plan_deck (max 2 passes)
-        v
-save_manifest_v3()                             (manifest.py)
-```
-
-Canvas: 16:9 = 959.976 x 540 pt. Point-based coordinates throughout.
-
-## Layout Roles and Recipes
-
-24 roles with 62 recipe variants:
-
-| Role | Variants | Description |
-|---|---|---|
-| `cover` | 3 | Title/cover slides |
-| `toc` | 2 | Table of contents |
-| `section` | 2 | Section dividers |
-| `bullets` | 5 | Bullet-point content (rail/sparse/dense/split/compact) |
-| `text_image` | 2 | Text with image side-by-side |
-| `full_image` | 2 | Full-bleed image slides |
-| `image_grid` | 3 | Image grid layouts (2x2/3x3/grid4) |
-| `dashboard` | 5 | Dashboard/KPI layouts |
-| `timeline` | 3 | Timeline layouts (horizontal/vertical_dense/compact) |
-| `comparison` | 4 | Side-by-side comparisons (two_column/three_column) |
-| `quote` | 2 | Quote slides |
-| `process` | 4 | Process flow layouts (horizontal/horizontal_dense/vertical/stepper) |
-| `table` | 3 | Data table slides (standard/wide/compact) |
-| `end` | 2 | Closing slides |
-| `matrix` | 2 | Matrix/2x2 grid |
-| `kpi_hero` | 2 | KPI hero metric slides |
-| `faq` | 2 | FAQ layouts |
-| `testimonial` | 2 | Testimonial/quote with attribution |
-| `logo_wall` | 2 | Logo wall / partner slides |
-| `swot` | 2 | SWOT analysis (quadrant/labeled) |
-| `porter` | 2 | Porter's Five Forces (diamond/horizontal) |
-| `pest` | 2 | PEST analysis (grid/vertical) |
-| `bmc` | 2 | Business Model Canvas (canvas/compact) |
-| `funnel` | 2 | Sales/marketing funnel (stacked/narrow) |
+| Module | Description |
+|---|---|
+| `api.py` | Compatibility facade wrapping both layers; `auto_generate_ppt`, `auto_validate_ppt`. |
+| `deck.py` | **v6.0** Unified fluent `Deck` class and `open_deck()`. |
+| `cli.py` | **v6.0** Unified CLI (`pptx-skill` command) with 13 subcommands. |
+| `markdown_import.py` | **v6.0** Markdown-to-sections parser and `import_markdown()`. |
+| `content_model.py` | Zero-dependency core: `ContentSpec`, `SlideSpec`, `ElementSpec`, `LayoutPlan`, `PlannedNode`, `GeometrySpec`, `BBox`, `CanvasSpec`, `StableIdGenerator`. |
+| `content_adapter.py` | Adapt legacy `Section` objects to `ContentSpec`. |
+| `layout_engine.py` | Declarative `LayoutRecipe` + Kiwi constraint solver -> `SolvedGeometry`. |
+| `deck_planner.py` | Beam search over candidate bundles with transition penalties. |
+| `pagination.py` | Role-specific paginators (bullets, table, timeline, process, image_grid). |
+| `pptx_renderer.py` | Adaptive renderer dispatching text/image/shape/table/chart nodes. |
+| `text_metrics.py` | Pillow font metrics, CJK line-breaking, font-size bisection. |
+| `semantic_qa.py` | Overflow/overlap/contrast/font/distortion checks. |
+| `render_qa.py` | Pixel-level perceptual diff, SSIM, window density. |
+| `repair_engine.py` | Whitelist repair actions with profile override merging. |
+| `generation_pipeline.py` | Plan -> render -> QA -> repair closed loop. |
+| `manifest.py` | V3 manifest (embedded XML + sidecar JSON) with V2->V3 migration. |
+| `design_schema.py` | V2 template schema, three-layer tokens, resolution. |
+| `template_compiler.py` | TemplateProfileV2 compilation with diversity gate. |
+| `template_v2_adapter.py` | V1->V2 migration, V2->legacy adaptation. |
+| `reference_adapter.py` | Native/clone/visual-rebuild adapter dispatch. |
+| `visual_rebuild.py` | Flattened-deck parsing and adaptive rebuild. |
+| `qa_dataset.py` | 200-page annotation dataset generator. |
+| `golden_renders.py` | Per-role golden renders and family decks. |
+| `image_crop.py` | Contain/cover/smart crop. |
+| `preview_renderer.py` | LibreOffice / PyMuPDF / Windows COM rendering. |
+| `template_downloader.py` | Template pack download (GitHub/URL/local), PPTX archive extraction, remote pack listing & search. |
+| `visual_qa.py` | Visual QA checks on rendered slides. |
+| `capability.py` | Runtime environment capability detection and reporting. |
+| `transitions.py` | 18 slide transition types (fade/push/wipe/cover/split/dissolve/random/cut) + path-based overloads. |
+| `transitions_ext.py` | 12 advanced transitions (wheel, ripple, honeycomb, vortex, shred, flip, gallery, pan, glitter, warp, wind, curtain). |
+| `animations.py` | 51 animation types (20 entrance, 15 exit, 15 emphasis, 1 motion path) via OOXML timing XML + path-based overloads. |
+| `morph.py` | Morph transition (p15 namespace), morph-by-object/word/char options. |
+| `merge.py` | Multi-deck merge with layout/media/rel-ID deduplication, slide extraction. |
+| `watermark.py` | Text/image watermarks with opacity, tiling, z-ordering, removal. |
+| `sections.py` | Section groups (add/remove/rename/move/collapse) via OOXML sectionLst. |
+| `slide_master.py` | Slide master/layout query, clone, rename, placeholder ops, background settings. |
+| `image_optimize.py` | Image compression, format conversion, unused media removal, stats. |
+| `comments.py` | Speaker notes + review comments (add/list/delete/reply/resolve). |
+| `diff.py` | Structural diff at slide/shape/text/image/layout level with shape matching. |
+| `export.py` | PDF/image/HTML/text/thumbnail export (LibreOffice/PyMuPDF/Pillow backends). |
+| `smartart.py` | SmartArt detection, text extraction/editing, preservation across clone/merge. |
+| `vba.py` | VBA project detection, injection, extraction, macro-to-shape attachment. |
+| `table_styles.py` | 20 built-in table styles, cell merge/unmerge, borders, fills, add row/column. |
+| `html_import.py` | HTML-to-PPTX import with local snapshot underlay technique. |
+| `effects.py` | 3D/bevel/glow/reflection/soft-edges/inner-shadow/perspective-shadow + 16 effect presets. |
+| `connectors.py` | Lines, elbow/curved connectors, freeform paths, arrowheads, dash styles. |
+| `protection.py` | Write-protection, password encryption (msoffcrypto), mark-as-final. |
+| `accessibility.py` | WCAG 2.1 audit, alt-text management, contrast checking, auto-fix. |
+| `metadata.py` | Core document properties, custom properties, embedded fonts. |
+| `equations.py` | OMML builder + LaTeX-to-OMML converter (fractions, radicals, n-ary, matrices). |
+| `multimedia.py` | Video/audio embedding with playback settings (loop, fullscreen, trim). |
+| `groups.py` | Shape grouping/ungrouping, z-order within groups. |
+| `zoom.py` | Slide Zoom, Section Zoom, Summary Zoom (interactive navigation thumbnails). |
+| `batch.py` | Batch/parallel processing (convert, watermark, recolor, inspect, stats). |
+| `svg_import.py` | SVG-to-DrawingML converter (path/rect/circle/line/polygon -> custGeom). |
+| `svg_export.py` | DrawingML-to-SVG converter (slides -> SVG vector output). |
+| `ocr.py` | OCR integration (Tesseract/EasyOCR/PaddleOCR), auto-caption. |
+| `chart_edit.py` | Chart data/style/type editing, series add/remove/rename, axis control. |
+| `color.py` | Color science (RGB/HSL/HSV/CMYK), palette extraction, harmony generators, gradient builder. |
+| `layout_sync.py` | Alignment, distribution, snap-to-grid, layout templates, z-order. |
+| `markdown_export.py` | Markdown export (text, tables, notes, chart data, metadata). |
+| `video.py` | MP4/GIF video export via ffmpeg (crossfade transitions, speaker timing). |
 
 ## Editing Paths
 
@@ -393,10 +387,11 @@ Canvas: 16:9 = 959.976 x 540 pt. Point-based coordinates throughout.
 | Skill-generated PPT (has manifest) | `load_project` -> `edit_section` -> `regenerate` | Lossless |
 | Skill-generated PPT (has manifest) | `insert_slide` / `delete_slide` / `move_slide` / `replace_layout` | Lossless for new pages |
 | External PPT | `inspect_ppt()` -> understand structure | Read-only |
-| External PPT | `edit_text` / `swap_image` / `recolor` / `swap_theme` | Best-effort |
+| External PPT | `edit_text` / `find_replace_all` / `swap_image` / `recolor` / `swap_theme` | Best-effort |
+| Markdown file | `import_markdown()` -> editable PPTX | Full generation |
 | HTML slides | `import_from_html()` -> editable PPTX | Underlay + editable text |
 
-All editing functions create `.bak.pptx` backup before writing. Slide indices are 1-based in public APIs.
+All editing functions create `.bak.pptx` backup before writing. Slide indices are 1-based in all public APIs.
 
 ## Testing
 
@@ -406,7 +401,20 @@ Run the full test suite:
 python -m pytest tests/ -ra
 ```
 
-Baseline: **185 tests passing** (including chart/rich-text/table-styling/media/template-downloader/animations/transitions/merge/watermark/sections/slide_master/image_optimize/comments/diff/export/smartart/vba/table_styles coverage).
+Baseline: **217 tests passing** (including animations, transitions, merge, watermark, sections, slide_master, image_optimize, comments, diff, export, smartart, vba, table_styles, chart_edit, color, layout_sync, markdown_export, video, svg_export, svg_import, ocr, batch, morph, accessibility, effects, connectors, protection, metadata, equations, multimedia, groups, zoom, html_import, deck, markdown_import, cli, and core layout/QA/pipeline coverage).
+
+Run a single test file:
+
+```powershell
+pytest tests/test_layout_engine.py
+```
+
+Lint and type check:
+
+```powershell
+ruff check .
+mypy pptx_skill/
+```
 
 ## Pre-Delivery Checklist
 
@@ -424,10 +432,16 @@ Baseline: **185 tests passing** (including chart/rich-text/table-styling/media/t
 ## Documentation Index
 
 - [`SKILL.md`](SKILL.md) -- Complete agent-facing usage manual.
+- [`CLAUDE.md`](CLAUDE.md) -- Architecture, data flow, and developer guide.
 - [`references/reference-ppt-workflow.md`](references/reference-ppt-workflow.md) -- Handling user-provided reference decks.
 - [`references/editing-workflow.md`](references/editing-workflow.md) -- Editing existing PPTs.
 - [`references/engine-api.md`](references/engine-api.md) -- Generation API and template profiles.
 - [`references/quality-checklist.md`](references/quality-checklist.md) -- Pre-delivery quality checklist.
+- [`experiences/layout-pitfalls.md`](experiences/layout-pitfalls.md) -- Common layout pitfalls and solutions.
+- [`experiences/chart-limits.md`](experiences/chart-limits.md) -- Chart type limits and workarounds.
+- [`experiences/cjk-issues.md`](experiences/cjk-issues.md) -- CJK font and text issues.
+- [`experiences/overflow-rules.md`](experiences/overflow-rules.md) -- Text overflow rules and pagination.
+- [`experiences/rendering-quirks.md`](experiences/rendering-quirks.md) -- Rendering engine quirks.
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) -- Third-party dependencies and licenses.
 
 ## License
@@ -436,4 +450,4 @@ Core path is MIT-style licensed (see repository LICENSE). When using optional ba
 
 ---
 
-*Generated for pptx-skill v3.0.0.*
+*Generated for pptx-skill v6.0.0.*

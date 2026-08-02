@@ -494,6 +494,8 @@ def apply_gradient(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     gradient_type : str
         ``"linear"``, ``"radial"``, or ``"path"``.
     angle : float
@@ -509,7 +511,9 @@ def apply_gradient(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -580,14 +584,22 @@ def apply_gradient(
 
 
 def remove_gradient(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Remove gradient fill from a shape (reverts to no fill)."""
+    """Remove gradient fill from a shape (reverts to no fill).
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -608,11 +620,23 @@ def remove_gradient(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
 
 def list_gradients(prs_or_path, slide_index: int | None = None) -> list[GradientInfo]:
-    """List all gradient fills in the presentation."""
+    """List all gradient fills in the presentation.
+
+    Parameters
+    ----------
+    slide_index : int, optional
+        1-based slide index (1 = first slide).  If provided, only list
+        gradients on that slide.
+    """
     prs = _open_prs(prs_or_path)
     try:
         results = []
-        slides = [prs.slides[slide_index]] if slide_index is not None else prs.slides
+        if slide_index is not None:
+            if slide_index < 1 or slide_index > len(prs.slides):
+                raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+            slides = [prs.slides[slide_index - 1]]
+        else:
+            slides = prs.slides
 
         for slide in slides:
             for shape in slide.shapes:

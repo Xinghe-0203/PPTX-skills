@@ -25,9 +25,10 @@ from reference_ppt import (
 
 
 def _slide_at(prs: Presentation, slide_index: int) -> Any:
-    position = 0 if slide_index == 0 else slide_index - 1
+    """Return the slide at 1-based *slide_index* (1 = first slide)."""
+    position = slide_index - 1
     if not 0 <= position < len(prs.slides):
-        raise IndexError(f"Slide index out of range: {slide_index}")
+        raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
     return prs.slides[position]
 
 
@@ -96,6 +97,59 @@ def edit_text(pptx_path: str | Path, slide_index: int, find: str, replace: str) 
                 replacements += _replace_cross_run(paragraph, find, replace)
     if replacements:
         _save(prs, pptx_path)
+    return replacements
+
+
+def find_replace_all(pptx_path: str | Path, find: str, replace: str) -> int:
+    """Global find-and-replace across all slides, preserving run formatting.
+
+    Parameters
+    ----------
+    pptx_path : str or Path or Presentation
+        Path to the PPTX file (or an open Presentation object).
+    find : str
+        Text to search for.  Must not be empty.
+    replace : str
+        Replacement text.
+
+    Returns
+    -------
+    int
+        Total number of replacements made across all slides.
+
+    Notes
+    -----
+    Each replacement preserves the run's existing font formatting.
+    Cross-run matches (where *find* spans multiple runs) are handled by
+    merging runs before replacing.  A backup ``.bak.pptx`` is created
+    before saving when a path is given.
+    """
+    if not find:
+        raise ValueError("find must not be empty")
+
+    is_path = not hasattr(pptx_path, "slides")
+    if is_path:
+        prs = Presentation(str(pptx_path))
+    else:
+        prs = pptx_path
+
+    replacements = 0
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not getattr(shape, "has_text_frame", False):
+                continue
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    if find in run.text:
+                        occurrences = run.text.count(find)
+                        run.text = run.text.replace(find, replace)
+                        replacements += occurrences
+                if find in "".join(run.text for run in paragraph.runs):
+                    replacements += _replace_cross_run(paragraph, find, replace)
+
+    if replacements and is_path:
+        _save(prs, pptx_path)
+
     return replacements
 
 

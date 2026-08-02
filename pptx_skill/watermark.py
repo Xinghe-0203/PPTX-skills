@@ -88,7 +88,7 @@ def _alpha_val(opacity: float) -> str:
 
 
 def _resolve_slides(prs: Any, slides: list[int] | None) -> list[Any]:
-    """Return a list of slide objects for the given 0-based *slides* indices.
+    """Return a list of slide objects for the given 1-based *slides* indices.
 
     If *slides* is ``None``, return all slides in the presentation.
     """
@@ -97,7 +97,12 @@ def _resolve_slides(prs: Any, slides: list[int] | None) -> list[Any]:
         return []
     if slides is None:
         return all_slides
-    return [all_slides[i] for i in slides if 0 <= i < len(all_slides)]
+    # Validate and convert 1-based indices to 0-based
+    n = len(all_slides)
+    for i in slides:
+        if i < 1 or i > n:
+            raise IndexError(f"slide index {i} out of range (1..{n})")
+    return [all_slides[i - 1] for i in slides]
 
 
 def _position_rect(
@@ -276,7 +281,7 @@ def add_text_watermark(
             ``top-right``, ``bottom-left``, ``bottom-right``, ``diagonal``.
         bold: Whether the watermark text is bold.
         italic: Whether the watermark text is italic.
-        slides: 0-based slide indices to watermark. ``None`` means all slides.
+        slides: 1-based slide indices to watermark. ``None`` means all slides.
         z_order: ``"front"`` or ``"back"`` (default ``"back"``).
         tile: If ``True``, repeat the watermark across the slide.
 
@@ -375,7 +380,7 @@ def add_image_watermark(
         position: Placement on the slide — ``center``, ``top-left``,
             ``top-right``, ``bottom-left``, ``bottom-right``, ``diagonal``.
         scale: Scale factor relative to slide dimensions (0.0–1.0).
-        slides: 0-based slide indices to watermark. ``None`` means all slides.
+        slides: 1-based slide indices to watermark. ``None`` means all slides.
         z_order: ``"front"`` or ``"back"`` (default ``"back"``).
         tile: If ``True``, repeat the watermark across the slide.
 
@@ -486,14 +491,14 @@ def list_watermarks(
         name_contains: Substring to match against shape names.
 
     Returns:
-        A list of dicts with keys ``slide_index`` (0-based), ``shape_name``,
+        A list of dicts with keys ``slide_index`` (1-based), ``shape_name``,
         ``shape_type``, ``left``, ``top``, ``width``, ``height``.
     """
 
     prs = _open_prs(prs_or_path)
     results: list[dict[str, Any]] = []
 
-    for slide_idx, slide in enumerate(prs.slides):
+    for slide_idx, slide in enumerate(prs.slides, start=1):
         for shape in slide.shapes:
             if name_contains in shape.name:
                 results.append(

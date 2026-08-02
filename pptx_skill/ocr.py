@@ -8,7 +8,7 @@ alt-text or overlay text boxes).
 Quick start
 -----------
 >>> from pptx_skill.ocr import ocr_slide, ocr_presentation
->>> results = ocr_slide("deck.pptx", 0)          # single slide
+>>> results = ocr_slide("deck.pptx", 1)          # single slide (1-based)
 >>> all_results = ocr_presentation("deck.pptx")   # all slides
 
 Optional dependencies
@@ -328,7 +328,7 @@ def ocr_slide(
     Parameters
     ----------
     slide_index : int
-        0-based slide index.
+        1-based slide index (1 = first slide).
     include_rendered : bool
         If True, also OCR the rendered slide image (catches text in shapes
         that are hard to extract directly).  Default False — only OCR images
@@ -342,7 +342,9 @@ def ocr_slide(
     """
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         all_results: list[OcrResult] = []
 
         # OCR each image shape
@@ -418,7 +420,7 @@ def ocr_presentation(
     Returns
     -------
     dict[int, list[OcrResult]]
-        Map of slide_index → OCR results.
+        Map of slide_index (1-based) → OCR results.
     """
     prs = _open_prs(prs_or_path)
     try:
@@ -427,8 +429,8 @@ def ocr_presentation(
         limit = min(slide_count, max_slides) if max_slides else slide_count
 
         for idx in range(limit):
-            results[idx] = ocr_slide(
-                prs, idx,
+            results[idx + 1] = ocr_slide(
+                prs, idx + 1,
                 engine=engine,
                 languages=languages,
                 min_confidence=min_confidence,
@@ -457,6 +459,8 @@ def auto_caption_slide(
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     mode : str
         ``"alt_text"`` — set alt text on image shapes (accessibility).
         ``"text_box"`` — add a text box overlay with OCR text.
@@ -473,7 +477,9 @@ def auto_caption_slide(
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
     try:
-        slide = prs.slides[slide_index]
+        if slide_index < 1 or slide_index > len(prs.slides):
+            raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
+        slide = prs.slides[slide_index - 1]
         results = ocr_slide(
             prs, slide_index,
             engine=engine,
@@ -519,7 +525,7 @@ def auto_caption_presentation(
     prs = _open_prs(prs_or_path)
     try:
         total = 0
-        for idx in range(len(prs.slides)):
+        for idx in range(1, len(prs.slides) + 1):
             total += auto_caption_slide(
                 prs, idx,
                 engine=engine,

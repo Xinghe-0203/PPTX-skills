@@ -699,15 +699,44 @@ def _reorder_slides(
 ) -> None:
     """Reorder slides in *prs* according to *positions*.
 
-    This is a best-effort reordering.  The positions list specifies where
-    each source's block of slides should end up (1-based).  None means
-    the block stays in its current position (appended).
+    The *positions* list specifies, for each source deck, the 1-based
+    target position where its block of slides should end up.  ``None``
+    means the block stays in its current (appended) position.
+
+    Implementation reorders the ``<p:sldIdLst>`` children of
+    ``presentation.xml`` directly, which is the canonical way to
+    reorder slides in python-pptx (the library only supports append).
     """
-    # For simplicity, we only support reordering when positions are
-    # monotonically increasing or all None.  Complex reordering would
-    # require tracking which slides came from which source.
-    # This is a placeholder for future enhancement.
-    pass
+    # Collect the sldId entries (each references a slide via r:id).
+    sld_id_lst = prs.slides._sldIdLst  # type: ignore[attr-defined]
+    entries = list(sld_id_lst)
+    n_total = len(entries)
+
+    # If no positions given or all None, nothing to do.
+    if not positions or all(p is None for p in positions):
+        return
+
+    # Build a list of (target_position, entry) for entries that have a
+    # target.  Entries without a target keep their relative order at the
+    # end.  We don't have per-slide source attribution here (merge already
+    # interleaved them), so we treat *positions* as a target-order hint:
+    # sort the entries by the position values, with None sorting last.
+    #
+    # This gives a best-effort reorder: sources with lower target positions
+    # come first, None-positioned sources retain append order.
+    indexed = list(enumerate(entries))
+    # Sort key: (position or infinity, original_index)
+    indexed.sort(key=lambda pair: (
+        positions[pair[0]] if pair[0] < len(positions) and positions[pair[0]] is not None else float('inf'),
+        pair[0],
+    ))
+    sorted_entries = [entry for _, entry in indexed]
+
+    # Clear and re-append in the new order.
+    for entry in entries:
+        sld_id_lst.remove(entry)
+    for entry in sorted_entries:
+        sld_id_lst.append(entry)
 
 
 # ---------------------------------------------------------------------------

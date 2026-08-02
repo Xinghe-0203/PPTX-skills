@@ -1,6 +1,6 @@
 ---
 name: pptx
-version: "3.0.0"
+version: "6.0.0"
 description: |
   创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 24 种内容版式（含 5 种分析框架）、62 种版式配方、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取、18 种转场动画、51 种入场/退出/强调动画、多文件合并与幻灯片提取、文字/图片水印、节管理、母版/版式查询与克隆、图片压缩与优化、演讲者备注与审阅批注、结构化差异比较、多格式导出（PDF/图片/HTML/文本）、SmartArt 检测与编辑、VBA 宏注入与提取、20 种内置表格样式与单元格操作、HTML 导入。
 ---
@@ -70,6 +70,31 @@ description: |
 | VBA 宏检测/注入/提取/形状绑定 | 已落地 | `pptx_skill.vba.has_vba_project()` / `inject_vba_project()` / `extract_vba_project()` / `attach_macro_to_shape()` |
 | 20 种内置表格样式 + 单元格合并/边框/填充/行列增删 | 已落地 | `pptx_skill.table_styles.apply_table_style()` / `merge_cells()` / `set_cell_border()` / `add_table_row()` |
 | HTML 幻灯片导入（Marp/Slidev/reveal.js） | 已落地 | `pptx_skill.html_import.import_from_html()` / `html_to_content_spec()` / `detect_html_slides()` |
+| 3D/斜面/发光/反射/柔边/内阴影/透视阴影 + 16 特效预设 | 已落地 | `pptx_skill.effects.apply_shadow()` / `apply_glow()` / `apply_reflection()` / `apply_effect_preset()` |
+| 线条/肘形/曲线连接符/自由路径/箭头/虚线 | 已落地 | `pptx_skill.connectors.add_line()` / `add_elbow_connector()` / `add_freeform()` / `set_arrow_style()` |
+| 写保护/密码加密/标记最终版 | 已落地 | `pptx_skill.protection.write_protect()` / `encrypt_presentation()` / `mark_as_final()` |
+| WCAG 2.1 无障碍审计/替代文本/对比度/自动修复 | 已落地 | `pptx_skill.accessibility.audit_accessibility()` / `set_alt_text()` / `check_contrast()` / `fix_accessibility()` |
+| 核心文档属性/自定义属性/嵌入字体 | 已落地 | `pptx_skill.metadata.set_metadata()` / `set_custom_property()` / `embed_font()` |
+| OMML 公式构建器 + LaTeX→OMML（分数/根号/n 元/矩阵） | 已落地 | `pptx_skill.equations.add_equation()` / `add_display_equation()` / `list_equations()` |
+| 视频/音频嵌入与播放设置（循环/全屏/裁剪） | 已落地 | `pptx_skill.multimedia.add_video()` / `add_audio()` |
+| 形状分组/取消分组/组内 z 序 | 已落地 | `pptx_skill.groups.group_shapes()` / `ungroup_shapes()` / `list_groups()` |
+| Slide Zoom/Section Zoom/Summary Zoom | 已落地 | `pptx_skill.zoom.add_slide_zoom()` / `add_section_zoom()` / `add_summary_zoom()` |
+| Morph 变形转场（p15，按对象/词/字） | 已落地 | `pptx_skill.morph.set_morph_transition()` / `set_morph_options()` |
+| 12 种高级转场（轮/波纹/蜂窝/漩涡等，p14） | 已落地 | `pptx_skill.transitions_ext.set_advanced_transition()` / `set_wheel_transition()` / `set_flip_transition()` |
+| 批量/并行处理（转换/水印/换色/检查/统计） | 已落地 | `pptx_skill.batch.batch_convert()` / `batch_watermark()` / `batch_recolor()` / `batch_inspect()` |
+| SVG→DrawingML 转换（path/rect/circle/line/polygon） | 已落地 | `pptx_skill.svg_import.import_svg()` / `import_svg_as_image()` / `svg_to_drawingml()` |
+| OCR 集成（Tesseract/EasyOCR/PaddleOCR）+ 自动替代文本 | 已落地 | `pptx_skill.ocr.ocr_slide()` / `ocr_presentation()` / `auto_caption_slide()` |
+| 图表数据/样式/类型编辑 + 系列增删/轴控制/数据标签 | 已落地 | `pptx_skill.chart_edit.edit_chart_data()` / `add_chart_series()` / `set_chart_type()` / `set_data_labels()` |
+| 色彩科学（RGB/HSL/HSV/CMYK）+ 调色板提取 + 和谐生成器 | 已落地 | `pptx_skill.color.extract_palette()` / `complementary_colors()` / `analogous_colors()` / `recolor_presentation()` |
+| 形状对齐/分布/吸附网格/布局模板/z 序/居中 | 已落地 | `pptx_skill.layout_sync.align_shapes()` / `distribute_shapes()` / `snap_to_grid()` / `apply_layout_template()` |
+| Markdown 导出（文本/表格/备注/图表数据/元数据） | 已落地 | `pptx_skill.markdown_export.export_to_markdown()` / `slide_to_markdown()` |
+| MP4/GIF 视频导出（ffmpeg，交叉淡入/演讲计时） | 已落地 | `pptx_skill.video.export_to_video()` / `export_to_gif()` |
+| DrawingML→SVG 导出（幻灯片→SVG 矢量输出） | 已落地 | `pptx_skill.svg_export.export_to_svg()` / `export_slide_to_svg()` |
+| **统一 Deck 高层 API（v6.0，链式调用）** | 已落地 | `from pptx_skill import Deck` → `Deck.open(path).add_watermark("DRAFT").add_notes(1,"...").add_transition(1,"fade").save()` |
+| **统一 CLI（v6.0）** | 已落地 | `pptx-skill info\|inspect\|generate\|from-markdown\|render\|edit\|watermark\|export\|pages\|merge\|validate\|template\|capability` |
+| **Markdown 导入（v6.0）** | 已落地 | `pptx_skill.markdown_import.markdown_to_sections()` / `import_markdown()` |
+| **全局查找替换（v6.0）** | 已落地 | `pptx_skill.find_replace_all(path, find, replace)` |
+| **路径式转场/动画重载（v6.0）** | 已落地 | `pptx_skill.add_transition(path, slide_index, ...)` / `add_entrance_animation(path, slide_index, ...)` |
 
 ## 前置依赖
 

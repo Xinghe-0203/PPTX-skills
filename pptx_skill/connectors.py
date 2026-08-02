@@ -244,6 +244,8 @@ def add_line(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     start_x, start_y : int
         Start point in EMU.
     end_x, end_y : int
@@ -265,8 +267,11 @@ def add_line(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
 
         _color = line_color or "000000"
@@ -328,6 +333,8 @@ def add_connector(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     start_shape, end_shape : str
         Shape names to connect.
     start_side, end_side : str
@@ -343,8 +350,11 @@ def add_connector(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape1 = _find_shape(slide, start_shape)
         shape2 = _find_shape(slide, end_shape)
         if shape1 is None or shape2 is None:
@@ -399,14 +409,23 @@ def add_elbow_connector(prs_or_path, slide_index: int, *,
                         start_arrow: str | None = None,
                         end_arrow: str | None = None,
                         name: str | None = None) -> str:
-    """Add an elbow (right-angle) connector between two shapes."""
+    """Add an elbow (right-angle) connector between two shapes.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape1 = _find_shape(slide, start_shape)
         shape2 = _find_shape(slide, end_shape)
         if shape1 is None or shape2 is None:
@@ -464,14 +483,23 @@ def add_curved_connector(prs_or_path, slide_index: int, *,
                          start_arrow: str | None = None,
                          end_arrow: str | None = None,
                          name: str | None = None) -> str:
-    """Add a curved connector between two shapes."""
+    """Add a curved connector between two shapes.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape1 = _find_shape(slide, start_shape)
         shape2 = _find_shape(slide, end_shape)
         if shape1 is None or shape2 is None:
@@ -537,6 +565,8 @@ def add_curve(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     points : list of (x, y) tuples
         Points in EMU. At least 2 points required.
     """
@@ -548,8 +578,11 @@ def add_curve(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
         _color = line_color or "000000"
         _width = line_width or 12700
@@ -623,6 +656,8 @@ def add_freeform(prs_or_path, slide_index: int, *,
 
     Parameters
     ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     points : list of (x, y) tuples
         Points in EMU. At least 3 points required. Shape is auto-closed.
     fill_color : str, optional
@@ -636,8 +671,11 @@ def add_freeform(prs_or_path, slide_index: int, *,
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         sp_tree = slide.shapes._spTree
         _line_color = line_color or "000000"
         _width = line_width or 12700
@@ -713,12 +751,21 @@ def set_line_style(prs_or_path, slide_index: int, shape_name: str, *,
                    line_width: int | None = None,
                    line_style: str | None = None,
                    dash_style: str | None = None) -> bool:
-    """Set line style properties on an existing shape."""
+    """Set line style properties on an existing shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -737,14 +784,23 @@ def set_arrow_style(prs_or_path, slide_index: int, shape_name: str, *,
                     end_arrow: str | None = None,
                     start_arrow_size: str | None = None,
                     end_arrow_size: str | None = None) -> bool:
-    """Set arrowhead style on an existing line/connector shape."""
+    """Set arrowhead style on an existing line/connector shape.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -784,14 +840,22 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
     This recalculates the connector's bounding box based on the current
     positions of the start and end shapes.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
     """
     from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -859,12 +923,21 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def delete_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
-    """Delete a connector or line shape by name."""
+    """Delete a connector or line shape by name.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
@@ -876,12 +949,21 @@ def delete_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
 
 def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineInfo]:
-    """List all connectors and lines on a slide."""
+    """List all connectors and lines on a slide.
+
+    Parameters
+    ----------
+    slide_index : int
+        1-based slide index (1 = first slide).
+    """
     from lxml import etree
 
     prs = _open_prs(prs_or_path)
+    if slide_index < 1 or slide_index > len(prs.slides):
+        raise IndexError(f"slide_index {slide_index} out of range "
+                         f"(1..{len(prs.slides)})")
     try:
-        slide = prs.slides[slide_index]
+        slide = prs.slides[slide_index - 1]
         results: list[ConnectorInfo | LineInfo] = []
 
         for shape in slide.shapes:
