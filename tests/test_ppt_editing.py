@@ -51,6 +51,48 @@ class PptEditingTests(unittest.TestCase):
             self.assertEqual(embedded["sections"][0]["title"], "第一页")
             Presentation(str(deck))
 
+    def test_facade_generated_deck_is_round_trippable(self):
+        # Decks produced by the V3 facade (pptx_skill.auto_generate_ppt) carry a
+        # Manifest V3, not a v2 sections payload. load_project must still rebuild
+        # a v2 project so edit_section/regenerate keep working.
+        from pptx_skill import auto_generate_ppt as facade_generate
+        from ppt_project import edit_section, regenerate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            deck = directory / "facade.pptx"
+            facade_generate(
+                title="封面标题",
+                subtitle="副标题",
+                sections=[
+                    {"title": "第一页", "bullets": ["要点 A", "要点 B"]},
+                    {"title": "指标页", "metrics": [{"label": "x", "value": "10", "change": "+5%"}]},
+                ],
+                output_path=str(deck),
+                auto_search_images=False,
+            )
+            project = load_project(deck)
+            self.assertIsNotNone(project)
+            self.assertEqual(len(project["sections"]), 2)
+            self.assertEqual(project["sections"][0]["title"], "第一页")
+            self.assertEqual(project["sections"][0]["layout"], "bullets")
+            self.assertEqual(project["sections"][1]["layout"], "dashboard")
+
+            # edit_section must succeed on a V3-only deck.
+            out = edit_section(deck, 1, {"title": "改后标题"})
+            prs = Presentation(out)
+            text = "\n".join(
+                shape.text for slide in prs.slides for shape in slide.shapes
+                if getattr(shape, "has_text_frame", False)
+            )
+            self.assertIn("改后标题", text)
+
+            # regenerate to a new path must also succeed.
+            other = directory / "regen.pptx"
+            project["sections"][0]["title"] = "再次改"
+            regenerate(project, other)
+            self.assertTrue(other.exists())
+
     def test_text_color_and_page_operations_create_backups(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)

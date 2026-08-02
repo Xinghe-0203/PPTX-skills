@@ -154,6 +154,89 @@ def _read_embedded_manifest(pptx_path: Path) -> dict | None:
         return None
 
 
+def _v3_to_v2_project(manifest, pptx_path: Path) -> dict:
+    """Rebuild a legacy v2 project dict from a Manifest V3 in-memory object.
+
+    The V3 ``current.content`` stores ``SlideSpec``/``ElementSpec`` shapes; the
+    v2 toolchain (``regenerate``/``edit_section``) consumes flat ``sections``
+    dicts. This is the inverse of ``pptx_skill.content_adapter`` so decks
+    produced by the V3 facade (``pptx_skill.auto_generate_ppt``) remain
+    editable through the round-trip API.
+    """
+    content = manifest.current.get("content", {}) if manifest else {}
+    slides = content.get("slides", []) or []
+    sections: list[dict] = []
+    layouts: list[str] = []
+    for slide in slides:
+        role = slide.get("role") or "bullets"
+        # slide.role mirrors the chosen layout (see content_adapter._infer_layout).
+        layout = (slide.get("preferred_layouts") or [role])[0]
+        section: dict[str, object] = {"layout": layout}
+        for elem in slide.get("elements", []) or []:
+            erole = elem.get("role")
+            data = elem.get("content", {}) or {}
+            if erole == "title":
+                section["title"] = data.get("text", "")
+            elif erole == "subtitle":
+                section["subtitle"] = data.get("text", "")
+            elif erole == "kicker":
+                section["kicker"] = data.get("text", "")
+            elif erole == "body":
+                section["bullets"] = list(data.get("items", []))
+            elif erole == "quote":
+                section["quote"] = data.get("text", "")
+                section["source"] = data.get("source", "")
+            elif erole in {"hero", "supporting_image"}:
+                section.setdefault("images", []).append(data.get("path", ""))
+            elif erole == "metric_group":
+                section["metrics"] = list(data.get("items", []))
+            elif erole == "process":
+                section["steps"] = list(data.get("items", []))
+            elif erole == "timeline":
+                section["events"] = list(data.get("items", []))
+            elif erole == "table":
+                section["table_headers"] = list(data.get("headers", []))
+                section["table_rows"] = [list(r) for r in data.get("rows", [])]
+            elif erole == "comparison":
+                section["left"] = dict(data.get("left", {}))
+                section["right"] = dict(data.get("right", {}))
+        sections.append(section)
+        layouts.append(layout)
+    legacy = manifest.legacy or {}
+    project = {
+        "skill_version": 2,
+        "title": content.get("title", ""),
+        "subtitle": content.get("subtitle", ""),
+        "theme_key": legacy.get("theme_key"),
+        "template_key": legacy.get("template_key"),
+        "template_profile": legacy.get("template_profile"),
+        "image_dir": legacy.get("original_image_dir") or str(pptx_path.parent / "ppt_images"),
+        "lang": content.get("locale", "zh-CN").split("-")[0] if content.get("locale") else "zh",
+        "auto_search_images": legacy.get("original_auto_search_images", False),
+        "sections": sections,
+        "layouts": layouts,
+        "generated_at": None,
+        "_migrated_from_v3": True,
+    }
+    return project
+
+
+def _load_v3_manifest(pptx_path: Path):
+    """Try to load a Manifest V3 from the package or sidecar.
+
+    Returns a ``ManifestV3`` instance or ``None`` when neither V3 embedded XML
+    nor a V3 sidecar is present.
+    """
+    try:
+        from pptx_skill.manifest import load_manifest
+    except Exception:
+        return None
+    try:
+        return load_manifest(pptx_path)
+    except Exception:
+        return None
+
+
 def _relocate_images(project: dict, pptx_path: Path) -> None:
     image_dir = Path(project.get("image_dir") or pptx_path.parent)
     candidates = [image_dir, pptx_path.parent, pptx_path.parent / image_dir.name]
@@ -178,15 +261,29 @@ def load_project(pptx_path: str | Path) -> dict | None:
     project = _read_embedded_manifest(path)
     if project is None:
         sidecar = _sidecar_path(path)
-        if not sidecar.exists():
-            return None
-        try:
-            with sidecar.open("r", encoding="utf-8") as handle:
-                project = json.load(handle)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise ValueError(f"Invalid manifest sidecar: {sidecar}") from exc
-        if not isinstance(project, dict):
-            raise TypeError(f"Manifest sidecar must contain an object: {sidecar}")
+        if sidecar.exists():
+            try:
+                with sidecar.open("r", encoding="utf-8") as handle:
+                    sidecar_payload = json.load(handle)
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                raise ValueError(f"Invalid manifest sidecar: {sidecar}") from exc
+            if not isinstance(sidecar_payload, dict):
+                raise TypeError(f"Manifest sidecar must contain an object: {sidecar}")
+            # A V3 sidecar stores ``manifest_schema_version: 3`` and no v2
+            # ``sections``; defer to the V3 loader so it can be migrated.
+            if sidecar_payload.get("manifest_schema_version") == 3:
+                project = None
+            else:
+                project = sidecar_payload
+    if project is None:
+        # Fall back to Manifest V3 (embedded XML or sidecar) and rebuild a v2
+        # project dict so the legacy round-trip API stays usable on decks
+        # produced by ``pptx_skill.auto_generate_ppt``.
+        manifest = _load_v3_manifest(path)
+        if manifest is not None:
+            project = _v3_to_v2_project(manifest, path)
+    if project is None:
+        return None
     _relocate_images(project, path)
     project["source_pptx"] = str(path)
     return project
