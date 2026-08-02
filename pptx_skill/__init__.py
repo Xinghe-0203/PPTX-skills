@@ -406,7 +406,7 @@ from pptx_skill.diff import (  # noqa: E402
     Change,
     ChangeKind,
     PresentationDiff,
-    SlideDiff,
+    SlideDiff as diff_SlideDiff,
     diff_presentations,
     diff_presentations_visual,
     diff_slides,
@@ -457,11 +457,8 @@ from pptx_skill.table_styles import (  # noqa: E402
     set_table_direction,
     unmerge_cells,
 )
-from pptx_skill.html_import import (  # noqa: E402
-    detect_html_slides,
-    html_to_content_spec,
-    import_from_html,
-)
+# NOTE: html_import symbols are imported once above (L424); the previous
+# duplicate import block here was removed to avoid running the module twice.
 
 __version__ = "5.1.0"
 
@@ -538,8 +535,8 @@ from pptx_skill.protection import (  # noqa: E402
 from pptx_skill.accessibility import (  # noqa: E402
     AccessibilityIssue,
     AccessibilityReport,
-    IssueKind,
-    IssueSeverity,
+    IssueKind as accessibility_IssueKind,
+    IssueSeverity as accessibility_IssueSeverity,
     add_title_to_slide,
     audit_accessibility,
     check_contrast as check_accessibility_contrast,
@@ -743,7 +740,7 @@ from pptx_skill.markdown_export import (  # noqa: E402
 )
 from pptx_skill.video import (  # noqa: E402
     VideoExportOptions,
-    VideoInfo,
+    VideoInfo as video_VideoInfo,
     check_ffmpeg,
     export_to_gif,
     export_to_video,
@@ -1091,7 +1088,7 @@ __all__ = [
     "Change",
     "ChangeKind",
     "PresentationDiff",
-    "SlideDiff",
+    "diff_SlideDiff",
     "diff_presentations",
     "diff_presentations_visual",
     "diff_slides",
@@ -1154,6 +1151,7 @@ __all__ = [
     "effects_pt_to_emu",
     "effects_inch_to_emu",
     "effects_cm_to_emu",
+    "list_effects",
     "remove_3d_format",
     "remove_effect",
     "remove_effects",
@@ -1205,8 +1203,8 @@ __all__ = [
     # --- v4.0: Accessibility ---
     "AccessibilityIssue",
     "AccessibilityReport",
-    "IssueKind",
-    "IssueSeverity",
+    "accessibility_IssueKind",
+    "accessibility_IssueSeverity",
     "add_title_to_slide",
     "audit_accessibility",
     "check_accessibility_contrast",
@@ -1394,7 +1392,7 @@ __all__ = [
     "slide_to_markdown",
     # --- v5.1: Video Export ---
     "VideoExportOptions",
-    "VideoInfo",
+    "video_VideoInfo",
     "check_ffmpeg",
     "export_to_gif",
     "export_to_video",
