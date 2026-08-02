@@ -13,14 +13,14 @@ Requires Python ≥ 3.12. The package adds `scripts/` to `sys.path` at import ti
 ## Testing
 
 ```powershell
-python -m pytest tests/ -x -q                 # full suite (184 tests; slow — includes rendering)
+python -m pytest tests/ -x -q                 # full suite (217 tests; slow — includes rendering)
 python -m pytest tests/test_content_model.py  # single file
 python -m pytest tests/ -k "test_layout" -x   # by keyword
 ```
 
-- Tests use `unittest.TestCase`; `pytest` is the runner.
+- Tests use `unittest.TestCase`; `pytest` is the runner (`python -m unittest discover -s tests` works without pytest installed).
 - Rendering tests (pipeline, golden renders) are slow and need LibreOffice. Run fast unit tests first when iterating.
-- Baseline: 184/184 passing.
+- Baseline: 217/217 passing (one preview test skips when an engine is unavailable).
 
 ## Architecture: dual-layer
 
