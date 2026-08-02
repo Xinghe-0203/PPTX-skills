@@ -24,8 +24,15 @@ def _ensure_dir(path: str) -> None:
 
 
 def _legacy_validate(pptx_path: str) -> dict[str, Any]:
-    """Port the existing structural validation to the new outcome model."""
+    """Port the existing structural validation to the new outcome model.
+
+    Mirrors ``pptx_helper.auto_validate_ppt`` so callers switching to the
+    facade get the same five checks (adjacent diversity, layout diversity,
+    cover content, font-size hierarchy, color restraint) instead of the
+    stripped-down three-check variant that previously lived here.
+    """
     from pptx import Presentation
+    from pptx.util import Pt
 
     if not os.path.exists(pptx_path):
         return {"passed": False, "checks": [], "warnings": [f"文件不存在: {pptx_path}"]}
@@ -37,6 +44,10 @@ def _legacy_validate(pptx_path: str) -> dict[str, Any]:
     warnings: list[str] = []
     passed = True
 
+    # 1. 相邻版式不重复（连续 3 页 shape 数量相同视为可能重复）。
+    # ``i`` is 0-based over ``slides``; the three repeated pages are the
+    # 1-based slides ``i-1, i, i+1``, so the range label ``第{i-1}-{i+1}页``
+    # is already 1-based and correct.
     if n_slides >= 3:
         counts = [len(slide.shapes) for slide in slides]
         for i in range(2, n_slides):
@@ -46,14 +57,58 @@ def _legacy_validate(pptx_path: str) -> dict[str, Any]:
                 )
     checks.append(("相邻版式多样性", not any("版式重复" in w for w in warnings)))
 
-    checks.append(("版式多样性", True))
+    # 2. 版式多样性：shape 数量不重复率 > 50%。
+    unique_counts = len({len(s.shapes) for s in slides})
+    diversity_ratio = unique_counts / max(n_slides, 1)
+    checks.append(("版式多样性", diversity_ratio >= 0.5))
+    if diversity_ratio < 0.5:
+        warnings.append(f"版式多样性不足: {unique_counts}/{n_slides}种不同的shape数量")
+        passed = False
 
+    # 3. 封面非空。
     if n_slides >= 1:
         cover_shapes = len(slides[0].shapes)
         checks.append(("封面有内容", cover_shapes >= 2))
         if cover_shapes < 2:
             warnings.append("封面内容过少")
             passed = False
+
+    # 4. 字号层级跳跃（最大/最小 ≥ 2.5）。
+    max_font = 0
+    min_font = 999
+    for slide in slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    if run.font.size:
+                        pt_val = run.font.size.pt
+                        max_font = max(max_font, pt_val)
+                        min_font = min(min_font, pt_val)
+    if max_font > 0 and min_font < 999:
+        ratio = max_font / max(min_font, 1)
+        checks.append(("字号层级跳跃", ratio >= 2.5))
+        if ratio < 2.5:
+            warnings.append(f"字号层级不够跳跃: 最大{max_font}pt/最小{min_font}pt={ratio:.1f}x (需≥2.5x)")
+            passed = False
+    else:
+        warnings.append("无法检测字号层级（可能未设置font.size）")
+
+    # 5. 配色克制（≤ 10 种填充色）。
+    colors: set[str] = set()
+    for slide in slides:
+        for shape in slide.shapes:
+            try:
+                if hasattr(shape, "fill") and shape.fill.type is not None:
+                    if shape.fill.fore_color and shape.fill.fore_color.rgb:
+                        colors.add(str(shape.fill.fore_color.rgb))
+            except Exception:
+                pass
+    checks.append(("配色克制", len(colors) <= 10))
+    if len(colors) > 10:
+        warnings.append(f"使用颜色过多: {len(colors)}种 (建议≤10)")
+        passed = False
 
     return {"passed": passed, "checks": checks, "warnings": warnings, "total_slides": n_slides}
 

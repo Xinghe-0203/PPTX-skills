@@ -72,6 +72,34 @@ class ApiFacadeTests(unittest.TestCase):
             report = auto_validate_ppt(str(path), return_report=True)
             self.assertEqual(report.status, CheckOutcome.PASS)
 
+    def test_facade_validate_matches_legacy_checks(self):
+        # The facade validate must run the same five checks as the legacy
+        # implementation (no silent loss of font-hierarchy / color-restraint).
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        from pptx_helper import auto_validate_ppt as legacy_validate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            auto_generate_ppt(
+                title="一致性",
+                sections=[
+                    {"title": "页一", "bullets": ["1", "2", "3"]},
+                    {"title": "页二", "steps": ["发现", "设计", "交付"]},
+                ],
+                output_path=str(path),
+                theme_key="editorial",
+                auto_search_images=False,
+            )
+            legacy = legacy_validate(str(path))
+            facade = auto_validate_ppt(str(path))
+            self.assertEqual(
+                [c[0] for c in facade["checks"]],
+                [c[0] for c in legacy["checks"]],
+            )
+            self.assertEqual(facade["passed"], legacy["passed"])
+            self.assertEqual(facade["total_slides"], legacy["total_slides"])
+
 
 if __name__ == "__main__":
     unittest.main()
