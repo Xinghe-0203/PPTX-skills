@@ -857,7 +857,7 @@ def _auto_shape_to_svg(
         )
 
     # Determine fill and stroke
-    fill_colour = _shape_fill_to_svg(shape)
+    fill_colour = _shape_fill_to_svg(shape) or ""
     stroke_colour, stroke_w = _shape_stroke_to_svg(shape)
 
     fill_attr = f' fill="{fill_colour}"' if fill_colour else ' fill="none"'
@@ -1431,8 +1431,8 @@ def export_to_svg(
 
     # Compute slide dimensions in inches
     try:
-        slide_w_emu = prs.slide_width
-        slide_h_emu = prs.slide_height
+        slide_w_emu = prs.slide_width or 0
+        slide_h_emu = prs.slide_height or 0
         slide_w_in = slide_w_emu / _EMU_PER_INCH
         slide_h_in = slide_h_emu / _EMU_PER_INCH
     except Exception:

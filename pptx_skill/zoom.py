@@ -942,7 +942,7 @@ def add_summary_zoom(
         item_h = min(item_w * 0.667, (height - 0.2 * max(0, rows - 1)) / max(1, rows))
         item_w = min(item_w, item_h / 0.5)  # cap width if height is constrained
 
-        positions = _compute_grid_positions(n, left, top, width, height, item_w, item_h)
+        positions: list[Any] = _compute_grid_positions(n, left, top, width, height, item_w, item_h)
 
         for (sec_name, target_idx), (pos_left, pos_top) in zip(targets, positions, strict=True):
             shape_id = _next_shape_id(slide)
@@ -1096,7 +1096,7 @@ def list_zooms(prs_or_path: Any, slide_index: int | None = None) -> list[ZoomInf
             )
         slide_range = [slide_index - 1]
     else:
-        slide_range = range(n_slides)
+        slide_range = list(range(n_slides))
 
     results: list[ZoomInfo] = []
 

@@ -19,7 +19,7 @@ Quick start
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 __all__ = [
     "LayoutTemplate",
@@ -57,7 +57,7 @@ _DEFAULT_GRID = 914400 // 8  # 1/8 inch = 114300 EMU
 class LayoutTemplate:
     """A layout template capturing shape positions from a reference slide."""
     name: str = ""
-    shapes: list[dict] = None  # Each dict: {name, left, top, width, height, font_size, ...}
+    shapes: list[dict] = field(default_factory=list)  # Each dict: {name, left, top, width, height, font_size, ...}
 
     def __post_init__(self):
         if self.shapes is None:

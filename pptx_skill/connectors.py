@@ -972,7 +972,7 @@ def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineI
 
             # Check if it's a connector
             if tag == f"{{{_NS_P}}}cxnSp":
-                info = ConnectorInfo(name=shape.name, connector_type="straight")
+                info: Any = ConnectorInfo(name=shape.name, connector_type="straight")
                 nvCxnSpPr = elem.find(f".//{{{_NS_P}}}nvCxnSpPr")
                 if nvCxnSpPr is not None:
                     cNvCxnSpPr = nvCxnSpPr.find(f"{{{_NS_P}}}cNvCxnSpPr")

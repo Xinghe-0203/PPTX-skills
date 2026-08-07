@@ -252,8 +252,9 @@ def markdown_to_sections(
         # --- Bullet / numbered list ---
         bullet_match = re.match(r"^[-*+]\s+(.*)$", stripped)
         numbered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
-        if bullet_match or numbered_match:
-            text = (bullet_match or numbered_match).group(1).strip()
+        m = bullet_match or numbered_match
+        if m:
+            text = m.group(1).strip()
             if current is None:
                 current = {"title": "", "layout": ""}
             current.setdefault("bullets", []).append(text)
@@ -381,7 +382,7 @@ def import_markdown(
     # Lazy import to avoid circular dependency at module load.
     from pptx_skill import auto_generate_ppt
 
-    return auto_generate_ppt(
+    result = auto_generate_ppt(
         title=deck_title,
         subtitle=deck_subtitle,
         sections=sections[1:],  # cover is handled by auto_generate_ppt
@@ -390,3 +391,4 @@ def import_markdown(
         lang=effective_lang,
         auto_search_images=auto_search_images,
     )
+    return result if isinstance(result, str) else result.pptx_path

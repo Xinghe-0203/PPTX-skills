@@ -738,6 +738,13 @@ def _parse_svg_opacity(opacity_str: str | None) -> float:
         return 1.0
 
 
+def _to_float(v: str | float | None) -> float | None:
+    """Coerce an SVG attribute value (possibly a numeric string) to float."""
+    if v is None:
+        return None
+    return float(v)
+
+
 # ---------------------------------------------------------------------------
 # SVG transform parsing
 # ---------------------------------------------------------------------------
@@ -1463,7 +1470,7 @@ def _walk_svg_tree(
 
     current_fill = fill_attr if fill_attr is not None else parent_fill
     current_stroke = stroke_attr if stroke_attr is not None else parent_stroke
-    current_sw = sw_attr if sw_attr is not None else parent_stroke_width
+    current_sw = _to_float(sw_attr) if sw_attr is not None else parent_stroke_width
     current_opacity = parent_opacity * _parse_svg_opacity(opacity_attr)
 
     # Skip unsupported elements at this level
@@ -1552,7 +1559,7 @@ def svg_to_drawingml(
         )
 
     counter = [0]
-    identity = [1, 0, 0, 1, 0, 0]
+    identity: list[float] = [1, 0, 0, 1, 0, 0]
     return _walk_svg_tree(root, identity, counter)
 
 
@@ -2076,7 +2083,7 @@ def import_svg(
 
     # Extract path data
     counter = [0]
-    identity = [1, 0, 0, 1, 0, 0]
+    identity: list[float] = [1, 0, 0, 1, 0, 0]
     path_data_list = _walk_svg_tree(root, identity, counter)
 
     if not path_data_list:
@@ -2233,7 +2240,7 @@ def import_svg_as_image(
 
     # Try cairosvg first (best quality)
     try:
-        import cairosvg  # type: ignore[import-untyped]
+        import cairosvg
         png_data = cairosvg.svg2png(
             url=svg_path,
             output_width=width * dpi,
@@ -2258,7 +2265,7 @@ def import_svg_as_image(
 
             # Use Wand (ImageMagick) if available
             try:
-                from wand.image import Image as WandImage  # type: ignore[import-untyped]
+                from wand.image import Image as WandImage
                 with WandImage(filename=svg_path) as img:
                     img.resolution = dpi
                     img.resize(int(width * dpi), int(height * dpi))

@@ -247,6 +247,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     """Run structural validation checks on a PPTX file."""
     from pptx_skill import auto_validate_ppt
     result = auto_validate_ppt(args.path)
+    assert isinstance(result, dict), "Expected dict from auto_validate_ppt"
     passed = result.get("passed", False)
     print(f"Validation: {'PASSED' if passed else 'FAILED'}")
     for check_name, check_passed in result.get("checks", []):

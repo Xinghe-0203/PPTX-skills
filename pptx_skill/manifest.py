@@ -157,7 +157,8 @@ def _deserialize_dataclass(cls: type, data: dict[str, Any]) -> Any:
     via a ``_extra`` attribute so that round-trip serialization does not
     lose data when the schema evolves.
     """
-    field_types = {f.name: f.type for f in cls.__dataclass_fields__.values()}
+    fields_map: Any = getattr(cls, "__dataclass_fields__", None) or {}
+    field_types = {f.name: f.type for f in fields_map.values()}
     kwargs: dict[str, Any] = {}
     extra: dict[str, Any] = {}
     for name, value in data.items():
@@ -169,9 +170,9 @@ def _deserialize_dataclass(cls: type, data: dict[str, Any]) -> Any:
     try:
         obj = cls(**kwargs)
     except TypeError:
-        defaults = {f.name: f.default for f in cls.__dataclass_fields__.values() if f.default is not MISSING}
-        defaults.update({f.name: f.default_factory() for f in cls.__dataclass_fields__.values() if f.default_factory is not MISSING})
-        for k in cls.__dataclass_fields__:
+        defaults = {f.name: f.default for f in fields_map.values() if f.default is not MISSING}
+        defaults.update({f.name: f.default_factory() for f in fields_map.values() if f.default_factory is not MISSING})
+        for k in fields_map:
             if k not in kwargs and k in defaults:
                 kwargs[k] = defaults[k]
         obj = cls(**kwargs)

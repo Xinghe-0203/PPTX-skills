@@ -14,7 +14,7 @@ All functions accept both ``Presentation`` objects and file paths.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 __all__ = [
     "ChartInfo",
@@ -78,7 +78,7 @@ _CHART_TYPE_MAP = {
 class SeriesInfo:
     """Info about a chart series."""
     name: str = ""
-    values: list[float] = None
+    values: list[float] = field(default_factory=list)
     index: int = 0
 
     def __post_init__(self):
@@ -93,8 +93,8 @@ class ChartInfo:
     chart_type: str = ""
     series_count: int = 0
     category_count: int = 0
-    categories: list[str] = None
-    series: list[SeriesInfo] = None
+    categories: list[str] = field(default_factory=list)
+    series: list[SeriesInfo] = field(default_factory=list)
     has_legend: bool = True
     has_data_labels: bool = False
     left: float = 0
@@ -1271,7 +1271,7 @@ def set_chart_type(
             return False
 
         # Extract series data from old chart
-        series_data = []
+        series_data: list[dict] = []
         for ser in old_chart.findall(f"{{{_NS_C}}}ser"):
             ser_info = {}
             # Series name

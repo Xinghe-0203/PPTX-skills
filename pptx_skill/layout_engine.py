@@ -196,7 +196,7 @@ def solve_recipe(
 
     solver = kiwi.Solver()
     variables: dict[str, Any] = {}
-    diagnostics: list[dict] = []
+    diagnostics = []
 
     def get_var(name: str) -> Any:
         if name not in variables:

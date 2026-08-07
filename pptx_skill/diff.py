@@ -226,8 +226,8 @@ def _match_shapes(
 
     # Phase 1: match by name
     name_map_b: dict[str, int] = {}
-    for i, ib in enumerate(infos_b):
-        nm = ib.get("name", "")
+    for i, info_b in enumerate(infos_b):
+        nm = info_b.get("name", "")
         if nm:
             name_map_b.setdefault(nm, i)
 
@@ -261,7 +261,7 @@ def _match_shapes(
 
     # Phase 3: match by type + approximate position (looser tolerance)
     for ia in list(unmatched_a):
-        best_ib: int | None = None
+        best_ib = None
         best_dist = float("inf")
         for ib in unmatched_b:
             if infos_a[ia]["shape_type"] == infos_b[ib]["shape_type"]:
@@ -612,7 +612,7 @@ def diff_presentations(
             password-protected).
     """
     # Lazy import to keep module importable without python-pptx.
-    from pptx import Presentation  # type: ignore[import-untyped]
+    from pptx import Presentation
 
     path_a = Path(path_a)
     path_b = Path(path_b)
@@ -894,8 +894,8 @@ def diff_presentations_visual(
 
         # Compare images
         try:
-            import numpy as np  # type: ignore[import-not-found]
-            from skimage.metrics import structural_similarity as ssim  # type: ignore[import-not-found]
+            import numpy as np
+            from skimage.metrics import structural_similarity as ssim
 
             use_skimage = True
             result["rasterizer"] = "skimage"
@@ -904,7 +904,7 @@ def diff_presentations_visual(
 
         for i in range(n_compare):
             try:
-                from PIL import Image  # type: ignore[import-not-found]
+                from PIL import Image
 
                 img_a = Image.open(pngs_a[i]).convert("L")
                 img_b = Image.open(pngs_b[i]).convert("L")
@@ -914,14 +914,14 @@ def diff_presentations_visual(
                     img_b = img_b.resize(img_a.size)
 
                 if use_skimage:
-                    import numpy as np  # type: ignore[import-not-found]
+                    import numpy as np
 
                     arr_a = np.array(img_a)
                     arr_b = np.array(img_b)
                     score = float(ssim(arr_a, arr_b))
                 else:
                     # Simple RMS difference as fallback
-                    import numpy as np  # type: ignore[import-not-found]
+                    import numpy as np
 
                     arr_a = np.array(img_a, dtype=float)
                     arr_b = np.array(img_b, dtype=float)

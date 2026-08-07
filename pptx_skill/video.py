@@ -122,7 +122,7 @@ def _render_slides_to_images(prs_or_path, tmp_dir: str, width: int, height: int)
     from pptx import Presentation
 
     from pptx_skill.export import export_to_images
-    if isinstance(prs_or_path, Presentation):
+    if hasattr(prs_or_path, "slides"):
         slide_w_in = prs_or_path.slide_width / 914400
     else:
         prs = Presentation(prs_or_path)

@@ -9,7 +9,7 @@ the deck planner consumes already-derived slides and never re-splits.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal, cast
 
 from pptx_skill.content_model import (
     CanvasSpec,
@@ -375,7 +375,7 @@ def plan_deck(
     best = beam[0]
     status = "infeasible" if blockers else "feasible"
     return DeckPlanResult(
-        status=status,
+        status=cast(Literal["feasible", "infeasible"], status),
         source_slides=slides,
         derived_slides=best.derived_slides,
         plans=best.plans,

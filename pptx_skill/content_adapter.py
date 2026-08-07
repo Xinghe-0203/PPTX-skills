@@ -7,7 +7,7 @@ rewriting ``auto_generate_ppt`` callers.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pptx_skill.content_model import ContentSpec, ElementSpec, SlideSpec, StableIdGenerator
 
@@ -49,7 +49,7 @@ def _section_to_elements(
     """Create ElementSpecs from a legacy section dict."""
     elements: list[ElementSpec] = []
 
-    def add(kind: str, role: str, content: dict[str, Any], item_key: str = "") -> None:
+    def add(kind: Literal["text", "image", "shape", "table", "chart", "group", "video", "audio"], role: str, content: dict[str, Any], item_key: str = "") -> None:
         elements.append(
             ElementSpec(
                 id=gen.element_id(source_section_id, fragment_index, role, item_key or role),

@@ -178,10 +178,10 @@ def render_with_libreoffice(
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except subprocess.TimeoutExpired as exc:
-        if exc.child is not None:
+        if exc.child is not None:  # type: ignore[attr-defined]
             try:
-                exc.child.kill()
-                exc.child.wait(timeout=10)
+                exc.child.kill()  # type: ignore[attr-defined]
+                exc.child.wait(timeout=10)  # type: ignore[attr-defined]
             except Exception:
                 pass
         _cleanup_tmp(tmp_root)

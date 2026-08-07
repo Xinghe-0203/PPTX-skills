@@ -284,7 +284,7 @@ def _export_notes_docx(
 ) -> None:
     """Write notes as a Word document (requires python-docx)."""
     try:
-        from docx import Document  # type: ignore[import-untyped]
+        from docx import Document
         from docx.shared import Pt
     except ImportError as exc:
         raise ImportError(

@@ -142,7 +142,7 @@ def _remap_rids_in_element(element: Any, mapping: dict[str, str]) -> None:
 # ---------------------------------------------------------------------------
 # Internal helpers — slide removal
 # ---------------------------------------------------------------------------
-def _remove_slide_by_element(prs: Presentation, slide: Any) -> None:
+def _remove_slide_by_element(prs: Any, slide: Any) -> None:
     """Remove *slide* from *prs* by matching its part reference."""
     slide_id_list = prs.slides._sldIdLst
     for slide_id in list(slide_id_list):
@@ -266,7 +266,7 @@ def _copy_media_from_zip(
 # ---------------------------------------------------------------------------
 # Internal helpers — layout conflict resolution
 # ---------------------------------------------------------------------------
-def _existing_layout_names(prs: Presentation) -> set[str]:
+def _existing_layout_names(prs: Any) -> set[str]:
     """Return the set of layout names already in *prs*."""
     names: set[str] = set()
     for master in prs.slide_masters:
@@ -275,7 +275,7 @@ def _existing_layout_names(prs: Presentation) -> set[str]:
     return names
 
 
-def _find_layout_by_name(prs: Presentation, name: str) -> Any | None:
+def _find_layout_by_name(prs: Any, name: str) -> Any | None:
     """Find a slide layout by name in *prs*, or return None."""
     for master in prs.slide_masters:
         for layout in master.slide_layouts:
@@ -285,8 +285,8 @@ def _find_layout_by_name(prs: Presentation, name: str) -> Any | None:
 
 
 def _resolve_layout_conflicts(
-    prs_target: Presentation,
-    prs_source: Presentation,
+    prs_target: Any,
+    prs_source: Any,
     on_conflict: Literal["rename", "skip", "replace"],
 ) -> dict[int, tuple[Any, str]]:
     """Resolve layout name conflicts between target and source.
@@ -333,8 +333,8 @@ def _resolve_layout_conflicts(
 # Internal helpers — slide copy (core of the merge)
 # ---------------------------------------------------------------------------
 def _copy_slides_into_target(
-    prs_target: Presentation,
-    prs_source: Presentation,
+    prs_target: Any,
+    prs_source: Any,
     source_slides: list[Any],
     indices: list[int],
     source_layout_id_to_target: dict[int, Any],
@@ -500,7 +500,7 @@ def _copy_notes(
 # Core merge implementation
 # ---------------------------------------------------------------------------
 def _import_source_slides(
-    prs_target: Presentation,
+    prs_target: Any,
     source_path: str | Path,
     slide_indices: list[int] | None = None,
     on_conflict: Literal["rename", "skip", "replace"] = "rename",
@@ -693,7 +693,7 @@ def _import_source_slides(
 # Internal helpers — slide reordering
 # ---------------------------------------------------------------------------
 def _reorder_slides(
-    prs: Presentation,
+    prs: Any,
     positions: list[int | None],
     n_sources: int,
 ) -> None:
@@ -708,7 +708,7 @@ def _reorder_slides(
     reorder slides in python-pptx (the library only supports append).
     """
     # Collect the sldId entries (each references a slide via r:id).
-    sld_id_lst = prs.slides._sldIdLst  # type: ignore[attr-defined]
+    sld_id_lst = prs.slides._sldIdLst
     entries = list(sld_id_lst)
     len(entries)
 

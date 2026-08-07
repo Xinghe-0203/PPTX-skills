@@ -32,10 +32,7 @@ Import from Markdown:
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from pptx import Presentation
+from typing import Any, cast
 
 __all__ = [
     "Deck",
@@ -61,7 +58,7 @@ class Deck:
     def __init__(self, path: str) -> None:
         from pptx import Presentation
         self._path: str | None = str(path)
-        self._prs: Presentation = Presentation(str(path))
+        self._prs: Any = Presentation(str(path))
         self._dirty = False
 
     # ------------------------------------------------------------------
@@ -107,7 +104,7 @@ class Deck:
             lang=lang,
             auto_search_images=auto_search_images,
         )
-        return cls(path)
+        return cls(path if isinstance(path, str) else path.pptx_path)
 
     @classmethod
     def from_markdown(
@@ -153,7 +150,7 @@ class Deck:
         return len(self._prs.slides)
 
     @property
-    def presentation(self) -> Presentation:
+    def presentation(self) -> Any:
         """The underlying python-pptx ``Presentation`` object."""
         return self._prs
 
@@ -516,7 +513,7 @@ class Deck:
         # auto_validate_ppt takes a path — save first if dirty.
         if self._dirty and self._path:
             self._prs.save(self._path)
-        return auto_validate_ppt(self._path or "")
+        return cast(dict[str, Any], auto_validate_ppt(self._path or ""))
 
     # ------------------------------------------------------------------
     # Export

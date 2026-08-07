@@ -266,9 +266,9 @@ def crop_smart(
     if best_score == -1e9:
         return crop_cover(orig_w, orig_h, dst_width, dst_height)
 
-    left, top, right, bottom = best
-    focus_x = (left + right) / 2
-    focus_y = (top + bottom) / 2
+    f_left, f_top, f_right, f_bottom = best
+    focus_x = (f_left + f_right) / 2
+    focus_y = (f_top + f_bottom) / 2
     return CropResult(
         focus=(focus_x, focus_y),
         crop_rect=best,

@@ -283,7 +283,7 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
             if render_result.slide_pngs:
                 images: list[Image.Image] = []
                 for png_path in render_result.slide_pngs:
-                    img = Image.open(png_path)
+                    img: Image.Image = Image.open(png_path)
                     if img.mode == "RGBA":
                         # PDF does not support RGBA; convert to RGB with white bg
                         bg = Image.new("RGB", img.size, (255, 255, 255))
@@ -395,7 +395,8 @@ def export_to_images(
                 # Convert via Pillow
                 from PIL import Image as PILImage
 
-                with PILImage.open(src) as img:
+                img: PILImage.Image = PILImage.open(src)
+                with img:
                     if format == "JPEG" and img.mode == "RGBA":
                         bg = PILImage.new("RGB", img.size, (255, 255, 255))
                         bg.paste(img, mask=img.split()[3])
@@ -1059,9 +1060,10 @@ def export_thumbnails(
         output_paths: list[str] = []
         for i, src in enumerate(render_result.slide_pngs):
             dst = os.path.join(output_dir, f"thumb_{i + 1:03d}.{ext}")
-            with PILImage.open(src) as img:
+            img: PILImage.Image = PILImage.open(src)
+            with img:
                 # Use high-quality downsampling
-                img = img.resize(size, PILImage.LANCZOS)
+                img = img.resize(size, PILImage.Resampling.LANCZOS)
                 if format == "JPEG" and img.mode == "RGBA":
                     bg = PILImage.new("RGB", img.size, (255, 255, 255))
                     bg.paste(img, mask=img.split()[3])

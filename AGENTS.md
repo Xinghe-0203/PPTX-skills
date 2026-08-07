@@ -86,4 +86,4 @@ Task-specific detail lives in `references/`:
 ruff check pptx_skill/ scripts/ tests/
 ```
 
-Config in `pyproject.toml`: line-length 120, target Python 3.12, E501 ignored.
+Config in `pyproject.toml`: line-length 120, target Python 3.10, E501 ignored.

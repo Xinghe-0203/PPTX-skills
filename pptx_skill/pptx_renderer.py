@@ -1066,7 +1066,7 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     is_xy = chart_type_str in ("scatter",)
 
     if is_xy:
-        chart_data = XyChartData()
+        chart_data: CategoryChartData | XyChartData = XyChartData()
         series_list = binding.get("series")
         if series_list and isinstance(series_list, list):
             for s_idx, s_dict in enumerate(series_list):
@@ -1461,7 +1461,8 @@ def render_layout_plans(
         # Add slide meta (headers / footers / slide numbers)
         try:
             _add_slide_meta(slide, slide_index, total_slides, opts,
-                            prs.slide_width, prs.slide_height)
+                            int(prs.slide_width) if prs.slide_width is not None else 0,
+                            int(prs.slide_height) if prs.slide_height is not None else 0)
         except Exception as exc:
             log.warning("Failed to add slide meta for slide %d: %s", slide_index, exc)
 

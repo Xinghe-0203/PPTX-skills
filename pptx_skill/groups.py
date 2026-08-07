@@ -35,7 +35,7 @@ class GroupInfo:
     width: int = 0
     height: int = 0
     child_count: int = 0
-    child_names: list[str] = None
+    child_names: list[str] | None = None
 
     def __post_init__(self):
         if self.child_names is None:

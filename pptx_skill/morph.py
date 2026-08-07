@@ -190,6 +190,7 @@ def _parse_morph_info(slide_index: int, transition: Any) -> MorphInfo | None:
     prst_trans = _find_prst_trans(transition)
     if not _is_morph_prst_trans(prst_trans):
         return None
+    assert prst_trans is not None
 
     # Determine option
     options = prst_trans.findall(f"{{{_P15_NS}}}option")
@@ -365,6 +366,7 @@ def set_morph_options(
     if existing is not None:
         prst_trans = _find_prst_trans(existing)
         if _is_morph_prst_trans(prst_trans):
+            assert prst_trans is not None
             # Remove existing <p15:option> elements
             for opt in prst_trans.findall(f"{{{_P15_NS}}}option"):
                 prst_trans.remove(opt)

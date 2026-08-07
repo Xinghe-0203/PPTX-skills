@@ -317,9 +317,9 @@ def _list_macro_names_regex(vba_bytes: bytes) -> list[str]:
 
     # Strategy 2: raw byte pattern search for module record markers
     if not names:
-        for match in _MODULE_NAME_RE.finditer(vba_bytes):
+        for bmatch in _MODULE_NAME_RE.finditer(vba_bytes):
             try:
-                name = match.group(1).decode("ascii")
+                name = bmatch.group(1).decode("ascii")
             except UnicodeDecodeError:
                 continue
             if len(name) >= 2 and name not in seen:

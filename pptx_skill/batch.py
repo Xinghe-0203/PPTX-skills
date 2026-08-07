@@ -27,7 +27,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 __all__ = [
     "BatchResult",
@@ -311,7 +311,7 @@ def _convert_operation(
         actual_output = str(p.with_suffix(".pdf"))
         export_to_pdf(prs_or_path, actual_output)
     elif fmt in ("png", "jpg", "jpeg", "bmp"):
-        img_fmt = "PNG" if fmt == "png" else ("JPEG" if fmt in ("jpg", "jpeg") else "BMP")
+        img_fmt: Literal["PNG", "JPEG", "BMP"] = "PNG" if fmt == "png" else ("JPEG" if fmt in ("jpg", "jpeg") else "BMP")
         # For image export, create a subdirectory named after the file
         out_dir = p.with_suffix("")
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -447,7 +447,7 @@ def _export_images_operation(
     if img_fmt == "JPG":
         img_fmt = "JPEG"
 
-    export_to_images(prs_or_path, str(out_dir), dpi=dpi, format=img_fmt)
+    export_to_images(prs_or_path, str(out_dir), dpi=dpi, format=cast(Literal["PNG", "JPEG", "BMP"], img_fmt))
     return True
 
 
@@ -834,10 +834,10 @@ def batch_merge(
         if not Path(p).exists():
             raise FileNotFoundError(f"Input file not found: {p}")
 
-    on_conflict = "skip" if dedup_layouts else "rename"
+    on_conflict: Literal["rename", "skip", "replace"] = "skip" if dedup_layouts else "rename"
 
     result = merge_presentations(
-        sources=input_paths,
+        sources=cast(list[str | Path], input_paths),
         output_path=output_path,
         on_conflict=on_conflict,
     )

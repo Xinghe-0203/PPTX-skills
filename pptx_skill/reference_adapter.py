@@ -26,7 +26,7 @@ from pptx_skill.content_model import CanvasSpec, ContentSpec, SlideSpec
 # package __init__ prepends scripts/ to sys.path, so the bare import works both
 # from tests and from consumers.
 try:
-    from reference_ppt import (  # type: ignore[import-not-found]
+    from reference_ppt import (
         analyze_presentation,
         auto_bind_slide,
         clone_slide,
@@ -34,11 +34,11 @@ try:
         generate_native_from_reference,
     )
 except ImportError:  # pragma: no cover - import guard for environments without scripts/
-    analyze_presentation = None  # type: ignore[assignment]
-    auto_bind_slide = None  # type: ignore[assignment]
-    clone_slide = None  # type: ignore[assignment]
-    compose_from_reference = None  # type: ignore[assignment]
-    generate_native_from_reference = None  # type: ignore[assignment]
+    analyze_presentation = None
+    auto_bind_slide = None
+    clone_slide = None
+    compose_from_reference = None
+    generate_native_from_reference = None
 
 
 REFERENCE_MODES = ("native", "clone", "visual-rebuild")
@@ -75,8 +75,8 @@ def reference_canvas(reference_pptx: str | Path) -> ReferenceCanvasInfo:
     from pptx import Presentation
 
     prs = Presentation(str(reference_pptx))
-    w_emu = int(prs.slide_width)
-    h_emu = int(prs.slide_height)
+    w_emu = int(prs.slide_width) if prs.slide_width is not None else 0
+    h_emu = int(prs.slide_height) if prs.slide_height is not None else 0
     return ReferenceCanvasInfo(
         width_emu=w_emu,
         height_emu=h_emu,

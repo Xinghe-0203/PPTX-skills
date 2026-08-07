@@ -135,7 +135,7 @@ def _load_font(font_family: str, size_pt: float, bold: bool, italic: bool):
     path = resolve_font(font_family, bold, italic)
     if path:
         try:
-            font = ImageFont.truetype(str(path), int(size_pt))
+            font: Any = ImageFont.truetype(str(path), int(size_pt))
             _FONT_CACHE[key] = font
             return font
         except Exception:

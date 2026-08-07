@@ -190,32 +190,32 @@ def _ocr_easyocr(image_path: str, languages: list[str], min_confidence: float) -
     with Image.open(image_path) as img:
         img_w, img_h = img.size
 
-        # EasyOCR language codes: en, ch_sim, ch_tra, ja, ko, etc.
-        lang_map = {"zh": "ch_sim", "zh_tw": "ch_tra"}
-        reader_langs = [lang_map.get(lang, lang) for lang in languages]
+    # EasyOCR language codes: en, ch_sim, ch_tra, ja, ko, etc.
+    lang_map = {"zh": "ch_sim", "zh_tw": "ch_tra"}
+    reader_langs = [lang_map.get(lang, lang) for lang in languages]
 
-        # Reader is cached per language combo
-        reader = easyocr.Reader(reader_langs, verbose=False)
-        detections = reader.readtext(image_path)
+    # Reader is cached per language combo
+    reader = easyocr.Reader(reader_langs, verbose=False)
+    detections = reader.readtext(image_path)
 
-        results = []
-        for bbox, text, conf in detections:
-            if conf < min_confidence or not text.strip():
-                continue
-            # bbox is [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
-            xs = [p[0] for p in bbox]
-            ys = [p[1] for p in bbox]
-            results.append(OcrResult(
-                text=text.strip(),
-                confidence=conf,
-                left=min(xs) / img_w,
-                top=min(ys) / img_h,
-                width=(max(xs) - min(xs)) / img_w,
-                height=(max(ys) - min(ys)) / img_h,
-                language=languages[0] if languages else "en",
-                engine=OcrEngine.EASYOCR,
-            ))
-        return results
+    results = []
+    for bbox, text, conf in detections:
+        if conf < min_confidence or not text.strip():
+            continue
+        # bbox is [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+        xs = [p[0] for p in bbox]
+        ys = [p[1] for p in bbox]
+        results.append(OcrResult(
+            text=text.strip(),
+            confidence=conf,
+            left=min(xs) / img_w,
+            top=min(ys) / img_h,
+            width=(max(xs) - min(xs)) / img_w,
+            height=(max(ys) - min(ys)) / img_h,
+            language=languages[0] if languages else "en",
+            engine=OcrEngine.EASYOCR,
+        ))
+    return results
 
 
 def _ocr_paddleocr(image_path: str, languages: list[str], min_confidence: float) -> list[OcrResult]:
@@ -225,14 +225,14 @@ def _ocr_paddleocr(image_path: str, languages: list[str], min_confidence: float)
     with Image.open(image_path) as img:
         img_w, img_h = img.size
 
-        # Lazy import — paddleocr is heavy
-        from paddleocr import PaddleOCR
+    # Lazy import — paddleocr is heavy
+    from paddleocr import PaddleOCR
 
-        lang_map = {"en": "en", "zh": "ch", "zh_tw": "ch", "ja": "japan", "ko": "korean"}
-        pad_lang = lang_map.get(languages[0], "en") if languages else "en"
+    lang_map = {"en": "en", "zh": "ch", "zh_tw": "ch", "ja": "japan", "ko": "korean"}
+    pad_lang = lang_map.get(languages[0], "en") if languages else "en"
 
-        ocr = PaddleOCR(lang=pad_lang, show_log=False)
-        result = ocr.ocr(image_path, cls=True)
+    ocr = PaddleOCR(lang=pad_lang, show_log=False)
+    result = ocr.ocr(image_path, cls=True)
 
     results = []
     if result and result[0]:

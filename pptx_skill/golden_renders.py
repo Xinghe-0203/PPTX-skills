@@ -202,9 +202,9 @@ def _try_render_png_libreoffice(pptx_path: str, png_path: Path) -> bool:
             pdf = Path(tmp) / (Path(pptx_path).stem + ".pdf")
             if not pdf.exists():
                 return False
-            import fitz  # type: ignore[import-not-found]
+            import fitz
 
-            doc = fitz.open(str(pdf))  # type: ignore[attr-defined]
+            doc = fitz.open(str(pdf))
             if doc.page_count > 0:
                 doc[0].get_pixmap(dpi=150).save(str(png_path))
             doc.close()
@@ -246,6 +246,7 @@ def render_golden_set(
 
     for role in roles:
         recipes = builtin_recipes(role)[:variants_per_role]
+        recipe: LayoutRecipe | None
         for recipe in recipes:
             slide_spec, _family = _role_slide_spec(role, recipe.id)
             geometry = solve_recipe(recipe, canvas, tokens)

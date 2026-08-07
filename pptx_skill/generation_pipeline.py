@@ -8,7 +8,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 from pptx_skill.content_model import CanvasSpec, ContentSpec, LayoutPlan, SlideSpec
 from pptx_skill.deck_planner import LayoutScoringConfig, plan_deck
@@ -18,7 +18,7 @@ from pptx_skill.preview_renderer import render_preview
 from pptx_skill.render_qa import RenderQAConfig, evaluate_render_against_baseline
 from pptx_skill.repair_engine import apply_repairs, merge_profile_overrides, propose_repairs
 from pptx_skill.semantic_qa import SemanticQAEngine
-from pptx_skill.visual_qa import CheckOutcome, PresentationQualityError, QACheckResult, QAReport
+from pptx_skill.visual_qa import CheckOutcome, PresentationQualityError, QACheckResult, QAIssue, QAReport
 
 
 class LayoutPlanningError(Exception):
@@ -138,7 +138,7 @@ def run_generation_pipeline(
             try:
                 preview_dir = str(Path(output_path).parent / "preview")
                 Path(preview_dir).mkdir(parents=True, exist_ok=True)
-                preview = render_preview(final_pptx_path, output_dir=preview_dir, engine=renderer_engine, dpi=target_dpi)
+                preview = render_preview(final_pptx_path, output_dir=preview_dir, engine=cast(Literal["auto", "libreoffice", "com"], renderer_engine), dpi=target_dpi)
                 for idx, png_path in enumerate(preview.slide_pngs):
                     dest = Path(preview_dir) / f"slide_{idx:03d}.png"
                     shutil.copy(png_path, dest)
@@ -178,7 +178,7 @@ def run_generation_pipeline(
                 for deck_issue in deck_report.deck_issues:
                     checks.append(QACheckResult(check_id=f"deck_{deck_issue.kind}", outcome=CheckOutcome.FAIL, confidence=1.0, evidence={"message": deck_issue.message}, issue_codes=[deck_issue.kind]))
                 status = CheckOutcome.PASS if all(i.severity.value != "blocker" for i in issues) else CheckOutcome.FAIL
-                qa_report = QAReport(status=status, checks=checks, issues=issues, render_result=None, metrics={}, artifacts={"preview_dir": preview_dir} if preview_dir else {})
+                qa_report = QAReport(status=status, checks=checks, issues=cast(list[QAIssue], issues), render_result=None, metrics={}, artifacts={"preview_dir": preview_dir} if preview_dir else {})
 
             if qa_report.status == CheckOutcome.PASS:
                 return GenerationResult(
@@ -211,12 +211,12 @@ def run_generation_pipeline(
             continue
 
     # Exited without passing.
-    status = "fail" if qa_report and qa_report.status == CheckOutcome.FAIL else "inconclusive"
+    exit_status = "fail" if qa_report and qa_report.status == CheckOutcome.FAIL else "inconclusive"
     return GenerationResult(
         pptx_path=final_pptx_path,
         manifest_path=manifest_sidecar,
         qa_report_path=None,
-        qa_status=status,
+        qa_status=exit_status,
         preview_dir=None,
         repair_passes=len(repair_log),
         repair_log=repair_log,

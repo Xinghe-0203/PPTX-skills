@@ -24,7 +24,7 @@ else:  # pragma: no cover - version-gated
             return self.value
 
         @classmethod
-        def _missing_(cls, value):  # type: ignore[override]
+        def _missing_(cls, value):
             if isinstance(value, str):
                 for member in cls:
                     if member.value == value:

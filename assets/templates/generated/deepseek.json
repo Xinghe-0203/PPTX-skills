@@ -1,0 +1,53 @@
+{
+  "name": "DeepSeek 深空科技",
+  "layout_family": "technical_axis",
+  "description": "深色科技风、深空蓝黑底色、电光青蓝与深紫渐变、精密仪器感、AI大模型技术汇报、高对比、未来感、数据驱动",
+  "use_cases": [
+    "产品发布",
+    "路线图",
+    "功能介绍"
+  ],
+  "theme": {
+    "bg": "#161819",
+    "bg_alt": "#2D3234",
+    "primary": "#5E6470",
+    "secondary": "#A3AAA5",
+    "accent": "#00D4FF",
+    "text": "#F2EEE6",
+    "text_muted": "#A3AAA5",
+    "white": "#FFFFFF",
+    "dark": "#050706",
+    "on_dark": true
+  },
+  "fonts": {
+    "cn": "Microsoft YaHei",
+    "en": "Arial"
+  },
+  "layout_opts": {
+    "cover": {
+      "title_size": 62,
+      "title_y_ratio": 0.3
+    },
+    "text_image": {
+      "text_ratio": 0.46,
+      "image_padding": 0.08
+    },
+    "process": {
+      "card_gap": 0.22,
+      "max_steps": 5
+    }
+  },
+  "preferred_sequence": [
+    "cover",
+    "full_image",
+    "text_image",
+    "process",
+    "comparison",
+    "end"
+  ],
+  "id": "deepseek",
+  "generated_from": {
+    "base_template": "product-launch",
+    "prompt": "深色科技风、深空蓝黑底色、电光青蓝与深紫渐变、精密仪器感、AI大模型技术汇报、高对比、未来感、数据驱动"
+  }
+}

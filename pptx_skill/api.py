@@ -7,7 +7,6 @@ experimental switches for the V2 adaptive/QA pipeline.
 from __future__ import annotations
 
 import os
-import zipfile
 from pathlib import Path
 from typing import Any, Literal
 
@@ -258,27 +257,17 @@ def auto_generate_ppt(
         manifest.legacy["template_key"] = template_key
         save_manifest_v3(pptx_path, manifest)
     except Exception:
+        # V3 write failed — the legacy path already wrote an accurate V2
+        # manifest (content matches the generated deck), and load_manifest()
+        # auto-migrates V2→V3 on read, so we leave it in place. Clearing the
+        # embedded part would orphan its relationship in presentation.xml.rels
+        # and trigger PowerPoint's repair prompt.
         import logging
 
         logging.getLogger(__name__).warning(
-            "V3 manifest write failed; clearing embedded V2 residue to avoid stale reads",
+            "V3 manifest write failed; leaving accurate V2 manifest in place",
             exc_info=True,
         )
-        # V3 failed — remove the embedded manifest part that the legacy path
-        # wrote so a subsequent load_manifest() doesn't silently migrate a
-        # V2 payload that diverges from the actual generated content.
-        try:
-            from pptx_skill.manifest import MANIFEST_PART
-
-            with zipfile.ZipFile(pptx_path, "r") as source:
-                info_list = source.infolist()
-                members = {item.filename: source.read(item.filename) for item in info_list}
-            members.pop(MANIFEST_PART, None)
-            with zipfile.ZipFile(pptx_path, "w", zipfile.ZIP_DEFLATED) as out:
-                for name, data in members.items():
-                    out.writestr(name, data)
-        except Exception:
-            logging.getLogger(__name__).warning("Failed to clear embedded V2 manifest", exc_info=True)
 
     qa_report: QAReport | None = None
     if qa_mode != "off":

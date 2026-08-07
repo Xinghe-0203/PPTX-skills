@@ -31,9 +31,9 @@ from pptx_skill.layout_engine import (
 from pptx_skill.pptx_renderer import RenderResult, render_layout_plans
 
 try:
-    from reference_ppt import analyze_presentation  # type: ignore[import-not-found]
+    from reference_ppt import analyze_presentation
 except Exception:  # pragma: no cover
-    analyze_presentation = None  # type: ignore[assignment]
+    analyze_presentation = None
 
 
 # Role -> recipe variant preference for the rebuild. Mirrors the 14-role
@@ -347,7 +347,7 @@ def visual_rebuild_adapter(
     diff: list[ReferenceDiffRecord] = []
     sims: list[float] = []
     for plan, rebuild in zip(plans, rebuild_plans, strict=False):
-        ref_shapes = next(
+        ref_shapes: list = next(
             (r.get("shapes", []) for r in slide_records if r.get("index") == rebuild.source_slide_index),
             [],
         )

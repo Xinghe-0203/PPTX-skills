@@ -20,9 +20,7 @@ def _png_backend_available() -> bool:
     try:
         import shutil
 
-        from pdf2image import pdfinfo_from_path  # noqa: F401
-
-        if not shutil.which("pdfinfo"):
+        if not shutil.which("pdftoppm"):
             return False
         return True
     except ImportError:

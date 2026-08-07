@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import colorsys
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 __all__ = [
     "ColorInfo",
@@ -85,7 +85,7 @@ class GradientInfo:
     """Info about a gradient fill."""
     gradient_type: str = "linear"  # "linear", "radial", "path"
     angle: float = 0.0  # degrees, for linear
-    stops: list[GradientStop] = None
+    stops: list[GradientStop] = field(default_factory=list)
 
     def __post_init__(self):
         if self.stops is None:
@@ -378,7 +378,7 @@ def extract_palette(prs_or_path, *, top_n: int = 10) -> list[ColorInfo]:
     results = []
     for hex_val, contexts in color_counts.items():
         total = sum(contexts.values())
-        dominant_context = max(contexts, key=contexts.get)
+        dominant_context = max(contexts, key=lambda x: contexts.get(x, 0))
         r, g, b = hex_to_rgb(hex_val)
         results.append(ColorInfo(
             hex_value=hex_val,
@@ -670,7 +670,7 @@ def list_gradients(prs_or_path, slide_index: int | None = None) -> list[Gradient
                             color = f"#{srgb.get('val', '000000')}" if srgb is not None else "#000000"
                             alpha_elem = srgb.find(f"{{{_NS_A}}}alpha") if srgb is not None else None
                             alpha = int(alpha_elem.get("val", "100000")) / 1000.0 if alpha_elem is not None else 100
-                            info.stops.append(GradientStop(position=pos, color=color, alpha=alpha))
+                            info.stops.append(GradientStop(position=pos, color=color, alpha=int(alpha)))
 
                     results.append(info)
                 except Exception:
@@ -721,6 +721,8 @@ def recolor_presentation(
         count = 0
         # Normalize map keys
         normalized_map = {}
+        if color_map is None:
+            return 0
         for old, new in color_map.items():
             normalized_map[old.upper().lstrip("#")] = new.upper().lstrip("#")
             normalized_map[old.lower().lstrip("#")] = new.upper().lstrip("#")

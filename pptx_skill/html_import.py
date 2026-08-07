@@ -662,7 +662,7 @@ def _render_slide_snapshot(
     not available or rendering fails.
     """
     try:
-        from playwright.sync_api import sync_playwright  # type: ignore[import-untyped]
+        from playwright.sync_api import sync_playwright
     except ImportError:
         log.info("Playwright not available; skipping snapshot underlay")
         return None
@@ -1070,7 +1070,7 @@ def html_to_content_spec(
     if not slide_chunks:
         return ContentSpec(id="html-import-empty", title="", subtitle="", slides=[])
 
-    gen = StableIdGenerator()
+    gen = StableIdGenerator.from_seed(os.path.basename(html_path))
     deck_id = gen._join("html-import", os.path.basename(html_path))
     slides: list[SlideSpec] = []
 
@@ -1222,7 +1222,7 @@ def _split_html_into_slides(html_content: str, slide_selector: str) -> list[str]
 def _extract_slides_by_parser(html_content: str, slide_selector: str) -> list[str]:
     """Extract slide HTML chunks using a position-tracking parser."""
     # We use a custom parser that records start/end positions of slide containers.
-    positions: list[tuple[int, int]] = []
+    positions: list[tuple[tuple[int, int], tuple[int, int]]] = []
 
     if "." in slide_selector:
         sel_tag, _, sel_cls = slide_selector.partition(".")
@@ -1237,7 +1237,7 @@ def _extract_slides_by_parser(html_content: str, slide_selector: str) -> list[st
             super().__init__()
             self._depth = 0
             self._in_slide = False
-            self._slide_start = 0
+            self._slide_start: tuple[int, int] = (0, 0)
             self._slide_depth = 0
 
         def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
