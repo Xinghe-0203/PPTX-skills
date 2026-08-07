@@ -204,10 +204,9 @@ def _try_render_png_libreoffice(pptx_path: str, png_path: Path) -> bool:
                 return False
             import fitz
 
-            doc = fitz.open(str(pdf))
-            if doc.page_count > 0:
-                doc[0].get_pixmap(dpi=150).save(str(png_path))
-            doc.close()
+            with fitz.open(str(pdf)) as doc:
+                if doc.page_count > 0:
+                    doc[0].get_pixmap(dpi=150).save(str(png_path))
             return True
     except Exception:
         return False

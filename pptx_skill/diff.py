@@ -906,8 +906,10 @@ def diff_presentations_visual(
             try:
                 from PIL import Image
 
-                img_a = Image.open(pngs_a[i]).convert("L")
-                img_b = Image.open(pngs_b[i]).convert("L")
+                with Image.open(pngs_a[i]) as _ia:
+                    img_a = _ia.convert("L")
+                with Image.open(pngs_b[i]) as _ib:
+                    img_b = _ib.convert("L")
 
                 # Resize to same dimensions if needed
                 if img_a.size != img_b.size:

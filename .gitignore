@@ -29,6 +29,9 @@ slides_preview/
 ppt_images/
 *.pdf
 
+# Generated template profiles
+assets/templates/generated/
+
 # Temporary files created by Office/LibreOffice.
 ~$*.pptx
 *.tmp

@@ -255,14 +255,12 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
         try:
             render_result = render_preview(pptx_path, img_dir, dpi=dpi)
             if render_result.slide_pngs:
-                doc = fitz.open()
-                for png_path in render_result.slide_pngs:
-                    img_doc = fitz.open(png_path)
-                    page = doc.new_page(width=img_doc[0].rect.width, height=img_doc[0].rect.height)
-                    page.insert_image(page.rect, filename=png_path)
-                    img_doc.close()
-                doc.save(output_path)
-                doc.close()
+                with fitz.open() as doc:
+                    for png_path in render_result.slide_pngs:
+                        with fitz.open(png_path) as img_doc:
+                            page = doc.new_page(width=img_doc[0].rect.width, height=img_doc[0].rect.height)
+                            page.insert_image(page.rect, filename=png_path)
+                    doc.save(output_path)
                 return output_path
             else:
                 _errors.append("PyMuPDF: render produced no slide images")
@@ -283,15 +281,16 @@ def _convert_to_pdf(pptx_path: str, output_path: str, dpi: int) -> str:
             if render_result.slide_pngs:
                 images: list[Image.Image] = []
                 for png_path in render_result.slide_pngs:
-                    img: Image.Image = Image.open(png_path)
-                    if img.mode == "RGBA":
-                        # PDF does not support RGBA; convert to RGB with white bg
-                        bg = Image.new("RGB", img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    elif img.mode != "RGB":
-                        img = img.convert("RGB")
-                    images.append(img)
+                    with Image.open(png_path) as img_src:
+                        img: Image.Image = img_src
+                        if img.mode == "RGBA":
+                            # PDF does not support RGBA; convert to RGB with white bg
+                            bg = Image.new("RGB", img.size, (255, 255, 255))
+                            bg.paste(img, mask=img.split()[3])
+                            img = bg
+                        elif img.mode != "RGB":
+                            img = img.convert("RGB")
+                        images.append(img.copy())
                 if images:
                     first = images[0]
                     rest = images[1:]

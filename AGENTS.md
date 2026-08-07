@@ -20,7 +20,7 @@ python -m pytest tests/ -k "test_layout" -x   # by keyword
 
 - Tests use `unittest.TestCase`; `pytest` is the runner (`python -m unittest discover -s tests` works without pytest installed).
 - Rendering tests (pipeline, golden renders) are slow and need LibreOffice. Run fast unit tests first when iterating.
-- Baseline: 216 passed + 1 skipped (one preview test skips when an engine is unavailable).
+- Baseline: 242 passed + 2 skipped/failed (preview renderer tests require PyMuPDF or poppler for PDF→PNG conversion).
 
 ## Architecture: dual-layer
 

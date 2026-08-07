@@ -120,7 +120,8 @@ def crop_cover(
 def _load_and_resize(image_path: str | Path, max_side: int = 512):
     from PIL import Image
 
-    img = Image.open(image_path).convert("RGB")
+    with Image.open(image_path) as _img:
+        img = _img.convert("RGB")
     original_size = img.size
     w, h = original_size
     if max(w, h) > max_side:
