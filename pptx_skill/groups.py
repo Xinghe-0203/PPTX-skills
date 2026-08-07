@@ -9,7 +9,6 @@ OOXML reference: ECMA-376 Part 4, §19.3.1.25 (p:grpSp).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "GroupInfo",
@@ -211,7 +210,6 @@ def ungroup_shapes(prs_or_path, slide_index: int, shape_name: str) -> list[str]:
     list of str
         Names of the child shapes that were ungrouped.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -266,7 +264,6 @@ def list_groups(prs_or_path, slide_index: int) -> list[GroupInfo]:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     prs = _open_prs(prs_or_path)
     if slide_index < 1 or slide_index > len(prs.slides):
@@ -389,7 +386,6 @@ def add_to_group(prs_or_path, slide_index: int, *,
     shape_name : str
         Name of the shape to add.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -429,7 +425,6 @@ def remove_from_group(prs_or_path, slide_index: int, *,
     shape_name : str
         Name of the child shape to remove from the group.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -472,7 +467,6 @@ def move_in_group(prs_or_path, slide_index: int, *,
     new_index : int
         New position index within the group (0-based).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

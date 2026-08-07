@@ -13,7 +13,7 @@ import os
 import tempfile
 import zipfile
 from dataclasses import MISSING, asdict, dataclass, field, is_dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -93,7 +93,7 @@ class ManifestV3:
         repairs: list[dict[str, Any]] | None = None,
         sha256: dict[str, str] | None = None,
     ) -> AttemptRecord:
-        run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + f"-{pass_index:04d}"
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{pass_index:04d}"
         attempt = AttemptRecord(
             run_id=run_id,
             pass_index=pass_index,
@@ -435,7 +435,7 @@ def load_manifest(pptx_path: str | Path) -> ManifestV3 | None:
     # Treat payload without manifest_schema_version as legacy v2.
     manifest = migrate_v2_to_v3(payload)
     manifest.legacy["loaded_from"] = source_version
-    manifest.legacy["migrated_at"] = datetime.now(UTC).isoformat()
+    manifest.legacy["migrated_at"] = datetime.now(timezone.utc).isoformat()
     return manifest
 
 

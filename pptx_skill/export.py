@@ -850,7 +850,7 @@ def _table_to_html(table, style: str) -> str:
             cells_html.append(f"<{tag}>{_escape_html(cell_text)}</{tag}>")
         rows_html.append(f"<tr>{''.join(cells_html)}</tr>")
 
-    table_html = f'<table>{"\\n".join(rows_html)}</table>'
+    table_html = "<table>" + "\n".join(rows_html) + "</table>"
     return f'<div class="element" style="{style}">{table_html}</div>'
 
 

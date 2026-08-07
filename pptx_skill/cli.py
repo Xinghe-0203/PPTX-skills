@@ -29,8 +29,7 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
-from typing import Any, Sequence
+from collections.abc import Sequence
 
 
 def _ensure_utf8() -> None:

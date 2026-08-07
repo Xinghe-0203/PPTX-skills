@@ -10,7 +10,6 @@ OOXML reference: ECMA-376 Part 4, Section 20.1.2 (DrawingML - Effects)
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -530,7 +529,6 @@ def remove_shadow(prs_or_path, slide_index: int, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

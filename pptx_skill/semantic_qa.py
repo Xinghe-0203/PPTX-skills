@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from enum import StrEnum
 from pathlib import Path
 
 from PIL import Image
 
+from pptx_skill._compat import StrEnum
 from pptx_skill.content_model import BBox, CanvasSpec, LayoutPlan, PlannedNode
 from pptx_skill.text_metrics import ParagraphStyle, measure_text, resolve_font
 

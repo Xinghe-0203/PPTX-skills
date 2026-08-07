@@ -252,6 +252,7 @@ from pptx_skill.visual_rebuild import (  # noqa: E402
     reference_rebuild_diff_report,
     visual_rebuild_adapter,
 )
+
 # NOTE: html_import symbols are imported once above (L424); the previous
 # duplicate import block here was removed to avoid running the module twice.
 

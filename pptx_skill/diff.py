@@ -14,9 +14,10 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
-from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
+
+from pptx_skill._compat import StrEnum
 
 __all__ = [
     "Change",
@@ -852,7 +853,7 @@ def diff_presentations_visual(
     }
 
     try:
-        from pptx import Presentation  # noqa: lazy
+        from pptx import Presentation  # noqa: E402
     except ImportError:
         return result
 
@@ -893,8 +894,8 @@ def diff_presentations_visual(
 
         # Compare images
         try:
-            from skimage.metrics import structural_similarity as ssim  # type: ignore[import-not-found]
             import numpy as np  # type: ignore[import-not-found]
+            from skimage.metrics import structural_similarity as ssim  # type: ignore[import-not-found]
 
             use_skimage = True
             result["rasterizer"] = "skimage"

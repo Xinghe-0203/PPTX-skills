@@ -17,13 +17,10 @@ OOXML reference: ECMA-376 Part 4, §19.2 (PresentationML — Protection),
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
-import base64
-import struct
-import tempfile
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "ProtectionInfo",
@@ -166,7 +163,6 @@ def apply_write_protection(prs_or_path, *, password: str | None = None,
 
 def remove_write_protection(prs_or_path) -> bool:
     """Remove all write protection from a presentation."""
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -198,7 +194,6 @@ def mark_as_final(prs_or_path) -> bool:
     property marking the document as final. PowerPoint shows a
     "MARKED AS FINAL" banner when opening.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -259,13 +254,11 @@ def _set_doc_security(prs, value: int):
         )
         core_xml = etree.fromstring(core_part.blob)
 
-        cp_ns = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-        dc_ns = "http://purl.org/dc/elements/1.1/"
 
         # Find or create cp:contentStatus
-        content_status = core_xml.find(f"{{{{cp_ns}}}}contentStatus")
+        content_status = core_xml.find("{{cp_ns}}contentStatus")
         if content_status is None:
-            content_status = etree.SubElement(core_xml, f"{{{{cp_ns}}}}contentStatus")
+            content_status = etree.SubElement(core_xml, "{{cp_ns}}contentStatus")
 
         if value == 4:
             content_status.text = "Final"
@@ -286,8 +279,7 @@ def _get_doc_security(prs) -> int:
             "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
         )
         core_xml = etree.fromstring(core_part.blob)
-        cp_ns = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-        content_status = core_xml.find(f"{{{{cp_ns}}}}contentStatus")
+        content_status = core_xml.find("{{cp_ns}}contentStatus")
         if content_status is not None and content_status.text == "Final":
             return 4
     except Exception:
@@ -332,7 +324,7 @@ def encrypt_pptx(input_path: str, output_path: str, *, password: str,
         raise ImportError(
             "msoffcrypto-tool is required for encryption. "
             "Install with: pip install msoffcrypto-tool"
-        )
+        ) from None
 
     with open(input_path, "rb") as f:
         file = msoffcrypto.OfficeFile(f)
@@ -365,7 +357,7 @@ def decrypt_pptx(input_path: str, output_path: str, *, password: str) -> bool:
         raise ImportError(
             "msoffcrypto-tool is required for decryption. "
             "Install with: pip install msoffcrypto-tool"
-        )
+        ) from None
 
     with open(input_path, "rb") as f:
         file = msoffcrypto.OfficeFile(f)
@@ -412,7 +404,6 @@ def is_encrypted(path: str) -> bool:
 
 def get_protection_info(prs_or_path) -> ProtectionInfo:
     """Get comprehensive protection information about a presentation."""
-    from lxml import etree
 
     info = ProtectionInfo()
 

@@ -710,7 +710,7 @@ def _reorder_slides(
     # Collect the sldId entries (each references a slide via r:id).
     sld_id_lst = prs.slides._sldIdLst  # type: ignore[attr-defined]
     entries = list(sld_id_lst)
-    n_total = len(entries)
+    len(entries)
 
     # If no positions given or all None, nothing to do.
     if not positions or all(p is None for p in positions):

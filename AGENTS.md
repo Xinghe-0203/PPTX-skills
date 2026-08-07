@@ -8,7 +8,7 @@ python -m pip install -e ".[adaptive,qa-image,render-pdf]"  # full pipeline
 python -m pptx_skill.capability               # check what's available
 ```
 
-Requires Python ≥ 3.12. The package adds `scripts/` to `sys.path` at import time — do not run scripts directly as modules (`python -m scripts.pptx_helper` will fail); use `python scripts/pptx_helper.py` or import from `pptx_skill`.
+Requires Python ≥ 3.10. The package adds `scripts/` to `sys.path` at import time — do not run scripts directly as modules (`python -m scripts.pptx_helper` will fail); use `python scripts/pptx_helper.py` or import from `pptx_skill`.
 
 ## Testing
 
@@ -20,7 +20,7 @@ python -m pytest tests/ -k "test_layout" -x   # by keyword
 
 - Tests use `unittest.TestCase`; `pytest` is the runner (`python -m unittest discover -s tests` works without pytest installed).
 - Rendering tests (pipeline, golden renders) are slow and need LibreOffice. Run fast unit tests first when iterating.
-- Baseline: 217/217 passing (one preview test skips when an engine is unavailable).
+- Baseline: 216 passed + 1 skipped (one preview test skips when an engine is unavailable).
 
 ## Architecture: dual-layer
 
@@ -29,7 +29,7 @@ This repo has **two implementation layers** that coexist:
 1. **`scripts/`** — the original monolithic scripts (`pptx_helper.py`, `ppt_edit.py`, etc.). These are importable because `pptx_skill/__init__.py` prepends `scripts/` to `sys.path`.
 2. **`pptx_skill/`** — the new modular package with data models (`content_model.py`), constraint solver (`layout_engine.py`), QA engines, etc.
 
-`pptx_skill.api.auto_generate_ppt` is the public facade. It currently delegates to the legacy `scripts/pptx_helper.py` generator, then writes a V3 manifest. The `layout_engine="adaptive"` path exists in code but raises `ValueError` from the facade — use `run_generation_pipeline` directly for the adaptive pipeline.
+`pptx_skill.api.auto_generate_ppt` is the public facade. It delegates to the legacy `scripts/pptx_helper.py` generator by default and writes a V3 manifest. With `layout_engine="adaptive"` it dispatches to `run_generation_pipeline` directly (adaptive constraint-based layout).
 
 ## Key entrypoints
 

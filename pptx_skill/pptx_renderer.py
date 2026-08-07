@@ -155,12 +155,12 @@ def _add_slide_meta(slide, slide_index: int, total_slides: int, deck_options: di
                     slide_width_emu: int, slide_height_emu: int) -> None:
     """Add slide number, footer text, and header text to a slide."""
     from pptx.enum.text import PP_ALIGN
-    from pptx.util import Inches, Pt, Emu
+    from pptx.util import Inches, Pt
 
     theme = deck_options.get("theme") or {}
     # Resolve colours: theme may provide text_muted / text keys; else gray.
     muted_hex = theme.get("text_muted", "#999999")
-    text_hex = theme.get("text", "#333333")
+    theme.get("text", "#333333")
 
     show_numbers = deck_options.get("show_slide_numbers", True)
     footer_text = deck_options.get("footer_text", "")
@@ -246,7 +246,6 @@ def _set_bullet_char(paragraph, bullet_char: str | bool) -> None:
     """
     from lxml import etree
 
-    NSMAP = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
     pPr = paragraph._p.get_or_add_pPr()
 
     # Enable bullet list
@@ -604,7 +603,7 @@ def _set_cell_border(cell, border_pt: float = 0.5) -> None:
 
 def _add_table_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEntry:
     """Render a table node with enhanced styling support."""
-    from pptx.util import Inches, Pt, Emu
+    from pptx.util import Emu, Inches, Pt
 
     geom = node.geometry.bbox
     left = Inches(_pt_to_inches(geom.left))
@@ -861,8 +860,8 @@ def _embed_chart_workbook(chart_frame, binding: dict, is_xy: bool) -> None:
     # Add the xlsx as an embedded package part
     xlsx_partname_str = chart_part.partname.replace("/chart", "/embeddings/chart_data")
     xlsx_partname_str = xlsx_partname_str.replace(".xml", ".xlsx")
-    from pptx.opc.packuri import PackURI
     from pptx.opc.package import Part
+    from pptx.opc.packuri import PackURI
 
     xlsx_part = Part(
         partname=PackURI(xlsx_partname_str),
@@ -884,11 +883,11 @@ def _embed_chart_workbook(chart_frame, binding: dict, is_xy: bool) -> None:
     chart_xml = chart_part._element
     ns_c = "http://schemas.openxmlformats.org/drawingml/2006/chart"
     ns_r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-    external_data = etree.SubElement(chart_xml, "{%s}externalData" % ns_c)
-    external_data.set("{%s}id" % ns_r, rel)
+    external_data = etree.SubElement(chart_xml, f"{{{ns_c}}}externalData")
+    external_data.set(f"{{{ns_r}}}id", rel)
     # Add <c:autoUpdate val="1"/> so PowerPoint refreshes from the workbook
     etree.SubElement(
-        external_data, "{%s}autoUpdate" % ns_c
+        external_data, f"{{{ns_c}}}autoUpdate"
     ).set("val", "1")
 
 
@@ -1009,26 +1008,26 @@ def _apply_insight_annotations(chart_frame, annotations: list[dict]) -> None:
             # Access the underlying XML element
             dlbl_elem = dlbl._element
             # Remove any existing <c:tx> to replace it
-            for existing_tx in dlbl_elem.findall("{%s}tx" % nsmap["c"]):
+            for existing_tx in dlbl_elem.findall("{{{}}}tx".format(nsmap["c"])):
                 dlbl_elem.remove(existing_tx)
             # Build <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>TEXT</a:t></a:r></a:p></c:rich></c:tx>
-            tx = etree.SubElement(dlbl_elem, "{%s}tx" % nsmap["c"])
-            rich = etree.SubElement(tx, "{%s}rich" % nsmap["c"])
-            etree.SubElement(rich, "{%s}bodyPr" % nsmap["a"])
-            etree.SubElement(rich, "{%s}lstStyle" % nsmap["a"])
-            p = etree.SubElement(rich, "{%s}p" % nsmap["a"])
-            pPr = etree.SubElement(p, "{%s}pPr" % nsmap["a"])
-            etree.SubElement(pPr, "{%s}defRPr" % nsmap["a"]).set("sz", "900")
-            r = etree.SubElement(p, "{%s}r" % nsmap["a"])
-            rPr = etree.SubElement(r, "{%s}rPr" % nsmap["a"])
+            tx = etree.SubElement(dlbl_elem, "{{{}}}tx".format(nsmap["c"]))
+            rich = etree.SubElement(tx, "{{{}}}rich".format(nsmap["c"]))
+            etree.SubElement(rich, "{{{}}}bodyPr".format(nsmap["a"]))
+            etree.SubElement(rich, "{{{}}}lstStyle".format(nsmap["a"]))
+            p = etree.SubElement(rich, "{{{}}}p".format(nsmap["a"]))
+            pPr = etree.SubElement(p, "{{{}}}pPr".format(nsmap["a"]))
+            etree.SubElement(pPr, "{{{}}}defRPr".format(nsmap["a"])).set("sz", "900")
+            r = etree.SubElement(p, "{{{}}}r".format(nsmap["a"]))
+            rPr = etree.SubElement(r, "{{{}}}rPr".format(nsmap["a"]))
             rPr.set("lang", "en-US")
             rPr.set("sz", "900")
             rPr.set("dirty", "0")
-            t = etree.SubElement(r, "{%s}t" % nsmap["a"])
+            t = etree.SubElement(r, "{{{}}}t".format(nsmap["a"]))
             t.text = text
             # Ensure <c:showVal> etc. are not overriding our custom text
             for tag in ("showVal", "showCatName", "showSerName", "showPercent"):
-                elem = dlbl_elem.find("{%s}%s" % (nsmap["c"], tag))
+                elem = dlbl_elem.find("{{{}}}{}".format(nsmap["c"], tag))
                 if elem is not None:
                     dlbl_elem.remove(elem)
         except Exception as exc:
@@ -1047,7 +1046,7 @@ def _add_chart_node(slide, node: PlannedNode, shape_index: int) -> RenderTraceEn
     - Insight annotations (callout text on specific data points)
     """
     from pptx.chart.data import CategoryChartData, XyChartData
-    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+    from pptx.enum.chart import XL_LEGEND_POSITION
     from pptx.util import Inches
 
     geom = node.geometry.bbox
@@ -1478,7 +1477,7 @@ def render_layout_plans(
     # Apply deck-level transitions if requested
     transition_cfg = opts.get("transition")
     if transition_cfg:
-        from pptx_skill.transitions import apply_slide_transition, TRANSITION_TYPES
+        from pptx_skill.transitions import TRANSITION_TYPES, apply_slide_transition
 
         if isinstance(transition_cfg, str):
             # Simple string: just the transition type

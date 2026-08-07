@@ -7,7 +7,7 @@ name = "pptx-skill"
 version = "6.0.0"
 description = "The world's most powerful PPTX generation, editing, and manipulation toolkit — unified Deck API, CLI, Markdown import, constraint layout, 51 animations, morph transitions, OCR, SVG, batch, video, chart editing, color science, and more"
 readme = "SKILL.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
     {name = "Xinghe"},
 ]
@@ -56,11 +56,11 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]
+ignore = ["E501", "UP017"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["E402"]
@@ -68,7 +68,7 @@ ignore = ["E501"]
 "pptx_skill/__init__.py" = ["E402", "F401"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.10"
 warn_unused_ignores = true
 warn_redundant_casts = true
 ignore_missing_imports = true

@@ -9,7 +9,7 @@ OOXML reference: ECMA-376 Part 4, §21.3 (PresentationML — Connectors),
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
@@ -217,7 +217,6 @@ def _build_line_props(line_color: str | None, line_width: int | None,
 def _apply_line_props_to_sp_pr(sp_pr, line_color, line_width, dash_style,
                                 start_arrow, end_arrow):
     """Apply line properties to an existing spPr element."""
-    from lxml import etree
 
     # Remove existing ln
     for existing in sp_pr.findall(f"{{{_NS_A}}}ln"):
@@ -308,7 +307,7 @@ def add_line(prs_or_path, slide_index: int, *,
                                     start_arrow, end_arrow)
 
         # No fill for lines
-        noFill = etree.SubElement(spPr, f"{{{_NS_A}}}noFill")
+        etree.SubElement(spPr, f"{{{_NS_A}}}noFill")
 
         return _name
     finally:
@@ -429,7 +428,7 @@ def add_elbow_connector(prs_or_path, slide_index: int, *,
         shape1 = _find_shape(slide, start_shape)
         shape2 = _find_shape(slide, end_shape)
         if shape1 is None or shape2 is None:
-            raise ValueError(f"Shape not found")
+            raise ValueError("Shape not found")
 
         sp_tree = slide.shapes._spTree
         _color = line_color or "000000"
@@ -503,7 +502,7 @@ def add_curved_connector(prs_or_path, slide_index: int, *,
         shape1 = _find_shape(slide, start_shape)
         shape2 = _find_shape(slide, end_shape)
         if shape1 is None or shape2 is None:
-            raise ValueError(f"Shape not found")
+            raise ValueError("Shape not found")
 
         sp_tree = slide.shapes._spTree
         _color = line_color or "000000"
@@ -611,10 +610,10 @@ def add_curve(prs_or_path, slide_index: int, *,
         ext.set("cy", str(max(max_y - min_y, 1)))
 
         custGeom = etree.SubElement(spPr, f"{{{_NS_A}}}custGeom")
-        avLst = etree.SubElement(custGeom, f"{{{_NS_A}}}avLst")
-        gdLst = etree.SubElement(custGeom, f"{{{_NS_A}}}gdLst")
-        ahLst = etree.SubElement(custGeom, f"{{{_NS_A}}}ahLst")
-        cxnLst = etree.SubElement(custGeom, f"{{{_NS_A}}}cxnLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}avLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}gdLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}ahLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}cxnLst")
         rect = etree.SubElement(custGeom, f"{{{_NS_A}}}rect")
         rect.set("l", "0")
         rect.set("t", "0")
@@ -639,7 +638,7 @@ def add_curve(prs_or_path, slide_index: int, *,
 
         _apply_line_props_to_sp_pr(spPr, _color, _width, dash_style,
                                     start_arrow, end_arrow)
-        noFill = etree.SubElement(spPr, f"{{{_NS_A}}}noFill")
+        etree.SubElement(spPr, f"{{{_NS_A}}}noFill")
 
         return _name
     finally:
@@ -704,12 +703,15 @@ def add_freeform(prs_or_path, slide_index: int, *,
         ext.set("cy", str(max(max_y - min_y, 1)))
 
         custGeom = etree.SubElement(spPr, f"{{{_NS_A}}}custGeom")
-        avLst = etree.SubElement(custGeom, f"{{{_NS_A}}}avLst")
-        gdLst = etree.SubElement(custGeom, f"{{{_NS_A}}}gdLst")
-        ahLst = etree.SubElement(custGeom, f"{{{_NS_A}}}ahLst")
-        cxnLst = etree.SubElement(custGeom, f"{{{_NS_A}}}cxnLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}avLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}gdLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}ahLst")
+        etree.SubElement(custGeom, f"{{{_NS_A}}}cxnLst")
         rect = etree.SubElement(custGeom, f"{{{_NS_A}}}rect")
-        rect.set("l", "0"); rect.set("t", "0"); rect.set("r", "0"); rect.set("b", "0")
+        rect.set("l", "0")
+        rect.set("t", "0")
+        rect.set("r", "0")
+        rect.set("b", "0")
 
         pathLst = etree.SubElement(custGeom, f"{{{_NS_A}}}pathLst")
         path = etree.SubElement(pathLst, f"{{{_NS_A}}}path")
@@ -725,7 +727,7 @@ def add_freeform(prs_or_path, slide_index: int, *,
             pt.set("x", str(px))
             pt.set("y", str(py))
 
-        close = etree.SubElement(path, f"{{{_NS_A}}}close")
+        etree.SubElement(path, f"{{{_NS_A}}}close")
 
         # Fill
         if fill_color:
@@ -846,7 +848,6 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -956,7 +957,6 @@ def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineI
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     prs = _open_prs(prs_or_path)
     if slide_index < 1 or slide_index > len(prs.slides):

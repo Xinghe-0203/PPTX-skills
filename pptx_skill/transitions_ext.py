@@ -25,9 +25,9 @@ Convenience helpers for parameterised transitions:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def _is_presentation(obj: Any) -> bool:
     return hasattr(obj, "slides") and hasattr(obj, "save")
 
 
-def _open_prs(prs_or_path: Union[str, Path, Any]) -> Any:
+def _open_prs(prs_or_path: str | Path | Any) -> Any:
     """Open a presentation from a path, or pass through an existing object."""
     if _is_presentation(prs_or_path):
         return prs_or_path
@@ -129,7 +129,7 @@ def _open_prs(prs_or_path: Union[str, Path, Any]) -> Any:
     return Presentation(str(prs_or_path))
 
 
-def _save_prs(prs: Any, prs_or_path: Union[str, Path, Any]) -> None:
+def _save_prs(prs: Any, prs_or_path: str | Path | Any) -> None:
     """Save *prs* back.  Only writes to disk when *prs_or_path* is a path."""
     if not _is_presentation(prs_or_path):
         prs.save(str(prs_or_path))
@@ -238,7 +238,6 @@ def _build_advanced_transition_xml(
 
 def _insert_transition_on_slide(slide: Any, transition_elem: Any) -> None:
     """Insert a ``<p:transition>`` element into a slide, replacing any existing one."""
-    from lxml import etree  # lazy import
 
     sld = slide._element
     ns_p = _P_NS
@@ -318,7 +317,7 @@ def _read_transition_info(slide: Any, slide_index: int) -> AdvancedTransitionInf
 # ---------------------------------------------------------------------------
 
 def set_advanced_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
     *,
     transition: str,
@@ -387,7 +386,7 @@ def set_advanced_transition(
 
 
 def set_wheel_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
     *,
     spokes: int = 4,
@@ -442,7 +441,7 @@ def set_wheel_transition(
 
 
 def set_ripple_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
     *,
     center: bool = True,
@@ -497,7 +496,7 @@ def set_ripple_transition(
 
 
 def set_flip_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
     *,
     direction: str = "left",
@@ -553,7 +552,7 @@ def set_flip_transition(
 
 
 def set_pan_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
     *,
     direction: str = "left",
@@ -609,7 +608,7 @@ def set_pan_transition(
 
 
 def remove_advanced_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
 ) -> bool:
     """Remove an advanced transition from a slide.
@@ -665,7 +664,7 @@ def remove_advanced_transition(
 
 
 def list_advanced_transitions(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
 ) -> list[dict]:
     """List all advanced transitions in a presentation.
 
@@ -702,7 +701,7 @@ def list_advanced_transitions(
 
 
 def has_advanced_transition(
-    prs_or_path: Union[str, Path, Any],
+    prs_or_path: str | Path | Any,
     slide_index: int,
 ) -> bool | str:
     """Check whether a slide has an advanced (p14) transition.

@@ -8,24 +8,30 @@ from pathlib import Path
 from pptx_skill import auto_generate_ppt, render_preview
 
 
-class PreviewRendererTests(unittest.TestCase):
-    def test_libreoffice_render_result(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "deck.pptx"
-            out = Path(tmp) / "preview"
-            auto_generate_ppt(
-                title="Render",
-                sections=[{"title": "A", "bullets": ["1"]}],
-                output_path=str(path),
-                theme_key="editorial",
-                auto_search_images=False,
-            )
-            result = render_preview(str(path), output_dir=str(out), dpi=150, engine="libreoffice")
-            self.assertEqual(result.renderer, "libreoffice")
-            self.assertTrue(len(result.slide_pngs) > 0)
-            self.assertEqual(len(result.slide_pngs), len(result.actual_pixel_sizes))
-            self.assertTrue(result.attempts)
-            self.assertTrue(all(a["success"] for a in result.attempts))
+def _png_backend_available() -> bool:
+    """True if at least one PDF→PNG backend is actually working."""
+    try:
+        import fitz  # noqa: F401  # PyMuPDF
+
+        return True
+    except ImportError:
+        pass
+    # pdf2image needs poppler on PATH; import alone is not enough.
+    try:
+        import shutil
+
+        from pdf2image import pdfinfo_from_path  # noqa: F401
+
+        if not shutil.which("pdfinfo"):
+            return False
+        return True
+    except ImportError:
+        pass
+    return False
+
+
+class PreviewRendererLogicTests(unittest.TestCase):
+    """Tests that do not require a working PDF→PNG conversion pipeline."""
 
     def test_missing_file(self):
         result = render_preview("/nonexistent/file.pptx", output_dir="./out", engine="libreoffice")
@@ -60,6 +66,29 @@ class PreviewRendererTests(unittest.TestCase):
                 lo = next((a for a in result.attempts if a.get("engine") == "libreoffice"), None)
                 self.assertIsNotNone(lo)
                 self.assertIn("soffice", str(lo.get("error", "")).lower())
+
+
+@unittest.skipUnless(_png_backend_available(), "No PDF→PNG backend (PyMuPDF/poppler) available")
+class PreviewRendererPngTests(unittest.TestCase):
+    """Tests that require a working PDF→PNG conversion pipeline."""
+
+    def test_libreoffice_render_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            out = Path(tmp) / "preview"
+            auto_generate_ppt(
+                title="Render",
+                sections=[{"title": "A", "bullets": ["1"]}],
+                output_path=str(path),
+                theme_key="editorial",
+                auto_search_images=False,
+            )
+            result = render_preview(str(path), output_dir=str(out), dpi=150, engine="libreoffice")
+            self.assertEqual(result.renderer, "libreoffice")
+            self.assertTrue(len(result.slide_pngs) > 0)
+            self.assertEqual(len(result.slide_pngs), len(result.actual_pixel_sizes))
+            self.assertTrue(result.attempts)
+            self.assertTrue(all(a["success"] for a in result.attempts))
 
     def test_legacy_wrapper(self):
         from pptx_skill import render_slides

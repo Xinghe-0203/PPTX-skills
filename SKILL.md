@@ -45,8 +45,8 @@ description: |
 | 白名单修复引擎 | 已落地 | `pptx_skill.repair_engine.propose_repairs()` |
 | 生成 → QA → 修复闭环 | 已落地 | `pptx_skill.generation_pipeline.run_generation_pipeline()` |
 | Manifest V3 读写 | 已落地 | `pptx_skill.manifest.load_manifest()` |
-| 定点文字/图片/颜色编辑 | 已落地 | `pptx_skill.ppt_edit.*` |
-| 页面增删移复制换版式 | 已落地 | `pptx_skill.ppt_pages.*` |
+| 定点文字/图片/颜色编辑 | 已落地 | `pptx_skill.edit_text()` / `pptx_skill.swap_image()` / `pptx_skill.recolor()` |
+| 页面增删移复制换版式 | 已落地 | `pptx_skill.insert_slide()` / `pptx_skill.delete_slide()` / `pptx_skill.move_slide()` |
 | 10 种图表类型（多系列） | 已落地 | `pptx_skill.pptx_renderer` chart 节点 |
 | 富文本渲染（多段落/多 run/项目符号/超链接） | 已落地 | `pptx_skill.pptx_renderer` rich-text 节点 |
 | 表格增强样式（边框/条纹/填充/列宽） | 已落地 | `pptx_skill.pptx_renderer` table 节点 |
@@ -72,7 +72,7 @@ description: |
 | HTML 幻灯片导入（Marp/Slidev/reveal.js） | 已落地 | `pptx_skill.html_import.import_from_html()` / `html_to_content_spec()` / `detect_html_slides()` |
 | 3D/斜面/发光/反射/柔边/内阴影/透视阴影 + 16 特效预设 | 已落地 | `pptx_skill.effects.apply_shadow()` / `apply_glow()` / `apply_reflection()` / `apply_effect_preset()` |
 | 线条/肘形/曲线连接符/自由路径/箭头/虚线 | 已落地 | `pptx_skill.connectors.add_line()` / `add_elbow_connector()` / `add_freeform()` / `set_arrow_style()` |
-| 写保护/密码加密/标记最终版 | 已落地 | `pptx_skill.protection.write_protect()` / `encrypt_presentation()` / `mark_as_final()` |
+| 写保护/密码加密/标记最终版 | 已落地 | `pptx_skill.protection.apply_write_protection()` / `encrypt_pptx()` / `mark_as_final()` |
 | WCAG 2.1 无障碍审计/替代文本/对比度/自动修复 | 已落地 | `pptx_skill.accessibility.audit_accessibility()` / `set_alt_text()` / `check_contrast()` / `fix_accessibility()` |
 | 核心文档属性/自定义属性/嵌入字体 | 已落地 | `pptx_skill.metadata.set_metadata()` / `set_custom_property()` / `embed_font()` |
 | OMML 公式构建器 + LaTeX→OMML（分数/根号/n 元/矩阵） | 已落地 | `pptx_skill.equations.add_equation()` / `add_display_equation()` / `list_equations()` |

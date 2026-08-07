@@ -18,7 +18,6 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "VideoExportOptions",
@@ -118,11 +117,11 @@ def _render_slides_to_images(prs_or_path, tmp_dir: str, width: int, height: int)
 
     Returns list of image file paths.
     """
-    from pptx_skill.export import export_to_images
-
     # Calculate DPI from desired resolution
     # Standard slide is 13.333" × 7.5" (widescreen)
     from pptx import Presentation
+
+    from pptx_skill.export import export_to_images
     if isinstance(prs_or_path, Presentation):
         slide_w_in = prs_or_path.slide_width / 914400
     else:
@@ -140,7 +139,7 @@ def _write_concat_file(image_paths: list[str], durations: list[float],
     """Write an ffmpeg concat demuxer file."""
     with open(concat_path, "w", encoding="utf-8") as f:
         f.write("ffconcat version 1.0\n")
-        for img_path, duration in zip(image_paths, durations):
+        for img_path, duration in zip(image_paths, durations, strict=False):
             # Use forward slashes for ffmpeg
             safe_path = img_path.replace("\\", "/")
             f.write(f"file '{safe_path}'\n")
@@ -264,7 +263,7 @@ def export_to_video(
                     f"{result.stderr[-2000:]}"
                 )
         except subprocess.TimeoutExpired:
-            raise RuntimeError("ffmpeg encoding timed out after 600 seconds")
+            raise RuntimeError("ffmpeg encoding timed out after 600 seconds") from None
 
         if not os.path.isfile(output_path):
             raise RuntimeError(f"ffmpeg did not produce output file: {output_path}")
@@ -303,7 +302,7 @@ def _export_with_crossfade(
 
     # Chain crossfades
     if n == 1:
-        filter_parts.append(f"[v0]null[outv]")
+        filter_parts.append("[v0]null[outv]")
     else:
         # First crossfade
         offset = durations[0]
@@ -355,7 +354,7 @@ def _export_with_crossfade(
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg encoding failed:\n{result.stderr[-2000:]}")
     except subprocess.TimeoutExpired:
-        raise RuntimeError("ffmpeg encoding timed out after 600 seconds")
+        raise RuntimeError("ffmpeg encoding timed out after 600 seconds") from None
 
     return output_path
 
@@ -432,7 +431,7 @@ def export_to_gif(
                     f"{result.stderr[-2000:]}"
                 )
         except subprocess.TimeoutExpired:
-            raise RuntimeError("GIF encoding timed out after 600 seconds")
+            raise RuntimeError("GIF encoding timed out after 600 seconds") from None
 
         return output_path
 

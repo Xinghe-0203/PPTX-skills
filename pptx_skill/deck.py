@@ -32,8 +32,6 @@ Import from Markdown:
 from __future__ import annotations
 
 import os
-import shutil
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -71,7 +69,7 @@ class Deck:
     # ------------------------------------------------------------------
 
     @classmethod
-    def open(cls, path: str) -> "Deck":
+    def open(cls, path: str) -> Deck:
         """Open an existing PPTX file for editing.
 
         Creates a ``.bak.pptx`` backup alongside the original before any
@@ -91,7 +89,7 @@ class Deck:
         lang: str = "zh",
         auto_search_images: bool = False,
         output_path: str = "output.pptx",
-    ) -> "Deck":
+    ) -> Deck:
         """Generate a new deck from sections and open it for further editing.
 
         Delegates to :func:`pptx_skill.auto_generate_ppt`, then wraps the
@@ -122,7 +120,7 @@ class Deck:
         lang: str = "zh",
         theme_key: str | None = None,
         auto_search_images: bool = False,
-    ) -> "Deck":
+    ) -> Deck:
         """Generate a deck from a Markdown file and open it for editing.
 
         Delegates to :func:`pptx_skill.import_markdown`.
@@ -155,7 +153,7 @@ class Deck:
         return len(self._prs.slides)
 
     @property
-    def presentation(self) -> "Presentation":
+    def presentation(self) -> Presentation:
         """The underlying python-pptx ``Presentation`` object."""
         return self._prs
 
@@ -285,7 +283,7 @@ class Deck:
         diagonal: bool = False,
         font_size: int = 48,
         slides: list[int] | None = None,
-    ) -> "Deck":
+    ) -> Deck:
         """Add a text or image watermark. Chainable.
 
         Parameters
@@ -304,7 +302,7 @@ class Deck:
         slides : list[int], optional
             1-based slide indices to watermark.  None = all slides.
         """
-        from pptx_skill import add_text_watermark, add_image_watermark
+        from pptx_skill import add_image_watermark, add_text_watermark
         # Save to a temp path first if needed, since watermark functions
         # accept a path or Presentation.
         rotation = -45.0 if diagonal else 0.0
@@ -333,12 +331,12 @@ class Deck:
         slide_index: int | None = None,
         transition_type: str = "fade",
         duration_ms: int = 700,
-    ) -> "Deck":
+    ) -> Deck:
         """Add a slide transition (1-based index, or None for all slides).
 
         Chainable.
         """
-        from pptx_skill.transitions import apply_slide_transition, apply_deck_transitions
+        from pptx_skill.transitions import apply_deck_transitions, apply_slide_transition
         if slide_index is None:
             apply_deck_transitions(self._prs, transition_type, duration_ms)
         else:
@@ -354,7 +352,7 @@ class Deck:
         shape_name: str | None = None,
         anim_type: str = "fade_in",
         shape_index: int | None = None,
-    ) -> "Deck":
+    ) -> Deck:
         """Add an animation to a shape (1-based slide index). Chainable."""
         from pptx_skill.animations import apply_entrance_animation
         if slide_index < 1 or slide_index > len(self._prs.slides):
@@ -379,7 +377,7 @@ class Deck:
     # Notes & comments
     # ------------------------------------------------------------------
 
-    def add_notes(self, slide_index: int, text: str) -> "Deck":
+    def add_notes(self, slide_index: int, text: str) -> Deck:
         """Set speaker notes on a slide (1-based index). Chainable."""
         from pptx_skill import set_speaker_notes
         set_speaker_notes(self._prs, slide_index, text)
@@ -392,7 +390,7 @@ class Deck:
         text: str,
         *,
         author: str = "Claude",
-    ) -> "Deck":
+    ) -> Deck:
         """Add a review comment to a slide (1-based index). Chainable."""
         from pptx_skill import add_comment
         add_comment(self._prs, slide_index, text, author=author)
@@ -403,7 +401,7 @@ class Deck:
     # Sections
     # ------------------------------------------------------------------
 
-    def add_section(self, name: str, start_slide: int = 1) -> "Deck":
+    def add_section(self, name: str, start_slide: int = 1) -> Deck:
         """Add a section group (1-based start slide). Chainable."""
         from pptx_skill import add_section
         add_section(self._prs, name, start_slide=start_slide)
@@ -420,7 +418,7 @@ class Deck:
             self._prs.save(self._path)
             self._dirty = False
 
-    def insert_slide(self, index: int, section: dict, layout: str | None = None) -> "Deck":
+    def insert_slide(self, index: int, section: dict, layout: str | None = None) -> Deck:
         """Insert a slide at 1-based index. Chainable."""
         from pptx_skill import insert_slide
         self._save_if_dirty()
@@ -430,7 +428,7 @@ class Deck:
         self._prs = Presentation(self._path)
         return self
 
-    def delete_slide(self, index: int) -> "Deck":
+    def delete_slide(self, index: int) -> Deck:
         """Delete a slide at 1-based index. Chainable."""
         from pptx_skill import delete_slide
         self._save_if_dirty()
@@ -439,7 +437,7 @@ class Deck:
         self._prs = Presentation(self._path)
         return self
 
-    def move_slide(self, from_index: int, to_index: int) -> "Deck":
+    def move_slide(self, from_index: int, to_index: int) -> Deck:
         """Move a slide (1-based indices). Chainable."""
         from pptx_skill import move_slide
         self._save_if_dirty()
@@ -452,14 +450,14 @@ class Deck:
     # Metadata
     # ------------------------------------------------------------------
 
-    def set_metadata(self, **kwargs) -> "Deck":
+    def set_metadata(self, **kwargs) -> Deck:
         """Set core document properties (title, author, subject, ...). Chainable."""
         from pptx_skill import set_metadata
         set_metadata(self._prs, **kwargs)
         self._dirty = True
         return self
 
-    def set_custom_property(self, name: str, value) -> "Deck":
+    def set_custom_property(self, name: str, value) -> Deck:
         """Set a custom document property. Chainable."""
         from pptx_skill import set_custom_property
         set_custom_property(self._prs, name, value)
@@ -481,7 +479,7 @@ class Deck:
         dir_deg: float = 90,
         color: str = "808080",
         alpha: int = 50,
-    ) -> "Deck":
+    ) -> Deck:
         """Apply a shadow to a shape (1-based slide index). Chainable."""
         from pptx_skill import apply_shadow
         if slide_index < 1 or slide_index > len(self._prs.slides):
@@ -572,7 +570,7 @@ class Deck:
     def __repr__(self) -> str:
         return f"Deck(path={self._path!r}, slides={len(self._prs.slides)})"
 
-    def __enter__(self) -> "Deck":
+    def __enter__(self) -> Deck:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

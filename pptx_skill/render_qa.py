@@ -7,12 +7,12 @@ operations when numpy/scikit-image are unavailable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageChops, ImageDraw
 
+from pptx_skill._compat import StrEnum
 from pptx_skill.visual_qa import CheckOutcome, QACheckResult, QAIssue, QAReport, Severity
 
 

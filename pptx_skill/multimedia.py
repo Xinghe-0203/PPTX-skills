@@ -9,9 +9,7 @@ OOXML reference: ECMA-376 Part 4, §19.3 (PresentationML — Media).
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "VideoInfo",
@@ -135,7 +133,6 @@ def add_video(prs_or_path, slide_index: int, *,
     str
         The shape name.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -272,6 +269,7 @@ def _apply_media_playback(shape_elem, media_type: str, settings: dict):
 def _create_blank_poster() -> str:
     """Create a minimal 1x1 pixel PNG as a blank poster frame."""
     import tempfile
+
     from PIL import Image
 
     tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
@@ -388,7 +386,6 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
 
 def _update_media_playback(shape_elem, media_type: str, settings: dict):
     """Update existing media playback settings."""
-    from lxml import etree
 
     nvSpPr = shape_elem.find(f"{{{_NS_P}}}nvSpPr")
     if nvSpPr is None:

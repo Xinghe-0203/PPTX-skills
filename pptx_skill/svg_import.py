@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
@@ -832,7 +832,6 @@ def _parse_svg_viewbox(root: Any) -> tuple[float, float, float, float]:
 
     Returns ``(x, y, width, height)``.
     """
-    import xml.etree.ElementTree as ET
 
     # Try viewBox first
     vb = root.get("viewBox")
@@ -858,7 +857,6 @@ def _parse_svg_viewbox(root: Any) -> tuple[float, float, float, float]:
 
 def _get_attr(element: Any, attr: str, default: str | None = None) -> str | None:
     """Get an attribute from an SVG element, checking style attribute first."""
-    import xml.etree.ElementTree as ET
 
     # Check style attribute
     style = element.get("style", "")
@@ -875,7 +873,6 @@ def _get_attr(element: Any, attr: str, default: str | None = None) -> str | None
 
 def _element_has_unsupported_features(element: Any) -> bool:
     """Check if an SVG element uses features that cannot be converted to DrawingML."""
-    import xml.etree.ElementTree as ET
 
     tag = element.tag
     # Strip namespace
@@ -911,7 +908,6 @@ def _element_has_unsupported_features(element: Any) -> bool:
 
 def _svg_has_unsupported_features(root: Any) -> bool:
     """Recursively check if the SVG tree has any unsupported features."""
-    import xml.etree.ElementTree as ET
 
     for elem in root.iter():
         if _element_has_unsupported_features(elem):
@@ -974,8 +970,8 @@ def _convert_path_element(
     stroke_str = _get_attr(elem, "stroke")
     sw_str = _get_attr(elem, "stroke-width")
     opacity_str = _get_attr(elem, "opacity")
-    fill_opacity_str = _get_attr(elem, "fill-opacity")
-    stroke_opacity_str = _get_attr(elem, "stroke-opacity")
+    _get_attr(elem, "fill-opacity")
+    _get_attr(elem, "stroke-opacity")
 
     # Inherit from parent if not explicitly set
     raw_fill = fill_str if fill_str is not None else parent_fill
@@ -1120,7 +1116,7 @@ def _convert_rect_element(
         fill_hex = "000000"
 
     elem_opacity = _parse_svg_opacity(opacity_str)
-    effective_opacity = parent_opacity * elem_opacity
+    parent_opacity * elem_opacity
 
     name = elem.get("id", f"SVG_Rect_{idx}")
 
@@ -1442,7 +1438,6 @@ def _walk_svg_tree(
     parent_opacity: float = 1.0,
 ) -> list[PathData]:
     """Recursively walk the SVG element tree and convert each shape."""
-    import xml.etree.ElementTree as ET
 
     results: list[PathData] = []
 
@@ -1680,7 +1675,7 @@ def _build_stroke_xml(
             mj = etree.SubElement(ln, f"{{{_NS_A}}}miter")
             mj.set("lim", "800000")
         elif linejoin in join_map:
-            j = etree.SubElement(ln, f"{{{_NS_A}}}{join_map[linejoin]}")
+            etree.SubElement(ln, f"{{{_NS_A}}}{join_map[linejoin]}")
 
     return ln
 
@@ -1869,12 +1864,12 @@ def _add_group_to_sp_tree(
     # Compute overall bounds of all paths
     min_x, min_y, max_x, max_y = _compute_shape_bounds(path_data_list)
 
-    svg_content_w = max_x - min_x if max_x > min_x else svg_vb_w
-    svg_content_h = max_y - min_y if max_y > min_y else svg_vb_h
+    max_x - min_x if max_x > min_x else svg_vb_w
+    max_y - min_y if max_y > min_y else svg_vb_h
 
     # Scale factor: SVG units → EMU
-    scale_x = width_emu / svg_vb_w if svg_vb_w > 0 else 1
-    scale_y = height_emu / svg_vb_h if svg_vb_h > 0 else 1
+    width_emu / svg_vb_w if svg_vb_w > 0 else 1
+    height_emu / svg_vb_h if svg_vb_h > 0 else 1
 
     grpSp = etree.SubElement(sp_tree, f"{{{_NS_P}}}grpSp")
 
@@ -2252,7 +2247,7 @@ def import_svg_as_image(
     # Fallback: Pillow with svg support
     if png_data is None:
         try:
-            from PIL import Image  # type: ignore[import-untyped]
+            import PIL.Image  # noqa: F401 — availability probe
 
             # Try Pillow's SVG support (requires pypotrace or similar)
             # Most likely won't work without additional deps

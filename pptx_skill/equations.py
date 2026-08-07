@@ -11,8 +11,6 @@ OOXML reference: ECMA-376 Part 4, §22.1 (Office Math Markup Language).
 
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
@@ -91,7 +89,7 @@ class OmmlBuilder:
         from lxml import etree
         f = etree.SubElement(self._root, f"{{{_NS_M}}}f")
         fPr = etree.SubElement(f, f"{{{_NS_M}}}fPr")
-        ctrlPr = etree.SubElement(fPr, f"{{{_NS_M}}}ctrlPr")
+        etree.SubElement(fPr, f"{{{_NS_M}}}ctrlPr")
         type_elem = etree.SubElement(fPr, f"{{{_NS_M}}}type")
         type_elem.set(f"{{{_NS_M}}}val", bar_type)
 
@@ -419,7 +417,7 @@ class OmmlBuilder:
         borderBox = etree.SubElement(self._root, f"{{{_NS_M}}}borderBox")
         borderBoxPr = etree.SubElement(borderBox, f"{{{_NS_M}}}borderBoxPr")
         etree.SubElement(borderBoxPr, f"{{{_NS_M}}}ctrlPr")
-        e = etree.SubElement(borderBox, f"{{{_NS_M}}}e")
+        etree.SubElement(borderBox, f"{{{_NS_M}}}e")
         # The child builder will add to this <m:e>
         return self
 
@@ -549,7 +547,6 @@ def add_equation(prs_or_path, slide_index: int, *,
     str
         The shape name.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -850,7 +847,6 @@ def _extract_brace_content(text: str, start: int) -> tuple[str, int]:
 
 def _builder_to_plain_text(builder: OmmlBuilder) -> str:
     """Extract plain text from a builder (simplified)."""
-    from lxml import etree
     parts = []
     for t_elem in builder.to_xml().iter(f"{{{_NS_M}}}t"):
         if t_elem.text:
@@ -872,7 +868,6 @@ def list_equations(prs_or_path, slide_index: int) -> list[dict]:
 
     Returns a list of dicts with keys: name, is_display, text_preview.
     """
-    from lxml import etree
 
     prs = _open_prs(prs_or_path)
     if slide_index < 1 or slide_index > len(prs.slides):
@@ -925,7 +920,6 @@ def remove_equation(prs_or_path, slide_index: int, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

@@ -11,7 +11,7 @@ OOXML reference: ECMA-376 Part 4, §15.2 (Core Properties),
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -215,8 +215,9 @@ def list_custom_properties(prs_or_path) -> list[CustomProperty]:
 
     Custom properties are stored in ``docProps/custom.xml`` inside the PPTX.
     """
-    from lxml import etree
     import zipfile
+
+    from lxml import etree
 
     props: list[CustomProperty] = []
 
@@ -274,10 +275,11 @@ def set_custom_property(prs_or_path, name: str, value: str | int | float | bool)
     value : str | int | float | bool
         Property value. Type is preserved.
     """
-    from lxml import etree
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
+
+    from lxml import etree
 
     path = prs_or_path if isinstance(prs_or_path, str) else None
     if path is None:
@@ -363,10 +365,11 @@ def set_custom_property(prs_or_path, name: str, value: str | int | float | bool)
 
 def delete_custom_property(prs_or_path, name: str) -> bool:
     """Delete a custom document property by name."""
-    from lxml import etree
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
+
+    from lxml import etree
 
     path = prs_or_path if isinstance(prs_or_path, str) else None
     if path is None:
@@ -413,10 +416,11 @@ def delete_custom_property(prs_or_path, name: str) -> bool:
 
 def _ensure_custom_xml_relationship(path: str):
     """Ensure _rels/.rels has a relationship to docProps/custom.xml."""
-    from lxml import etree
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
+
+    from lxml import etree
 
     try:
         with zipfile.ZipFile(path, "r") as zf:
@@ -469,10 +473,11 @@ def _ensure_custom_xml_relationship(path: str):
 
 def _ensure_custom_xml_content_type(path: str):
     """Ensure [Content_Types].xml has an entry for docProps/custom.xml."""
-    from lxml import etree
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
+
+    from lxml import etree
 
     try:
         with zipfile.ZipFile(path, "r") as zf:
@@ -565,10 +570,11 @@ def embed_font(prs_or_path, font_path: str, *, subset: bool = True) -> bool:
     Full font embedding may have licensing restrictions. Check the font's
     EULA before embedding.
     """
-    from lxml import etree
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
+
+    from lxml import etree
 
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Font file not found: {font_path}")
@@ -589,7 +595,6 @@ def embed_font(prs_or_path, font_path: str, *, subset: bool = True) -> bool:
         # Add font to ZIP and update fontTable.xml
         temp_dir = tempfile.mkdtemp()
         temp_zip = os.path.join(temp_dir, "output.pptx")
-        font_table_updated = False
 
         try:
             with zipfile.ZipFile(path, "r") as zin:
@@ -612,20 +617,19 @@ def embed_font(prs_or_path, font_path: str, *, subset: bool = True) -> bool:
                     if font_table_xml is not None:
                         ft_root = etree.fromstring(font_table_xml)
                     else:
-                        ft_ns = "http://schemas.openxmlformats.org/drawingml/2006/main"
-                        ft_root = etree.Element(f"{{{{ft_ns}}}}fontTable")
+                        ft_root = etree.Element("{{ft_ns}}fontTable")
 
-                    ft_ns = ft_root.tag.split("}")[0] + "}" if "}" in ft_root.tag else \
+                    ft_root.tag.split("}")[0] + "}" if "}" in ft_root.tag else \
                         "http://schemas.openxmlformats.org/drawingml/2006/main"
 
                     # Add font entry
-                    font_elem = etree.SubElement(ft_root, f"{{{{ft_ns}}}}font")
+                    font_elem = etree.SubElement(ft_root, "{{ft_ns}}font")
                     font_elem.set("charset", "00")
                     font_elem.set("panose", "00000000000000000000")
                     font_elem.set("pitchFamily", "00")
 
                     # Regular
-                    regular = etree.SubElement(font_elem, f"{{{{ft_ns}}}}regular")
+                    regular = etree.SubElement(font_elem, "{{ft_ns}}regular")
                     regular.set("typeface", font_name)
 
                     embed_flag = "subset" if subset else "full"
@@ -655,9 +659,9 @@ def remove_embedded_font(prs_or_path, font_name: str) -> bool:
     font_name : str
         Name of the font to remove (without .ttf extension).
     """
-    import zipfile
     import shutil
     import tempfile
+    import zipfile
 
     path = prs_or_path if isinstance(prs_or_path, str) else None
     if path is None:

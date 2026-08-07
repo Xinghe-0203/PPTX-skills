@@ -14,9 +14,7 @@ All functions accept both ``Presentation`` objects and file paths.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "ChartInfo",
@@ -180,8 +178,7 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
     list[dict]
         Each dict has keys: slide_index, name, chart_type, series_count.
     """
-    is_path = not _is_presentation(prs_or_path)
-    path = prs_or_path if is_path else None
+    not _is_presentation(prs_or_path)
     prs = _open_prs(prs_or_path)
     try:
         results = []
@@ -221,8 +218,7 @@ def get_chart_info(prs_or_path, slide_index: int, shape_name: str) -> ChartInfo 
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    is_path = not _is_presentation(prs_or_path)
-    path = prs_or_path if is_path else None
+    not _is_presentation(prs_or_path)
     prs = _open_prs(prs_or_path)
     try:
         if slide_index < 1 or slide_index > len(prs.slides):
@@ -327,8 +323,7 @@ def edit_chart_data(
         # Edit series values
         if values is not None:
             try:
-                series = chart.series[series_index]
-                chart_data = chart.chart_data
+                chart.series[series_index]
                 # Use OOXML manipulation for precise control
                 _set_series_values(chart, series_index, values)
             except (IndexError, Exception) as exc:
@@ -1479,8 +1474,7 @@ def export_chart_data(
     dict
         ``{"categories": [...], "series": [{"name": ..., "values": [...]}, ...]}``
     """
-    is_path = not _is_presentation(prs_or_path)
-    path = prs_or_path if is_path else None
+    not _is_presentation(prs_or_path)
     prs = _open_prs(prs_or_path)
     try:
         if slide_index < 1 or slide_index > len(prs.slides):
@@ -1546,7 +1540,6 @@ def import_chart_data(
                 if i < len(existing_series):
                     _set_series_values(chart, i, values)
                     # Rename
-                    from lxml import etree
                     chart_space = chart._chartSpace
                     plot_area = chart_space.find(f".//{{{_NS_C}}}plotArea")
                     if plot_area is not None:

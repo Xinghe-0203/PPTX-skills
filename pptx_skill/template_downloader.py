@@ -414,7 +414,7 @@ def import_template(
     # Step 3: build a V2-compatible profile with design_schema tokens
     theme = v1_profile.get("theme", {})
     fonts = v1_profile.get("fonts", {})
-    on_dark = theme.get("on_dark", False)
+    theme.get("on_dark", False)
 
     # Build three-layer tokens (primitive -> semantic -> component)
     primitive_tokens = {

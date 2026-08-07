@@ -23,8 +23,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 __all__ = [
     "OcrResult",
@@ -155,32 +154,32 @@ def _ocr_tesseract(image_path: str, languages: list[str], min_confidence: float)
     import pytesseract
     from PIL import Image
 
-    img = Image.open(image_path)
-    img_w, img_h = img.size
+    with Image.open(image_path) as img:
+        img_w, img_h = img.size
 
-    # Tesseract language codes: eng, chi_sim, chi_tra, jpn, kor, etc.
-    lang_map = {"en": "eng", "zh": "chi_sim", "zh_tw": "chi_tra", "ja": "jpn", "ko": "kor"}
-    tess_langs = "+".join(lang_map.get(l, l) for l in languages)
+        # Tesseract language codes: eng, chi_sim, chi_tra, jpn, kor, etc.
+        lang_map = {"en": "eng", "zh": "chi_sim", "zh_tw": "chi_tra", "ja": "jpn", "ko": "kor"}
+        tess_langs = "+".join(lang_map.get(lang, lang) for lang in languages)
 
-    data = pytesseract.image_to_data(img, lang=tess_langs, output_type=pytesseract.Output.DICT)
-    results = []
-    n = len(data["text"])
-    for i in range(n):
-        text = data["text"][i].strip()
-        conf = float(data["conf"][i]) / 100.0  # Tesseract gives 0-100
-        if not text or conf < min_confidence:
-            continue
-        results.append(OcrResult(
-            text=text,
-            confidence=conf,
-            left=data["left"][i] / img_w,
-            top=data["top"][i] / img_h,
-            width=data["width"][i] / img_w,
-            height=data["height"][i] / img_h,
-            language=languages[0] if languages else "en",
-            engine=OcrEngine.TESSERACT,
-        ))
-    return results
+        data = pytesseract.image_to_data(img, lang=tess_langs, output_type=pytesseract.Output.DICT)
+        results = []
+        n = len(data["text"])
+        for i in range(n):
+            text = data["text"][i].strip()
+            conf = float(data["conf"][i]) / 100.0  # Tesseract gives 0-100
+            if not text or conf < min_confidence:
+                continue
+            results.append(OcrResult(
+                text=text,
+                confidence=conf,
+                left=data["left"][i] / img_w,
+                top=data["top"][i] / img_h,
+                width=data["width"][i] / img_w,
+                height=data["height"][i] / img_h,
+                language=languages[0] if languages else "en",
+                engine=OcrEngine.TESSERACT,
+            ))
+        return results
 
 
 def _ocr_easyocr(image_path: str, languages: list[str], min_confidence: float) -> list[OcrResult]:
@@ -188,52 +187,52 @@ def _ocr_easyocr(image_path: str, languages: list[str], min_confidence: float) -
     import easyocr
     from PIL import Image
 
-    img = Image.open(image_path)
-    img_w, img_h = img.size
+    with Image.open(image_path) as img:
+        img_w, img_h = img.size
 
-    # EasyOCR language codes: en, ch_sim, ch_tra, ja, ko, etc.
-    lang_map = {"zh": "ch_sim", "zh_tw": "ch_tra"}
-    reader_langs = [lang_map.get(l, l) for l in languages]
+        # EasyOCR language codes: en, ch_sim, ch_tra, ja, ko, etc.
+        lang_map = {"zh": "ch_sim", "zh_tw": "ch_tra"}
+        reader_langs = [lang_map.get(lang, lang) for lang in languages]
 
-    # Reader is cached per language combo
-    reader = easyocr.Reader(reader_langs, verbose=False)
-    detections = reader.readtext(image_path)
+        # Reader is cached per language combo
+        reader = easyocr.Reader(reader_langs, verbose=False)
+        detections = reader.readtext(image_path)
 
-    results = []
-    for bbox, text, conf in detections:
-        if conf < min_confidence or not text.strip():
-            continue
-        # bbox is [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
-        xs = [p[0] for p in bbox]
-        ys = [p[1] for p in bbox]
-        results.append(OcrResult(
-            text=text.strip(),
-            confidence=conf,
-            left=min(xs) / img_w,
-            top=min(ys) / img_h,
-            width=(max(xs) - min(xs)) / img_w,
-            height=(max(ys) - min(ys)) / img_h,
-            language=languages[0] if languages else "en",
-            engine=OcrEngine.EASYOCR,
-        ))
-    return results
+        results = []
+        for bbox, text, conf in detections:
+            if conf < min_confidence or not text.strip():
+                continue
+            # bbox is [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+            xs = [p[0] for p in bbox]
+            ys = [p[1] for p in bbox]
+            results.append(OcrResult(
+                text=text.strip(),
+                confidence=conf,
+                left=min(xs) / img_w,
+                top=min(ys) / img_h,
+                width=(max(xs) - min(xs)) / img_w,
+                height=(max(ys) - min(ys)) / img_h,
+                language=languages[0] if languages else "en",
+                engine=OcrEngine.EASYOCR,
+            ))
+        return results
 
 
 def _ocr_paddleocr(image_path: str, languages: list[str], min_confidence: float) -> list[OcrResult]:
     """OCR using PaddleOCR."""
     from PIL import Image
 
-    img = Image.open(image_path)
-    img_w, img_h = img.size
+    with Image.open(image_path) as img:
+        img_w, img_h = img.size
 
-    # Lazy import — paddleocr is heavy
-    from paddleocr import PaddleOCR
+        # Lazy import — paddleocr is heavy
+        from paddleocr import PaddleOCR
 
-    lang_map = {"en": "en", "zh": "ch", "zh_tw": "ch", "ja": "japan", "ko": "korean"}
-    pad_lang = lang_map.get(languages[0], "en") if languages else "en"
+        lang_map = {"en": "en", "zh": "ch", "zh_tw": "ch", "ja": "japan", "ko": "korean"}
+        pad_lang = lang_map.get(languages[0], "en") if languages else "en"
 
-    ocr = PaddleOCR(lang=pad_lang, show_log=False)
-    result = ocr.ocr(image_path, cls=True)
+        ocr = PaddleOCR(lang=pad_lang, show_log=False)
+        result = ocr.ocr(image_path, cls=True)
 
     results = []
     if result and result[0]:
@@ -471,7 +470,6 @@ def auto_caption_slide(
     int
         Number of shapes/elements updated.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

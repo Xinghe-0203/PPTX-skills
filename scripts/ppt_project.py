@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 import zipfile
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -124,7 +124,7 @@ def save_project_manifest(pptx_path: str | Path, project: dict) -> None:
     path = Path(pptx_path).resolve()
     payload = copy.deepcopy(project)
     payload.setdefault("skill_version", 2)
-    payload.setdefault("generated_at", datetime.now(UTC).isoformat())
+    payload.setdefault("generated_at", datetime.now(timezone.utc).isoformat())
     sidecar = _sidecar_path(path)
     with sidecar.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)

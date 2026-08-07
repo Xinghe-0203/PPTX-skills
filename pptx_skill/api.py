@@ -7,6 +7,7 @@ experimental switches for the V2 adaptive/QA pipeline.
 from __future__ import annotations
 
 import os
+import zipfile
 from pathlib import Path
 from typing import Any, Literal
 
@@ -32,7 +33,6 @@ def _legacy_validate(pptx_path: str) -> dict[str, Any]:
     stripped-down three-check variant that previously lived here.
     """
     from pptx import Presentation
-    from pptx.util import Pt
 
     if not os.path.exists(pptx_path):
         return {"passed": False, "checks": [], "warnings": [f"文件不存在: {pptx_path}"]}
@@ -249,6 +249,7 @@ def auto_generate_ppt(
     )
 
     # Build and persist V3 content model (best-effort; never breaks legacy path).
+    manifest = None
     try:
         content = adapt_legacy_sections(title, subtitle, sections, locale=lang or "zh-CN")
         manifest = load_manifest(pptx_path) or ManifestV3()
@@ -258,8 +259,26 @@ def auto_generate_ppt(
         save_manifest_v3(pptx_path, manifest)
     except Exception:
         import logging
-        logging.getLogger(__name__).debug("V3 manifest write failed (non-critical)", exc_info=True)
-        manifest = None
+
+        logging.getLogger(__name__).warning(
+            "V3 manifest write failed; clearing embedded V2 residue to avoid stale reads",
+            exc_info=True,
+        )
+        # V3 failed — remove the embedded manifest part that the legacy path
+        # wrote so a subsequent load_manifest() doesn't silently migrate a
+        # V2 payload that diverges from the actual generated content.
+        try:
+            from pptx_skill.manifest import MANIFEST_PART
+
+            with zipfile.ZipFile(pptx_path, "r") as source:
+                info_list = source.infolist()
+                members = {item.filename: source.read(item.filename) for item in info_list}
+            members.pop(MANIFEST_PART, None)
+            with zipfile.ZipFile(pptx_path, "w", zipfile.ZIP_DEFLATED) as out:
+                for name, data in members.items():
+                    out.writestr(name, data)
+        except Exception:
+            logging.getLogger(__name__).warning("Failed to clear embedded V2 manifest", exc_info=True)
 
     qa_report: QAReport | None = None
     if qa_mode != "off":

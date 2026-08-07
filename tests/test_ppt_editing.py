@@ -55,8 +55,9 @@ class PptEditingTests(unittest.TestCase):
         # Decks produced by the V3 facade (pptx_skill.auto_generate_ppt) carry a
         # Manifest V3, not a v2 sections payload. load_project must still rebuild
         # a v2 project so edit_section/regenerate keep working.
-        from pptx_skill import auto_generate_ppt as facade_generate
         from ppt_project import edit_section, regenerate
+
+        from pptx_skill import auto_generate_ppt as facade_generate
 
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
@@ -101,8 +102,8 @@ class PptEditingTests(unittest.TestCase):
         import copy
         import sys as _sys
         _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-        from pptx_helper import auto_generate_ppt as legacy_generate
         from ppt_project import regenerate
+        from pptx_helper import auto_generate_ppt as legacy_generate
 
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)

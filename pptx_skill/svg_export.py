@@ -18,7 +18,6 @@ from __future__ import annotations
 import base64
 import math
 import os
-import re
 from typing import Any
 
 from pptx import Presentation as _open_presentation
@@ -213,7 +212,7 @@ def _slide_background_color(slide: Any) -> str | None:
 
     # Try reading the XML directly
     try:
-        from lxml import etree
+        import lxml.etree  # noqa: F401 — availability probe
 
         sld_elem = slide._element
         bg_elem = sld_elem.find(f"{{{_NS_P}}}bg")
@@ -249,7 +248,7 @@ def _shape_fill_to_svg(shape: Any) -> str | None:
 
     # XML fallback
     try:
-        from lxml import etree
+        import lxml.etree  # noqa: F401 — availability probe
 
         sp_pr = shape._element.find(f"{{{_NS_P}}}spPr")
         if sp_pr is not None:
@@ -287,7 +286,7 @@ def _shape_stroke_to_svg(shape: Any) -> tuple[str | None, float]:
     # XML fallback for line properties
     if colour is None:
         try:
-            from lxml import etree
+            import lxml.etree  # noqa: F401 — availability probe
 
             sp_pr = shape._element.find(f"{{{_NS_P}}}spPr")
             if sp_pr is not None:
@@ -417,7 +416,7 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
     Returns ``None`` if the shape has no custom geometry.
     """
     try:
-        from lxml import etree
+        import lxml.etree  # noqa: F401 — availability probe
 
         sp_pr = shape._element.find(f"{{{_NS_P}}}spPr")
         if sp_pr is None:
@@ -491,10 +490,10 @@ def _custom_geom_to_path(shape: Any, offset_x: int, offset_y: int) -> str | None
 
                 elif tag == "arcTo":
                     # DrawingML arcTo: wR, hR, stAng, swAng
-                    w_r = int(child.get("wR", "0"))
-                    h_r = int(child.get("hR", "0"))
-                    st_ang = int(child.get("stAng", "0"))
-                    sw_ang = int(child.get("swAng", "0"))
+                    int(child.get("wR", "0"))
+                    int(child.get("hR", "0"))
+                    int(child.get("stAng", "0"))
+                    int(child.get("swAng", "0"))
                     # Simplified: draw as a line (arc approximation would need
                     # current-point tracking; skip for robustness)
                     pass
@@ -596,7 +595,6 @@ def _text_frame_to_svg(text_frame: Any, x: float, y: float, width: float, height
                 pass
             try:
                 # CJK font
-                from lxml import etree
 
                 r_elem = run._r
                 ea = r_elem.find(f".//{{{_NS_A}}}ea")
@@ -655,7 +653,7 @@ def _text_frame_to_svg(text_frame: Any, x: float, y: float, width: float, height
 
         if not tspans:
             # Empty paragraph -- preserve vertical space
-            tspans.append(f"<tspan> </tspan>")
+            tspans.append("<tspan> </tspan>")
 
         # Build the text element for this paragraph
         text_attrs: list[str] = [
@@ -928,7 +926,7 @@ def _connector_to_svg(
 
     # Try extracting connection points from XML
     try:
-        from lxml import etree
+        import lxml.etree  # noqa: F401 — availability probe
 
         sp_pr = shape._element.find(f"{{{_NS_P}}}spPr")
         if sp_pr is not None:
@@ -1148,7 +1146,6 @@ def _collect_fonts_from_slide(slide: Any) -> set[str]:
                             pass
                         # CJK font
                         try:
-                            from lxml import etree
 
                             r_elem = run._r
                             ea = r_elem.find(

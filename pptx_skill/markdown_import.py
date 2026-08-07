@@ -127,7 +127,6 @@ def markdown_to_sections(
 
     # State for the current section being built.
     current: dict[str, Any] | None = None
-    current_level = 0
 
     def _flush() -> None:
         nonlocal current

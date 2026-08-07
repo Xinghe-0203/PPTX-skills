@@ -9,36 +9,13 @@ import unittest
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches
 
-# ---------------------------------------------------------------------------
-# Module imports
-# ---------------------------------------------------------------------------
-from pptx_skill.transitions import (
-    TRANSITION_TYPES,
-    apply_deck_transitions,
-    apply_slide_transition,
-)
 from pptx_skill.animations import (
     ALL_ANIMATION_TYPES,
     ANIMATION_TYPES,
     apply_animation,
     remove_animations,
-)
-from pptx_skill.watermark import (
-    add_text_watermark,
-    list_watermarks,
-    remove_watermark,
-)
-from pptx_skill.sections import (
-    SectionInfo,
-    add_section,
-    list_sections,
-    rename_section,
-)
-from pptx_skill.image_optimize import (
-    compress_images,
-    get_image_stats,
 )
 from pptx_skill.comments import (
     get_speaker_notes,
@@ -53,23 +30,46 @@ from pptx_skill.diff import (
     has_changes,
 )
 from pptx_skill.export import export_to_text
-from pptx_skill.smartart import (
-    detect_smartart,
-    list_smartart_layouts,
-)
-from pptx_skill.vba import (
-    has_vba_project,
-    list_macro_names,
-)
-from pptx_skill.table_styles import (
-    TABLE_STYLE_IDS,
-    apply_table_style,
+from pptx_skill.image_optimize import (
+    compress_images,
+    get_image_stats,
 )
 from pptx_skill.merge import (
     MergeResult,
     extract_slides,
 )
+from pptx_skill.sections import (
+    SectionInfo,
+    add_section,
+    list_sections,
+    rename_section,
+)
+from pptx_skill.smartart import (
+    detect_smartart,
+    list_smartart_layouts,
+)
+from pptx_skill.table_styles import (
+    TABLE_STYLE_IDS,
+    apply_table_style,
+)
 
+# ---------------------------------------------------------------------------
+# Module imports
+# ---------------------------------------------------------------------------
+from pptx_skill.transitions import (
+    TRANSITION_TYPES,
+    apply_deck_transitions,
+    apply_slide_transition,
+)
+from pptx_skill.vba import (
+    has_vba_project,
+    list_macro_names,
+)
+from pptx_skill.watermark import (
+    add_text_watermark,
+    list_watermarks,
+    remove_watermark,
+)
 
 # ===================================================================
 # Helpers

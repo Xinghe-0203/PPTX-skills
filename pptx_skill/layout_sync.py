@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "LayoutTemplate",
@@ -186,7 +185,7 @@ def align_shapes(
             if shape is ref_shape:
                 continue
 
-            bounds = _get_shape_bounds(shape)
+            _get_shape_bounds(shape)
 
             if alignment == "left":
                 shape.left = ref_bounds["left"]
@@ -471,9 +470,9 @@ def _copy_shape_style(source, target):
         if source.has_text_frame and target.has_text_frame:
             for src_para, tgt_para in zip(
                 source.text_frame.paragraphs,
-                target.text_frame.paragraphs,
+                target.text_frame.paragraphs, strict=False,
             ):
-                for src_run, tgt_run in zip(src_para.runs, tgt_para.runs):
+                for src_run, tgt_run in zip(src_para.runs, tgt_para.runs, strict=False):
                     try:
                         tgt_run.font.size = src_run.font.size
                     except Exception:
@@ -633,7 +632,6 @@ def bring_to_front(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -663,7 +661,6 @@ def send_to_back(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -698,7 +695,6 @@ def move_up(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -733,7 +729,6 @@ def move_down(prs_or_path, slide_index: int, *, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -770,7 +765,6 @@ def set_z_order(prs_or_path, slide_index: int, *, shape_name: str, position: int
     position : int
         0 = back, -1 = front.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

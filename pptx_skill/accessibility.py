@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 __all__ = [
     "AccessibilityIssue",
@@ -237,10 +236,8 @@ def get_alt_text(prs_or_path, slide_index: int, shape_name: str) -> str | None:
 
     Returns None if no alt text is set.
     """
-    from lxml import etree
 
-    is_path = not _is_presentation(prs_or_path)
-    path = prs_or_path if is_path else None
+    not _is_presentation(prs_or_path)
     prs = _open_prs(prs_or_path)
     if slide_index < 1 or slide_index > len(prs.slides):
         raise IndexError(f"slide_index {slide_index} out of range (1..{len(prs.slides)})")
@@ -277,7 +274,6 @@ def set_alt_text(prs_or_path, slide_index: int, shape_name: str,
     title : str, optional
         Short title for the alt text (shown in some screen readers).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -312,7 +308,6 @@ def remove_alt_text(prs_or_path, slide_index: int, shape_name: str) -> bool:
     slide_index : int
         1-based slide index (1 = first slide).
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -354,7 +349,6 @@ def set_reading_order(prs_or_path, slide_index: int, shape_name: str,
     order : int
         Reading order index (0-based). Lower values are read first.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None
@@ -466,10 +460,8 @@ def audit_accessibility(prs_or_path, *,
     AccessibilityReport
         Complete audit report with issues and score.
     """
-    from lxml import etree
 
-    is_path = not _is_presentation(prs_or_path)
-    path = prs_or_path if is_path else None
+    not _is_presentation(prs_or_path)
     prs = _open_prs(prs_or_path)
     try:
         report = AccessibilityReport(total_slides=len(prs.slides))
@@ -648,7 +640,6 @@ def fix_accessibility(prs_or_path, *,
     list[AccessibilityIssue]
         Issues that were fixed.
     """
-    from lxml import etree
 
     is_path = not _is_presentation(prs_or_path)
     path = prs_or_path if is_path else None

@@ -19,9 +19,7 @@ from __future__ import annotations
 
 import colorsys
 import logging
-import re
 from dataclasses import dataclass
-from typing import Any
 
 __all__ = [
     "ColorInfo",
@@ -119,13 +117,13 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
 def rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
     """Convert RGB (0-255) to HSL (0-360, 0-1, 0-1)."""
     r_n, g_n, b_n = r / 255.0, g / 255.0, b / 255.0
-    h, l, s = colorsys.rgb_to_hls(r_n, g_n, b_n)
-    return (h * 360, s, l)
+    hue, light, sat = colorsys.rgb_to_hls(r_n, g_n, b_n)
+    return (hue * 360, sat, light)
 
 
-def hsl_to_rgb(h: float, s: float, l: float) -> tuple[int, int, int]:
+def hsl_to_rgb(h: float, s: float, light: float) -> tuple[int, int, int]:
     """Convert HSL (0-360, 0-1, 0-1) to RGB (0-255)."""
-    r_n, g_n, b_n = colorsys.hls_to_rgb(h / 360, l, s)
+    r_n, g_n, b_n = colorsys.hls_to_rgb(h / 360, light, s)
     return (int(round(r_n * 255)), int(round(g_n * 255)), int(round(b_n * 255)))
 
 
@@ -233,59 +231,59 @@ def contrast_color(hex_color: str, threshold: float = 0.5) -> str:
 
 def complementary_colors(hex_color: str) -> list[str]:
     """Return the complementary color pair (original + opposite)."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
-    comp = hsl_to_rgb((h + 180) % 360, s, l)
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
+    comp = hsl_to_rgb((h + 180) % 360, s, light)
     return [hex_color, rgb_to_hex(*comp)]
 
 
 def analogous_colors(hex_color: str, angle: float = 30) -> list[str]:
     """Return 3 analogous colors (original ± angle on the color wheel)."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
     return [
-        rgb_to_hex(*hsl_to_rgb((h - angle) % 360, s, l)),
+        rgb_to_hex(*hsl_to_rgb((h - angle) % 360, s, light)),
         hex_color,
-        rgb_to_hex(*hsl_to_rgb((h + angle) % 360, s, l)),
+        rgb_to_hex(*hsl_to_rgb((h + angle) % 360, s, light)),
     ]
 
 
 def triadic_colors(hex_color: str) -> list[str]:
     """Return 3 triadic colors (120° apart on the color wheel)."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
     return [
         hex_color,
-        rgb_to_hex(*hsl_to_rgb((h + 120) % 360, s, l)),
-        rgb_to_hex(*hsl_to_rgb((h + 240) % 360, s, l)),
+        rgb_to_hex(*hsl_to_rgb((h + 120) % 360, s, light)),
+        rgb_to_hex(*hsl_to_rgb((h + 240) % 360, s, light)),
     ]
 
 
 def split_complementary_colors(hex_color: str, angle: float = 30) -> list[str]:
     """Return 3 split-complementary colors."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
     return [
         hex_color,
-        rgb_to_hex(*hsl_to_rgb((h + 180 - angle) % 360, s, l)),
-        rgb_to_hex(*hsl_to_rgb((h + 180 + angle) % 360, s, l)),
+        rgb_to_hex(*hsl_to_rgb((h + 180 - angle) % 360, s, light)),
+        rgb_to_hex(*hsl_to_rgb((h + 180 + angle) % 360, s, light)),
     ]
 
 
 def tetradic_colors(hex_color: str) -> list[str]:
     """Return 4 tetradic (rectangle) colors (90° apart)."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
     return [
         hex_color,
-        rgb_to_hex(*hsl_to_rgb((h + 90) % 360, s, l)),
-        rgb_to_hex(*hsl_to_rgb((h + 180) % 360, s, l)),
-        rgb_to_hex(*hsl_to_rgb((h + 270) % 360, s, l)),
+        rgb_to_hex(*hsl_to_rgb((h + 90) % 360, s, light)),
+        rgb_to_hex(*hsl_to_rgb((h + 180) % 360, s, light)),
+        rgb_to_hex(*hsl_to_rgb((h + 270) % 360, s, light)),
     ]
 
 
 def monochromatic_colors(hex_color: str, count: int = 5) -> list[str]:
     """Generate monochromatic variations by adjusting lightness."""
-    h, s, l = rgb_to_hsl(*hex_to_rgb(hex_color))
+    h, s, light = rgb_to_hsl(*hex_to_rgb(hex_color))
     colors = []
     for i in range(count):
-        new_l = max(0.05, min(0.95, l - 0.3 + (0.6 * i / max(1, count - 1))))
-        colors.append(rgb_to_hex(*hsl_to_rgb(h, s, new_l)))
+        new_light = max(0.05, min(0.95, light - 0.3 + (0.6 * i / max(1, count - 1))))
+        colors.append(rgb_to_hex(*hsl_to_rgb(h, s, new_light)))
     return colors
 
 

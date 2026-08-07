@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from enum import StrEnum
 from typing import Any
 
+from pptx_skill._compat import StrEnum
 from pptx_skill.content_model import SlideSpec
 from pptx_skill.semantic_qa import SemanticQAReport
 from pptx_skill.visual_qa import QAReport

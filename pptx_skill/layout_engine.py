@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from enum import StrEnum
 from typing import Any
 
+from pptx_skill._compat import StrEnum
 from pptx_skill.content_model import BBox, CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode, SlideSpec
 from pptx_skill.semantic_qa import SemanticQAEngine
 from pptx_skill.text_metrics import ParagraphStyle, TextRun, measure_runs
