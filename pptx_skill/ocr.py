@@ -285,14 +285,22 @@ def _save_prs(prs, path):
         prs.save(str(path))
 
 
-def _render_slide_to_image(prs, slide_index: int, dpi: int = 200) -> str:
-    """Render a slide to a temporary PNG using the preview renderer."""
+def _render_slide_to_image(prs, slide_index: int, dpi: int = 200, *, tmp_dir: str | None = None) -> str:
+    """Render a slide to a temporary PNG using the preview renderer.
+
+    If *tmp_dir* is provided, the output file is created inside it.
+    Otherwise a new temporary directory is created (the caller is
+    responsible for cleanup via the returned path's parent directory).
+    """
     import tempfile
 
     from pptx_skill.preview_renderer import render_preview
 
-    tmp_dir = tempfile.mkdtemp(prefix="pptx_ocr_")
-    output_path = os.path.join(tmp_dir, f"slide_{slide_index}.png")
+    if tmp_dir is not None:
+        output_path = os.path.join(tmp_dir, f"slide_{slide_index}.png")
+    else:
+        tmp_dir = tempfile.mkdtemp(prefix="pptx_ocr_")
+        output_path = os.path.join(tmp_dir, f"slide_{slide_index}.png")
     render_preview(prs, output_path, dpi=dpi)
     return output_path
 
@@ -381,7 +389,7 @@ def ocr_slide(
             # Optionally OCR the rendered slide
             if include_rendered:
                 try:
-                    rendered_path = _render_slide_to_image(prs, slide_index, dpi)
+                    rendered_path = _render_slide_to_image(prs, slide_index, dpi, tmp_dir=tmp_dir)
                     rendered_results = ocr_image(
                         rendered_path,
                         engine=engine,

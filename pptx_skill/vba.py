@@ -87,16 +87,21 @@ def _resolve_path(prs_or_path: Any) -> str | None:
     return str(prs_or_path)
 
 
-def _ensure_path_on_disk(prs_or_path: Any) -> str:
-    """Return a file path on disk, saving to a temp file if needed."""
+def _ensure_path_on_disk(prs_or_path: Any) -> tuple[str, str | None]:
+    """Return a file path on disk, saving to a temp file if needed.
+
+    Returns a tuple of ``(path, tmp_dir)`` where *tmp_dir* is the temporary
+    directory path that the caller must clean up, or ``None`` if no temporary
+    directory was created (i.e. *prs_or_path* was already a file path).
+    """
     path = _resolve_path(prs_or_path)
     if path is not None:
-        return path
+        return path, None
     prs = prs_or_path  # already a Presentation object
     tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_vba_")
     tmp_path = os.path.join(tmp_dir, "work.pptx")
     prs.save(tmp_path)
-    return tmp_path
+    return tmp_path, tmp_dir
 
 
 # ---------------------------------------------------------------------------
@@ -343,13 +348,17 @@ def has_vba_project(prs_or_path: Any) -> bool:
     Returns:
         ``True`` if ``ppt/vbaProject.bin`` exists in the archive.
     """
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
     try:
-        with zipfile.ZipFile(path, "r") as zf:
-            return _VBA_BIN_PATH in zf.namelist()
-    except (zipfile.BadZipFile, FileNotFoundError, OSError) as exc:
-        log.warning("has_vba_project: cannot read %s: %s", path, exc)
-        return False
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                return _VBA_BIN_PATH in zf.namelist()
+        except (zipfile.BadZipFile, FileNotFoundError, OSError) as exc:
+            log.warning("has_vba_project: cannot read %s: %s", path, exc)
+            return False
+    finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def list_macro_names(prs_or_path: Any) -> list[str]:
@@ -365,27 +374,31 @@ def list_macro_names(prs_or_path: Any) -> list[str]:
         A list of macro / module name strings.  Returns an empty list if the
         PPTX has no VBA project or if the binary cannot be parsed.
     """
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
     try:
-        with zipfile.ZipFile(path, "r") as zf:
-            if _VBA_BIN_PATH not in zf.namelist():
-                return []
-            vba_bytes = zf.read(_VBA_BIN_PATH)
-    except (zipfile.BadZipFile, FileNotFoundError, OSError) as exc:
-        log.warning("list_macro_names: cannot read %s: %s", path, exc)
-        return []
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                if _VBA_BIN_PATH not in zf.namelist():
+                    return []
+                vba_bytes = zf.read(_VBA_BIN_PATH)
+        except (zipfile.BadZipFile, FileNotFoundError, OSError) as exc:
+            log.warning("list_macro_names: cannot read %s: %s", path, exc)
+            return []
 
-    if not vba_bytes:
-        return []
+        if not vba_bytes:
+            return []
 
-    # Try olefile first
-    names = _list_macro_names_olefile(vba_bytes)
-    if names is not None:
-        return names
+        # Try olefile first
+        names = _list_macro_names_olefile(vba_bytes)
+        if names is not None:
+            return names
 
-    # Fallback to regex
-    log.info("list_macro_names: olefile unavailable or failed, using regex fallback")
-    return _list_macro_names_regex(vba_bytes)
+        # Fallback to regex
+        log.info("list_macro_names: olefile unavailable or failed, using regex fallback")
+        return _list_macro_names_regex(vba_bytes)
+    finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -424,11 +437,13 @@ def inject_vba_project(prs_or_path: Any, vba_bin_path: str | Path) -> bool:
         log.error("inject_vba_project: vbaProject.bin is empty")
         return False
 
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
     try:
         zip_data = _read_zip_to_memory(path)
     except (zipfile.BadZipFile, OSError) as exc:
         log.error("inject_vba_project: cannot read PPTX: %s", exc)
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
     # Create backup
@@ -440,6 +455,8 @@ def inject_vba_project(prs_or_path: Any, vba_bin_path: str | Path) -> bool:
         from lxml import etree  # noqa: F811 – re-import in function scope
     except ImportError:
         log.error("inject_vba_project: lxml is required but not installed")
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
     updates: dict[str, bytes] = {}
@@ -451,6 +468,8 @@ def inject_vba_project(prs_or_path: Any, vba_bin_path: str | Path) -> bool:
     ct_bytes = zip_data.get("[Content_Types].xml")
     if ct_bytes is None:
         log.error("inject_vba_project: [Content_Types].xml not found in archive")
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
     ct_elem = _parse_xml(ct_bytes)
     _ensure_content_type(ct_elem, _VBA_BIN_PATH, _VBA_CONTENT_TYPE)
@@ -473,8 +492,12 @@ def inject_vba_project(prs_or_path: Any, vba_bin_path: str | Path) -> bool:
         # Restore from backup
         if os.path.exists(bak_path):
             shutil.copy2(bak_path, path)
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
+    if tmp_dir is not None:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     return True
 
 
@@ -498,23 +521,27 @@ def extract_vba_project(prs_or_path: Any, output_path: str | Path) -> str:
         OSError: If the output path cannot be written.
     """
     output_path = Path(output_path).resolve()
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
 
     try:
-        with zipfile.ZipFile(path, "r") as zf:
-            if _VBA_BIN_PATH not in zf.namelist():
-                raise ValueError(
-                    f"PPTX does not contain a VBA project: {_VBA_BIN_PATH} not found"
-                )
-            vba_bytes = zf.read(_VBA_BIN_PATH)
-    except zipfile.BadZipFile as exc:
-        raise ValueError(f"Cannot read PPTX as ZIP: {exc}") from exc
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                if _VBA_BIN_PATH not in zf.namelist():
+                    raise ValueError(
+                        f"PPTX does not contain a VBA project: {_VBA_BIN_PATH} not found"
+                    )
+                vba_bytes = zf.read(_VBA_BIN_PATH)
+        except zipfile.BadZipFile as exc:
+            raise ValueError(f"Cannot read PPTX as ZIP: {exc}") from exc
 
-    # Ensure parent directory exists
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(vba_bytes)
+        # Ensure parent directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(vba_bytes)
 
-    return str(output_path)
+        return str(output_path)
+    finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

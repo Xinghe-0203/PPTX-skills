@@ -30,6 +30,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -100,18 +101,22 @@ def _resolve_path(prs_or_path: Any) -> str | None:
     return str(prs_or_path)
 
 
-def _ensure_path_on_disk(prs_or_path: Any) -> str:
-    """Return a file path on disk, saving to a temp file if needed."""
+def _ensure_path_on_disk(prs_or_path: Any) -> tuple[str, str | None]:
+    """Return a file path on disk, saving to a temp file if needed.
+
+    Returns a tuple of ``(path, tmp_dir)`` where *tmp_dir* is the temporary
+    directory path that the caller must clean up, or ``None`` if no temporary
+    directory was created (i.e. *prs_or_path* was already a file path).
+    """
     path = _resolve_path(prs_or_path)
     if path is not None:
-        return path
-    import tempfile
+        return path, None
 
     prs = _open_prs(prs_or_path)
     tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_comments_")
     tmp_path = os.path.join(tmp_dir, "work.pptx")
     prs.save(tmp_path)
-    return tmp_path
+    return tmp_path, tmp_dir
 
 
 def _validate_slide_index(prs: Any, slide_index: int) -> None:
@@ -644,7 +649,7 @@ def add_comment(
     prs = _open_prs(prs_or_path)
     _validate_slide_index(prs, slide_index)
 
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
     pos_x = int(left * _EMU_PER_INCH)
     pos_y = int(top * _EMU_PER_INCH)
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -698,6 +703,8 @@ def add_comment(
 
         # Write back
         _write_zip_from_memory(path, zip_data, overwrite=updates)
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return new_id
 
     # --- Existing comment file for this slide ---
@@ -731,6 +738,8 @@ def add_comment(
         updates["[Content_Types].xml"] = _serialize_xml(ct_elem)
 
         _write_zip_from_memory(path, zip_data, overwrite=updates)
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return reply_id
 
     # Add a new top-level comment
@@ -747,6 +756,8 @@ def add_comment(
     updates["[Content_Types].xml"] = _serialize_xml(ct_elem)
 
     _write_zip_from_memory(path, zip_data, overwrite=updates)
+    if tmp_dir is not None:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     return new_id
 
 
@@ -769,15 +780,19 @@ def list_comments(
     prs = _open_prs(prs_or_path)
     _validate_slide_index(prs, slide_index)
 
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
 
     with zipfile.ZipFile(path, "r") as zf:
         comment_index = _find_comment_index_for_slide(zf, slide_index)
         if comment_index is None:
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
             return []
 
         comment_path = f"ppt/comments/comment{comment_index}.xml"
         if comment_path not in zf.namelist():
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
             return []
 
         cm_lst = _read_zip_xml(zf, comment_path)
@@ -793,6 +808,8 @@ def list_comments(
             authors_elem = _read_zip_xml(zf, authors_path)
             comments = _resolve_author_names(comments, authors_elem)
 
+    if tmp_dir is not None:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     return comments
 
 
@@ -816,7 +833,7 @@ def delete_comment(
     prs = _open_prs(prs_or_path)
     _validate_slide_index(prs, slide_index)
 
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
 
     # Read zip into memory
     zip_data = _read_zip_to_memory(path)
@@ -825,10 +842,14 @@ def delete_comment(
     with zipfile.ZipFile(path, "r") as zf:
         comment_index = _find_comment_index_for_slide(zf, slide_index)
     if comment_index is None:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
     comment_path = f"ppt/comments/comment{comment_index}.xml"
     if comment_path not in zip_data:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
     from lxml import etree
@@ -836,6 +857,8 @@ def delete_comment(
     cm_lst = etree.fromstring(zip_data[comment_path])
     parent, cm_elem = _find_comment_by_id(cm_lst, comment_id)
     if cm_elem is None:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
     parent.remove(cm_elem)
@@ -843,6 +866,8 @@ def delete_comment(
     # Write back only the modified comment file
     updates: dict[str, bytes] = {comment_path: _serialize_xml(cm_lst)}
     _write_zip_from_memory(path, zip_data, overwrite=updates)
+    if tmp_dir is not None:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     return True
 
 
@@ -898,30 +923,33 @@ def resolve_comment(
     prs = _open_prs(prs_or_path)
     _validate_slide_index(prs, slide_index)
 
-    path = _ensure_path_on_disk(prs_or_path)
+    path, tmp_dir = _ensure_path_on_disk(prs_or_path)
+    try:
+        # Read zip into memory
+        zip_data = _read_zip_to_memory(path)
 
-    # Read zip into memory
-    zip_data = _read_zip_to_memory(path)
+        # Find comment index
+        with zipfile.ZipFile(path, "r") as zf:
+            comment_index = _find_comment_index_for_slide(zf, slide_index)
+        if comment_index is None:
+            raise ValueError(f"No comments found on slide {slide_index}")
 
-    # Find comment index
-    with zipfile.ZipFile(path, "r") as zf:
-        comment_index = _find_comment_index_for_slide(zf, slide_index)
-    if comment_index is None:
-        raise ValueError(f"No comments found on slide {slide_index}")
+        comment_path = f"ppt/comments/comment{comment_index}.xml"
+        if comment_path not in zip_data:
+            raise ValueError(f"No comments found on slide {slide_index}")
 
-    comment_path = f"ppt/comments/comment{comment_index}.xml"
-    if comment_path not in zip_data:
-        raise ValueError(f"No comments found on slide {slide_index}")
+        from lxml import etree
 
-    from lxml import etree
+        cm_lst = etree.fromstring(zip_data[comment_path])
+        _, cm_elem = _find_comment_by_id(cm_lst, comment_id)
+        if cm_elem is None:
+            raise ValueError(f"Comment ID {comment_id!r} not found on slide {slide_index}")
 
-    cm_lst = etree.fromstring(zip_data[comment_path])
-    _, cm_elem = _find_comment_by_id(cm_lst, comment_id)
-    if cm_elem is None:
-        raise ValueError(f"Comment ID {comment_id!r} not found on slide {slide_index}")
+        cm_elem.set("resolved", "1" if resolved else "0")
 
-    cm_elem.set("resolved", "1" if resolved else "0")
-
-    # Write back only the modified comment file
-    updates: dict[str, bytes] = {comment_path: _serialize_xml(cm_lst)}
-    _write_zip_from_memory(path, zip_data, overwrite=updates)
+        # Write back only the modified comment file
+        updates: dict[str, bytes] = {comment_path: _serialize_xml(cm_lst)}
+        _write_zip_from_memory(path, zip_data, overwrite=updates)
+    finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
