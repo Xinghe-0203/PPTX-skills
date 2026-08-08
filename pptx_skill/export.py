@@ -456,6 +456,21 @@ _BASE_CSS = """
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
+.loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    z-index: 9999;
+}
+@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
 .slide-container {
     position: relative;
     width: 100%;
@@ -477,8 +492,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     overflow: hidden;
     border-radius: 4px;
     border: 1px solid var(--border);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
-.slide.active { display: block; }
+.slide.active { display: block; opacity: 1; }
+.slide.leaving { opacity: 0; }
 
 .slide .element {
     position: absolute;
@@ -525,11 +542,14 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     cursor: pointer;
     color: var(--text);
     font-size: 14px;
-    transition: background 0.15s;
+    transition: background 0.15s, transform 0.1s;
+    outline: none;
 }
 .navbar .nav-btn:hover { background: var(--border); }
+.navbar .nav-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.navbar .nav-btn:active { transform: scale(0.96); }
 .navbar .nav-btn:disabled { opacity: 0.3; cursor: default; }
-.navbar .slide-counter { font-size: 14px; color: var(--text-muted); min-width: 80px; text-align: center; }
+.navbar .slide-counter { font-size: 14px; color: var(--text-muted); min-width: 80px; text-align: center; font-variant-numeric: tabular-nums; }
 
 .progress-bar {
     position: fixed;
@@ -555,8 +575,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     color: var(--text-muted);
     display: none;
     z-index: 5;
+    transition: max-height 0.3s ease;
 }
 .notes-panel.visible { display: block; }
+.notes-panel::-webkit-scrollbar { width: 6px; }
+.notes-panel::-webkit-scrollbar-track { background: transparent; }
+.notes-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 .slide-nav {
     position: fixed;
@@ -566,7 +590,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     flex-direction: column;
     gap: 4px;
     z-index: 10;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 4px;
 }
+.slide-nav::-webkit-scrollbar { width: 4px; }
+.slide-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .slide-nav .thumb {
     width: 80px;
     height: 45px;
@@ -574,7 +603,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     border-radius: 4px;
     cursor: pointer;
     opacity: 0.5;
-    transition: opacity 0.2s, border-color 0.2s;
+    transition: opacity 0.2s, border-color 0.2s, transform 0.1s;
     background: var(--slide-bg);
     display: flex;
     align-items: center;
@@ -582,8 +611,45 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     font-size: 11px;
     color: var(--text-muted);
 }
-.slide-nav .thumb:hover { opacity: 0.8; }
+.slide-nav .thumb:hover { opacity: 0.8; transform: scale(1.05); }
 .slide-nav .thumb.active { border-color: var(--accent); opacity: 1; }
+.slide-nav .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.play-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeInOut 1s ease;
+}
+.play-indicator.show { display: flex; }
+.play-indicator svg { fill: white; width: 32px; height: 32px; }
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.slide-number-badge {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: var(--nav-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    z-index: 20;
+    font-variant-numeric: tabular-nums;
+}
 
 @media (max-width: 1100px) {
     .slide { width: 640px; height: 360px; }
@@ -591,6 +657,27 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 @media (max-width: 720px) {
     .slide { width: 480px; height: 270px; }
     .slide-nav { display: none; }
+    .navbar { padding: 0 10px; }
+    .navbar .nav-btn { padding: 6px 10px; font-size: 12px; }
+}
+
+@media print {
+    .navbar, .slide-nav, .progress-bar, .notes-panel, .slide-number-badge, .play-indicator, .loading {
+        display: none !important;
+    }
+    .slide-container { height: 100vh; }
+    .slide {
+        display: block !important;
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        box-shadow: none;
+        border: none;
+        page-break-after: always;
+        break-after: page;
+    }
+    .slide.active { display: block !important; }
+    .slide:last-child { page-break-after: avoid; }
 }
 """
 
@@ -605,32 +692,106 @@ _JS = """
     var notesPanel = document.getElementById('notes-panel');
     var prevBtn = document.getElementById('btn-prev');
     var nextBtn = document.getElementById('btn-next');
+    var slideBadge = document.getElementById('slide-badge');
+    var playIndicator = document.getElementById('play-indicator');
+    var slideContainer = document.querySelector('.slide-container');
+
+    // Auto-play state
+    var isPlaying = false;
+    var playInterval = null;
+    var playIntervalMs = 5000;
+
+    // Debounce for resize
+    var resizeTimer = null;
 
     function init() {
         slides = document.querySelectorAll('.slide');
         thumbs = document.querySelectorAll('.slide-nav .thumb');
         total = slides.length;
         if (total === 0) return;
+
+        // Remove loading indicator
+        var loading = document.getElementById('loading');
+        if (loading) loading.remove();
+
         showSlide(0);
+
+        // Keyboard navigation
         window.addEventListener('keydown', onKey);
-        // Touch support
+
+        // Touch support with swipe detection
         var touchStartX = 0;
-        document.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
-        document.addEventListener('touchend', function(e) {
-            var dx = e.changedTouches[0].screenX - touchStartX;
-            if (Math.abs(dx) > 50) { dx > 0 ? prev() : next(); }
+        var touchStartY = 0;
+        var touchStartTime = 0;
+        var isSwiping = false;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+            touchStartTime = Date.now();
+            isSwiping = false;
         }, {passive: true});
-        // Click navigation: left half = prev, right half = next
-        document.querySelector('.slide-container').addEventListener('click', function(e) {
+
+        document.addEventListener('touchmove', function(e) {
+            var dx = e.changedTouches[0].screenX - touchStartX;
+            var dy = e.changedTouches[0].screenY - touchStartY;
+            if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+                isSwiping = true;
+            }
+        }, {passive: true});
+
+        document.addEventListener('touchend', function(e) {
+            if (isSwiping) {
+                var dx = e.changedTouches[0].screenX - touchStartX;
+                var dt = Date.now() - touchStartTime;
+                // Require minimum velocity: 50px and within reasonable time
+                if (Math.abs(dx) > 50 && dt < 500) {
+                    dx > 0 ? prev() : next();
+                }
+            }
+        }, {passive: true});
+
+        // Click navigation with swipe detection
+        slideContainer.addEventListener('click', function(e) {
+            if (isSwiping) return;
             var rect = this.getBoundingClientRect();
             if (e.clientX < rect.left + rect.width / 2) { prev(); } else { next(); }
         });
+
+        // Debounced resize
         scaleSlides();
-        window.addEventListener('resize', scaleSlides);
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(scaleSlides, 100);
+        });
+
+        // Click handlers for buttons (already in HTML but ensure they work)
+        prevBtn.addEventListener('click', function() { prev(); });
+        nextBtn.addEventListener('click', function() { next(); });
+
+        // Event delegation for thumbs (click + keyboard)
+        var nav = document.querySelector('.slide-nav');
+        if (nav) {
+            nav.addEventListener('click', function(e) {
+                var thumb = e.target.closest('.thumb');
+                if (thumb) {
+                    var idx = parseInt(thumb.getAttribute('data-slide'), 10);
+                    if (!isNaN(idx)) showSlide(idx);
+                }
+            });
+            nav.addEventListener('keydown', function(e) {
+                var thumb = e.target.closest('.thumb');
+                if (thumb && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    var idx = parseInt(thumb.getAttribute('data-slide'), 10);
+                    if (!isNaN(idx)) showSlide(idx);
+                }
+            });
+        }
     }
 
     function scaleSlides() {
-        var container = document.querySelector('.slide-container');
+        var container = slideContainer;
         if (!container || total === 0) return;
         var cw = container.clientWidth;
         var ch = container.clientHeight;
@@ -640,58 +801,177 @@ _JS = """
         var sh = active.offsetHeight;
         var scale = Math.min(cw / sw, ch / sh, 1) * 0.92;
         active.style.transform = 'scale(' + scale + ')';
+        active.style.transformOrigin = 'center center';
     }
 
     function showSlide(n) {
         if (n < 0) n = 0;
         if (n >= total) n = total - 1;
-        for (var i = 0; i < total; i++) {
-            slides[i].classList.remove('active');
-            slides[i].style.transform = '';
-            if (thumbs[i]) thumbs[i].classList.remove('active');
+
+        var prevIndex = current;
+
+        // Handle leaving slide with transition
+        if (slides[prevIndex] && prevIndex !== n) {
+            slides[prevIndex].classList.add('leaving');
+            setTimeout(function() {
+                slides[prevIndex].classList.remove('active', 'leaving');
+                slides[prevIndex].style.transform = '';
+            }, 300);
+        } else {
+            slides[prevIndex].classList.remove('active');
+            slides[prevIndex].style.transform = '';
         }
+
         slides[n].classList.add('active');
-        if (thumbs[n]) thumbs[n].classList.add('active');
+        if (thumbs[n]) {
+            thumbs[n].classList.add('active');
+            // Smooth scroll thumb into view
+            thumbs[n].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        }
+
         current = n;
         updateUI();
         scaleSlides();
     }
 
-    function next() { if (current < total - 1) showSlide(current + 1); }
+    function next() { if (current < total - 1) showSlide(current + 1); else if (isPlaying) stopPlay(); }
     function prev() { if (current > 0) showSlide(current - 1); }
 
     function updateUI() {
         counterEl.textContent = (current + 1) + '/' + total;
         progressBar.style.width = ((current + 1) / total * 100) + '%';
+        if (slideBadge) slideBadge.textContent = (current + 1) + ' / ' + total;
         prevBtn.disabled = current === 0;
         nextBtn.disabled = current === total - 1;
+
+        // Update ARIA for active slide
+        for (var i = 0; i < total; i++) {
+            slides[i].setAttribute('aria-hidden', i !== current ? 'true' : 'false');
+        }
+
         // Notes
         var noteEl = slides[current].getAttribute('data-notes') || '';
         if (notesPanel) {
-            notesPanel.innerHTML = noteEl;
+            notesPanel.textContent = noteEl;
             notesPanel.classList.toggle('visible', !!noteEl);
-        }
-        // Scroll thumb into view
-        if (thumbs[current]) {
-            thumbs[current].scrollIntoView({block: 'nearest'});
         }
     }
 
     function onKey(e) {
         switch(e.key) {
-            case 'ArrowRight': case ' ': case 'PageDown': e.preventDefault(); next(); break;
-            case 'ArrowLeft': case 'PageUp': e.preventDefault(); prev(); break;
-            case 'Home': e.preventDefault(); showSlide(0); break;
-            case 'End': e.preventDefault(); showSlide(total - 1); break;
-            case 'f': case 'F':
-                if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(function(){}); }
-                else { document.exitFullscreen().catch(function(){}); }
+            case 'ArrowRight':
+            case 'PageDown':
+                e.preventDefault();
+                next();
+                break;
+            case 'ArrowLeft':
+            case 'PageUp':
+                e.preventDefault();
+                prev();
+                break;
+            case ' ':
+                e.preventDefault();
+                if (isPlaying) stopPlay(); else startPlay();
+                break;
+            case 'Home':
+                e.preventDefault();
+                showSlide(0);
+                break;
+            case 'End':
+                e.preventDefault();
+                showSlide(total - 1);
+                break;
+            case 'f':
+            case 'F':
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(function(){});
+                } else {
+                    document.exitFullscreen().catch(function(){});
+                }
+                break;
+            case 'p':
+            case 'P':
+                e.preventDefault();
+                if (isPlaying) stopPlay(); else startPlay();
+                break;
+            case 'n':
+            case 'N':
+                e.preventDefault();
+                var noteVisible = notesPanel && notesPanel.classList.contains('visible');
+                if (noteVisible) {
+                    notesPanel.classList.remove('visible');
+                } else {
+                    var noteText = slides[current].getAttribute('data-notes') || '';
+                    if (noteText) {
+                        notesPanel.textContent = noteText;
+                        notesPanel.classList.add('visible');
+                    }
+                }
+                break;
+            case 't':
+            case 'T':
+                e.preventDefault();
+                toggleThumbnails();
                 break;
         }
     }
 
+    function startPlay() {
+        if (total <= 1) return;
+        isPlaying = true;
+        showPlayIndicator('play');
+        playInterval = setInterval(function() {
+            if (current < total - 1) {
+                showSlide(current + 1);
+            } else {
+                stopPlay();
+            }
+        }, playIntervalMs);
+    }
+
+    function stopPlay() {
+        isPlaying = false;
+        showPlayIndicator('pause');
+        if (playInterval) {
+            clearInterval(playInterval);
+            playInterval = null;
+        }
+    }
+
+    function showPlayIndicator(type) {
+        if (!playIndicator) return;
+        playIndicator.classList.remove('show');
+        // Force reflow to restart animation
+        void playIndicator.offsetWidth;
+        playIndicator.classList.add('show');
+        var svg = playIndicator.querySelector('svg');
+        if (svg) {
+            svg.innerHTML = type === 'play'
+                ? '<polygon points="8,4 20,12 8,20"/>'
+                : '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+        }
+        setTimeout(function() { playIndicator.classList.remove('show'); }, 1000);
+    }
+
+    function toggleThumbnails() {
+        var nav = document.querySelector('.slide-nav');
+        if (nav) {
+            nav.style.display = nav.style.display === 'none' ? 'flex' : 'none';
+        }
+    }
+
+    // Public API
     window.gotoSlide = function(n) { showSlide(n); };
-    document.addEventListener('DOMContentLoaded', init);
+    window.startPresentation = function() { startPlay(); };
+    window.stopPresentation = function() { stopPlay(); };
+    window.togglePresentation = function() { isPlaying ? stopPlay() : startPlay(); };
+
+    // Init
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 """
 
@@ -862,6 +1142,7 @@ def _escape_html(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")
+        .replace("'", "&#39;")
     )
 
 
@@ -936,10 +1217,10 @@ def export_to_html(
         notes_text = _get_notes_text(slide) if include_notes else ""
         notes_attr = f' data-notes="{notes_text}"' if notes_text else ""
         slides_html_parts.append(
-            f'<div class="slide" data-index="{i}"{notes_attr}>\n{slide_inner}\n</div>'
+            f'<div class="slide" data-index="{i}" role="region" aria-label="Slide {i + 1} of {slide_count}" aria-hidden="true"{notes_attr}>\n{slide_inner}\n</div>'
         )
         thumb_html_parts.append(
-            f'<div class="thumb{" active" if i == 0 else ""}" onclick="gotoSlide({i})">{i + 1}</div>'
+            f'<div class="thumb{" active" if i == 0 else ""}" data-slide="{i}" role="button" aria-label="Go to slide {i + 1}" tabindex="0">{i + 1}</div>'
         )
 
     # Assemble the full HTML document
@@ -959,22 +1240,30 @@ def export_to_html(
 </style>
 </head>
 <body>
-<div class="slide-container">
+<div class="loading" id="loading"></div>
+
+<div class="slide-container" role="main" aria-label="Presentation slides">
 {slides_html}
 </div>
 
 <div class="progress-bar" id="progress-bar" style="width:0%"></div>
 
-<div class="notes-panel" id="notes-panel"></div>
+<div class="notes-panel" id="notes-panel" role="note" aria-label="Speaker notes"></div>
 
-<div class="slide-nav">
+<div class="slide-nav" aria-label="Slide navigation">
 {thumbs_html}
 </div>
 
-<div class="navbar">
-    <button class="nav-btn" id="btn-prev" onclick="gotoSlide(current-1)">&#9664; Prev</button>
-    <span class="slide-counter" id="slide-counter">1/{slide_count}</span>
-    <button class="nav-btn" id="btn-next" onclick="gotoSlide(current+1)">Next &#9654;</button>
+<div class="slide-number-badge" id="slide-badge" aria-live="polite">1 / {slide_count}</div>
+
+<div class="play-indicator" id="play-indicator" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><polygon points="8,4 20,12 8,20"/></svg>
+</div>
+
+<div class="navbar" role="toolbar" aria-label="Presentation controls">
+    <button class="nav-btn" id="btn-prev" aria-label="Previous slide">&#9664; Prev</button>
+    <span class="slide-counter" id="slide-counter" aria-live="polite">1/{slide_count}</span>
+    <button class="nav-btn" id="btn-next" aria-label="Next slide">Next &#9654;</button>
 </div>
 
 <script>
