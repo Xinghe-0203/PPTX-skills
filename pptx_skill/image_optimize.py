@@ -22,6 +22,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from pptx_skill.constants import REL_NS as _REL_NS
+
 __all__ = [
     "CompressionLevel",
     "compress_images",
@@ -96,7 +98,6 @@ class CompressionLevel:
 # ---------------------------------------------------------------------------
 
 _CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
-_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 # Mapping from Pillow format string -> OOXML content type
 _FORMAT_TO_CONTENT_TYPE: dict[str, str] = {

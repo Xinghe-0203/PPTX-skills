@@ -14,6 +14,8 @@ throughout in Clark notation.
 
 from __future__ import annotations
 
+from pptx_skill.constants import A_NS as _A_NS
+
 __all__ = [
     "TABLE_STYLE_IDS",
     "apply_table_style",
@@ -28,12 +30,6 @@ __all__ = [
     "set_table_banding",
     "set_table_direction",
 ]
-
-# ---------------------------------------------------------------------------
-# DrawingML namespace (module-level constant, used by every XML helper)
-# ---------------------------------------------------------------------------
-
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 
 # ---------------------------------------------------------------------------
 # 1. Built-in table styles

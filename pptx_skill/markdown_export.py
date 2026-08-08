@@ -15,6 +15,8 @@ import logging
 import os
 from dataclasses import dataclass
 
+from pptx_skill._io import open_prs as _open_prs
+
 __all__ = [
     "MarkdownOptions",
     "export_to_markdown",
@@ -38,24 +40,6 @@ class MarkdownOptions:
     table_alignment: str = "left"  # "left", "center", "right"
     include_metadata: bool = True
     page_break_between_slides: bool = True  # Insert --- between slides
-
-
-def _is_presentation(obj) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path):
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path.
-    Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
 
 
 def _bullet_char(style: str) -> str:

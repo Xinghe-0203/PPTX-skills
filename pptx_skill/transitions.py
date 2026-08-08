@@ -21,6 +21,8 @@ from typing import Any
 
 from lxml import etree
 
+from pptx_skill.constants import P_NS as _P_NS
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -59,9 +61,6 @@ TRANSITION_TYPES: frozenset[str] = frozenset({
 # ---------------------------------------------------------------------------
 # Internal mapping: transition_type -> (child_tag, extra_attrs)
 # ---------------------------------------------------------------------------
-
-# OOXML namespace for PresentationML
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 
 # Speed presets mapped from approximate millisecond ranges
 _SPEED_MAP: dict[int, str] = {

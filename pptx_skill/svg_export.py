@@ -23,6 +23,11 @@ from typing import Any
 from pptx import Presentation as _open_presentation
 from pptx.presentation import Presentation as _PresentationCls
 
+from pptx_skill.constants import A_NS as _NS_A
+from pptx_skill.constants import P_NS as _NS_P
+from pptx_skill.units import EMU_PER_INCH as _EMU_PER_INCH
+from pptx_skill.units import EMU_PER_PT as _EMU_PER_PT
+
 __all__ = [
     "export_to_svg",
     "export_slide_to_svg",
@@ -34,14 +39,8 @@ __all__ = [
 # Constants
 # ---------------------------------------------------------------------------
 
-_EMU_PER_PT = 12700
-_EMU_PER_INCH = 914400
-
 _SVG_NS = "http://www.w3.org/2000/svg"
 _XLINK_NS = "http://www.w3.org/1999/xlink"
-_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 # Preset geometry -> SVG element mapping for simple shapes.
 # Shapes not in this map are rendered as <rect> with the bounding box.

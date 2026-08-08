@@ -13,6 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from pptx_skill._io import is_presentation as _is_presentation
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import save_prs as _save_prs_impl
+from pptx_skill.constants import A_NS as _NS_A
+
 __all__ = [
     "EffectInfo",
     "BevelPreset",
@@ -223,33 +228,9 @@ class EffectInfo:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-
-
-def _is_presentation(obj) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path):
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path.
-    Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
 
 def _save_prs(prs, path):
-    """Save *prs* back to *path* if *path* is not None."""
-    if path is not None:
-        prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
 
 
 def _find_shape(slide, shape_name: str):

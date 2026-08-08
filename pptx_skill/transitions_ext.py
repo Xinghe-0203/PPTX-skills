@@ -29,14 +29,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import resolve_path as _resolve_path
+from pptx_skill._io import save_prs as _save_prs_impl
+from pptx_skill.constants import P14_NS
+from pptx_skill.constants import P_NS as _P_NS
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 1. Constants
 # ---------------------------------------------------------------------------
-
-P14_NS = "http://schemas.microsoft.com/office/powerpoint/2010/main"
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 
 # The 12 advanced transition names (valid values for prstTrans @prst)
 ADVANCED_TRANSITIONS: tuple[str, ...] = (
@@ -116,23 +119,11 @@ def _ms_to_spd(duration_ms: int) -> str | None:
     return None
 
 
-def _is_presentation(obj: Any) -> bool:
-    """Return ``True`` if *obj* looks like a ``pptx.Presentation``."""
-    return hasattr(obj, "slides") and hasattr(obj, "save")
-
-
-def _open_prs(prs_or_path: str | Path | Any) -> Any:
-    """Open a presentation from a path, or pass through an existing object."""
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    from pptx import Presentation  # lazy import
-    return Presentation(str(prs_or_path))
-
-
 def _save_prs(prs: Any, prs_or_path: str | Path | Any) -> None:
     """Save *prs* back.  Only writes to disk when *prs_or_path* is a path."""
-    if not _is_presentation(prs_or_path):
-        prs.save(str(prs_or_path))
+    path = _resolve_path(prs_or_path)
+    if path is not None:
+        _save_prs_impl(prs, path, backup=False)
 
 
 def _build_advanced_transition_xml(

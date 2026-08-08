@@ -32,11 +32,30 @@ from __future__ import annotations
 
 import logging
 import re
-import shutil
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from pptx_skill._io import (
+    open_prs as _open_prs,
+)
+from pptx_skill._io import (
+    resolve_path as _resolve_path,
+)
+from pptx_skill._io import (
+    save_prs as _save_prs,
+)
+from pptx_skill.constants import (
+    A_NS_PREFIX as _A_NS_PREFIX,
+)
+from pptx_skill.constants import (
+    P_NS_PREFIX as _P_NS_PREFIX,
+)
+from pptx_skill.constants import (
+    R_NS as _R_NS,
+)
+from pptx_skill.units import EMU_PER_PT as _EMU_PER_PT
 
 __all__ = [
     "MasterInfo",
@@ -56,22 +75,6 @@ __all__ = [
 ]
 
 log = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# OOXML namespaces
-# ---------------------------------------------------------------------------
-
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
-
-_P_NS_PREFIX = f"{{{_P_NS}}}"
-_A_NS_PREFIX = f"{{{_A_NS}}}"
-
-# EMU conversion constants
-_EMU_PER_PT = 12700
-_EMU_PER_INCH = 914400
 
 # Valid placeholder types (OOXML p:ph @type values)
 _VALID_PH_TYPES = frozenset({
@@ -116,42 +119,6 @@ class LayoutInfo:
 # ---------------------------------------------------------------------------
 # Helpers – Presentation open / save
 # ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path: Any) -> Any:
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path
-    (``str | Path``).  Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
-def _resolve_path(prs_or_path: Any) -> str | None:
-    """Return the file path if *prs_or_path* is a path, else ``None``."""
-    if _is_presentation(prs_or_path):
-        return None
-    return str(prs_or_path)
-
-
-def _save_prs(prs: Any, path: str | Path | None) -> None:
-    """Save *prs* back to *path*, creating a backup first."""
-    if path is None:
-        return
-    p = Path(path)
-    bak = p.with_suffix(".bak.pptx")
-    if p.exists():
-        shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
 
 
 def _get_master(prs: Any, master_index: int = 0) -> Any:

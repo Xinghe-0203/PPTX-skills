@@ -24,6 +24,8 @@ import copy
 import logging
 from typing import Any
 
+from pptx_skill.constants import A_NS as _A_NS
+
 __all__ = [
     "detect_smartart",
     "extract_smartart_text",
@@ -38,9 +40,6 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # OOXML namespaces
 # ---------------------------------------------------------------------------
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 _DGM_NS = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
 
 # Relationship types for the four SmartArt parts

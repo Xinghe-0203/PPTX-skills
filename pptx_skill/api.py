@@ -169,7 +169,7 @@ def _build_qa_report(pptx_path: str, legacy_result: dict[str, Any] | None = None
 # ---------------------------------------------------------------------------
 
 def auto_generate_ppt(
-    title,
+    title: str,
     subtitle: str = "",
     sections: list[dict[str, Any] | Any] | None = None,
     output_path: str = "output.pptx",

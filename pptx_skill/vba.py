@@ -26,11 +26,21 @@ import logging
 import os
 import re
 import shutil
-import tempfile
 import zipfile
 from io import BytesIO
 from pathlib import Path
 from typing import Any
+
+from pptx_skill._io import ensure_path_on_disk as _ensure_path_on_disk
+from pptx_skill.constants import (
+    A_NS_PREFIX as _A_NS_PREFIX,
+)
+from pptx_skill.constants import (
+    P_NS_PREFIX as _P_NS_PREFIX,
+)
+from pptx_skill.constants import (
+    REL_NS as _PR_NS,
+)
 
 __all__ = [
     "attach_macro_to_shape",
@@ -52,57 +62,12 @@ _VBA_BIN_PATH = "ppt/vbaProject.bin"
 _VBA_CONTENT_TYPE = "application/vnd.ms-office.vbaProject"
 _VBA_REL_TYPE = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
 
-# OOXML namespaces
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_PR_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-
-_A_NS_PREFIX = f"{{{_A_NS}}}"
-_R_NS_PREFIX = f"{{{_R_NS}}}"
-_PR_NS_PREFIX = f"{{{_PR_NS}}}"
-_P_NS_PREFIX = f"{{{_P_NS}}}"
-
 # Regex fallback patterns for extracting macro names from the OLE binary.
 # VBA stores module names as UTF-16LE strings preceded by a length byte.
 # We look for common VBA module record markers.
 _MODULE_NAME_RE = re.compile(
     rb"(?:\x00)([A-Za-z_][A-Za-z0-9_]{1,31})(?:\x00)"
 )
-
-# ---------------------------------------------------------------------------
-# Helpers – Presentation / path resolution
-# ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _resolve_path(prs_or_path: Any) -> str | None:
-    """Return the file path if *prs_or_path* is a path, else ``None``."""
-    if _is_presentation(prs_or_path):
-        return None
-    return str(prs_or_path)
-
-
-def _ensure_path_on_disk(prs_or_path: Any) -> tuple[str, str | None]:
-    """Return a file path on disk, saving to a temp file if needed.
-
-    Returns a tuple of ``(path, tmp_dir)`` where *tmp_dir* is the temporary
-    directory path that the caller must clean up, or ``None`` if no temporary
-    directory was created (i.e. *prs_or_path* was already a file path).
-    """
-    path = _resolve_path(prs_or_path)
-    if path is not None:
-        return path, None
-    prs = prs_or_path  # already a Presentation object
-    tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_vba_")
-    tmp_path = os.path.join(tmp_dir, "work.pptx")
-    prs.save(tmp_path)
-    return tmp_path, tmp_dir
-
 
 # ---------------------------------------------------------------------------
 # Helpers – ZIP I/O

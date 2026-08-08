@@ -15,6 +15,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from pptx_skill._io import is_presentation as _is_presentation
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import save_prs as _save_prs_impl
+
 __all__ = [
     "DocumentMetadata",
     "CustomProperty",
@@ -39,8 +43,6 @@ _NS_DC = "http://purl.org/dc/elements/1.1/"
 _NS_DCTERMS = "http://purl.org/dc/terms/"
 _NS_CUSTOM = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
 _NS_VT = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"
-_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 _FMTID = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"
 
@@ -88,28 +90,8 @@ class FontInfo:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _is_presentation(obj) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path):
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path.
-    Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
 def _save_prs(prs, path):
-    """Save *prs* back to *path* if *path* is not None."""
-    if path is not None:
-        prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
 
 
 def _vt_type_for_value(value) -> str:

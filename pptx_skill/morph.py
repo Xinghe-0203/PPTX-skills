@@ -23,17 +23,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
+from pptx_skill._io import is_presentation as _is_presentation
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import save_prs as _save_prs
+from pptx_skill.constants import P15_NS as _P15_NS
+from pptx_skill.constants import P_NS as _P_NS
+
 log = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# OOXML namespaces
-# ---------------------------------------------------------------------------
-
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_P15_NS = "http://schemas.microsoft.com/office/powerpoint/2012/main"
 
 # Valid option values for set_morph_transition
 _MORPH_OPTIONS: frozenset[str] = frozenset({"full", "none"})
@@ -76,38 +74,6 @@ class MorphInfo:
 # ---------------------------------------------------------------------------
 # Internal helpers — Presentation open / save
 # ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path: Any) -> Any:
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path
-    (``str | Path``).  Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
-def _save_prs(prs: Any, path: str | Path | None) -> None:
-    """Save *prs* back to *path*, creating a backup first."""
-    if path is None:
-        return
-
-    p = Path(path)
-    bak = p.with_suffix(".bak.pptx")
-    if p.exists():
-        import shutil
-
-        shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
 
 
 # ---------------------------------------------------------------------------

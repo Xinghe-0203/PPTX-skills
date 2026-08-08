@@ -22,6 +22,8 @@ import hashlib
 import os
 from dataclasses import dataclass
 
+from pptx_skill.constants import P_NS as _NS_P
+
 __all__ = [
     "ProtectionInfo",
     "apply_write_protection",
@@ -38,10 +40,6 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Namespace constants
 # ---------------------------------------------------------------------------
-
-_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 # FMTID for custom document property set
 _FMTID = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"

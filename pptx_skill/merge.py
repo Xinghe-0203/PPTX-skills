@@ -42,11 +42,6 @@ __all__ = [
 # ---------------------------------------------------------------------------
 _REL_ATTRS = frozenset({qn("r:embed"), qn("r:id"), qn("r:link")})
 
-# OOXML namespaces
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-
 
 # ---------------------------------------------------------------------------
 # Result dataclass

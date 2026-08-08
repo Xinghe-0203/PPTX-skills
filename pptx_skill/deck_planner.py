@@ -12,8 +12,10 @@ from dataclasses import dataclass
 from typing import Any, Literal, cast
 
 from pptx_skill.content_model import (
+    BBox,
     CanvasSpec,
     DeckPlanResult,
+    GeometrySpec,
     LayoutPlan,
     PlannedNode,
     SlidePlanCandidate,
@@ -23,6 +25,7 @@ from pptx_skill.content_model import (
 from pptx_skill.layout_engine import (
     builtin_recipes,
     plan_slide_candidates,
+    solve_recipe,
     solved_geometry_to_layout_plan,
 )
 from pptx_skill.pagination import paginate_bullets
@@ -266,8 +269,6 @@ def _build_split_candidate(
     font_family: str | None = None,
 ) -> SlidePlanCandidate | None:
     """Build a split candidate bundle from paginated slides using the first recipe."""
-    from pptx_skill.layout_engine import solve_recipe
-
     plans: list[LayoutPlan] = []
     total_score = 0.0
     for derived_slide in split_slides:
@@ -386,8 +387,6 @@ def plan_deck(
 
 def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec, font_family: str | None = None) -> LayoutPlan:
     """A minimal plan for an infeasible slide so the beam can continue."""
-    from pptx_skill.content_model import BBox, GeometrySpec
-
     _default_font = font_family or "Microsoft YaHei"
     nodes: list[PlannedNode] = []
     for idx, element in enumerate(slide.elements):

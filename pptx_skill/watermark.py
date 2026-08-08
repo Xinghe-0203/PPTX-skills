@@ -12,6 +12,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from pptx_skill._io import is_presentation as _is_presentation
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import save_prs as _save_prs
+from pptx_skill.constants import A_NS_PREFIX as _DML_NS_PREFIX
+
 __all__ = [
     "add_text_watermark",
     "add_image_watermark",
@@ -29,48 +34,9 @@ _WATERMARK_PREFIX = "pptx_skill_watermark"
 _WATERMARK_TEXT = f"{_WATERMARK_PREFIX}_text"
 _WATERMARK_IMAGE = f"{_WATERMARK_PREFIX}_image"
 
-# DrawingML namespace
-_DML_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_DML_NS_PREFIX = f"{{{_DML_NS}}}"
-
-# Relationship namespace for blip references
-_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path: Any) -> Any:
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path
-    (``str | Path``).  Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
-def _save_prs(prs: Any, path: str | Path | None) -> None:
-    """Save *prs* back to *path*, creating a backup first."""
-    if path is None:
-        return
-
-    p = Path(path)
-    bak = p.with_suffix(".bak.pptx")
-    if p.exists():
-        import shutil
-
-        shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
 
 
 def _validate_opacity(opacity: float) -> None:

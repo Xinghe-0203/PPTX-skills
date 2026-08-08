@@ -30,11 +30,33 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
+
+from pptx_skill._io import (
+    ensure_path_on_disk as _ensure_path_on_disk,
+)
+from pptx_skill._io import (
+    open_prs as _open_prs,
+)
+from pptx_skill._io import (
+    resolve_path as _resolve_path,
+)
+from pptx_skill._io import (
+    save_prs as _save_prs,
+)
+from pptx_skill.constants import (
+    P_NS_PREFIX as _P_NS_PREFIX,
+)
+from pptx_skill.constants import (
+    R_NS as _R_NS,
+)
+from pptx_skill.constants import (
+    REL_NS as _PR_NS,
+)
+from pptx_skill.units import EMU_PER_INCH as _EMU_PER_INCH
 
 __all__ = [
     "add_comment",
@@ -52,71 +74,8 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# OOXML namespaces
-# ---------------------------------------------------------------------------
-
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_PR_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
-
-_P_NS_PREFIX = f"{{{_P_NS}}}"
-
-# EMU conversion constant
-_EMU_PER_INCH = 914400
-
-# ---------------------------------------------------------------------------
 # Helpers – Presentation open / save
 # ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path: Any) -> Any:
-    """Open a Presentation from *prs_or_path*."""
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
-def _save_prs(prs: Any, path: str | Path | None) -> None:
-    """Save *prs* back to *path*, creating a backup first."""
-    if path is None:
-        return
-    p = Path(path)
-    bak = p.with_suffix(".bak.pptx")
-    if p.exists():
-        shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
-
-
-def _resolve_path(prs_or_path: Any) -> str | None:
-    """Return the file path if *prs_or_path* is a path, else ``None``."""
-    if _is_presentation(prs_or_path):
-        return None
-    return str(prs_or_path)
-
-
-def _ensure_path_on_disk(prs_or_path: Any) -> tuple[str, str | None]:
-    """Return a file path on disk, saving to a temp file if needed.
-
-    Returns a tuple of ``(path, tmp_dir)`` where *tmp_dir* is the temporary
-    directory path that the caller must clean up, or ``None`` if no temporary
-    directory was created (i.e. *prs_or_path* was already a file path).
-    """
-    path = _resolve_path(prs_or_path)
-    if path is not None:
-        return path, None
-
-    prs = _open_prs(prs_or_path)
-    tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_comments_")
-    tmp_path = os.path.join(tmp_dir, "work.pptx")
-    prs.save(tmp_path)
-    return tmp_path, tmp_dir
 
 
 def _validate_slide_index(prs: Any, slide_index: int) -> None:

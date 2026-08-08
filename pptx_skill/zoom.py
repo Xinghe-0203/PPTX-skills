@@ -28,8 +28,28 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
+
+from pptx_skill._io import (
+    open_prs as _open_prs,
+)
+from pptx_skill._io import (
+    resolve_path as _resolve_path,
+)
+from pptx_skill._io import (
+    save_prs as _save_prs,
+)
+from pptx_skill.constants import (
+    A_NS_PREFIX as _A,
+)
+from pptx_skill.constants import (
+    P15_NS_PREFIX as _P15,
+)
+from pptx_skill.constants import (
+    P_NS_PREFIX as _P,
+)
+from pptx_skill.units import EMU_PER_INCH as _EMU_PER_INCH
+from pptx_skill.units import EMU_PER_PT as _EMU_PER_PT
 
 __all__ = [
     "ZoomInfo",
@@ -42,29 +62,8 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# OOXML namespaces
-# ---------------------------------------------------------------------------
-
-_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-_NS_P14 = "http://schemas.microsoft.com/office/powerpoint/2010/main"
-_NS_P15 = "http://schemas.microsoft.com/office/powerpoint/2012/main"
-
-# Clark-notation prefixes
-_P = f"{{{_NS_P}}}"
-_A = f"{{{_NS_A}}}"
-_R = f"{{{_NS_R}}}"
-_P14 = f"{{{_NS_P14}}}"
-_P15 = f"{{{_NS_P15}}}"
-
 # Known extension URIs for zoom features
 _ZOOM_EXT_URI = "{BA7A70F8-3C3E-4F32-9C0E-417E468B1E77}"
-
-# EMU conversion
-_EMU_PER_PT = 12700
-_EMU_PER_INCH = 914400
 
 # ---------------------------------------------------------------------------
 # Data class
@@ -101,44 +100,6 @@ class ZoomInfo:
 # ---------------------------------------------------------------------------
 # Helpers – Presentation open / save
 # ---------------------------------------------------------------------------
-
-
-def _is_presentation(obj: Any) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path: Any) -> Any:
-    """Return a ``Presentation`` from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path
-    (``str | Path``).
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
-def _save_prs(prs: Any, path: str | Path | None) -> None:
-    """Save *prs* back to *path*, creating a backup first."""
-    if path is None:
-        return
-    import shutil
-
-    p = Path(path)
-    bak = p.with_suffix(".bak.pptx")
-    if p.exists():
-        shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
-
-
-def _resolve_path(prs_or_path: Any) -> str | None:
-    """Return the file path if *prs_or_path* is a path, else ``None``."""
-    if _is_presentation(prs_or_path):
-        return None
-    return str(prs_or_path)
 
 
 # ---------------------------------------------------------------------------

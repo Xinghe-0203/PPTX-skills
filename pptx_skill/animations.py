@@ -38,6 +38,9 @@ from typing import Any
 
 from lxml import etree
 
+from pptx_skill.constants import A_NS as _A_NS
+from pptx_skill.constants import P_NS as _P_NS
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -200,14 +203,7 @@ ANIMATION_TYPES: dict[str, dict[str, Any]] = {
 }
 
 # ---------------------------------------------------------------------------
-# 3. OOXML namespaces
-# ---------------------------------------------------------------------------
-
-_P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
-_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
-
-# ---------------------------------------------------------------------------
-# 4. Internal helpers
+# 3. Internal helpers
 # ---------------------------------------------------------------------------
 
 

@@ -25,6 +25,10 @@ import os
 import tempfile
 from dataclasses import dataclass
 
+from pptx_skill._io import is_presentation as _is_presentation
+from pptx_skill._io import open_prs as _open_prs
+from pptx_skill._io import save_prs as _save_prs_impl
+
 __all__ = [
     "OcrResult",
     "OcrEngine",
@@ -261,28 +265,8 @@ def _ocr_paddleocr(image_path: str, languages: list[str], min_confidence: float)
 # PPTX-level OCR
 # ---------------------------------------------------------------------------
 
-def _is_presentation(obj) -> bool:
-    """Check whether *obj* is a ``Presentation`` instance without eager import."""
-    return type(obj).__name__ == "Presentation" and type(obj).__module__.startswith("pptx")
-
-
-def _open_prs(prs_or_path):
-    """Open a Presentation from *prs_or_path*.
-
-    Accepts either an already-opened ``Presentation`` object or a file path.
-    Returns the ``Presentation`` object directly.
-    """
-    from pptx import Presentation
-
-    if _is_presentation(prs_or_path):
-        return prs_or_path
-    return Presentation(str(prs_or_path))
-
-
 def _save_prs(prs, path):
-    """Save *prs* back to *path* if *path* is not None."""
-    if path is not None:
-        prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
 
 
 def _render_slide_to_image(prs, slide_index: int, dpi: int = 200, *, tmp_dir: str | None = None) -> str:
