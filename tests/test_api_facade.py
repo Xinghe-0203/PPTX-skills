@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from pptx import Presentation
+
 from pptx_skill import (
     GenerationResult,
     auto_generate_ppt,
@@ -99,6 +101,60 @@ class ApiFacadeTests(unittest.TestCase):
             )
             self.assertEqual(facade["passed"], legacy["passed"])
             self.assertEqual(facade["total_slides"], legacy["total_slides"])
+
+
+class AutoPageDedupTests(unittest.TestCase):
+    """Caller-provided cover/toc/end sections must not be duplicated by the
+    auto cover/toc/end pages in the legacy generator."""
+
+    def _generate(self, tmp, sections):
+        path = Path(tmp) / "deck.pptx"
+        auto_generate_ppt(
+            title="去重",
+            sections=sections,
+            output_path=str(path),
+            theme_key="editorial",
+            auto_search_images=False,
+        )
+        return len(Presentation(str(path)).slides)
+
+    def test_explicit_end_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n = self._generate(tmp, [
+                {"title": "要点", "bullets": ["1", "2"], "layout": "bullets"},
+                {"title": "谢谢", "layout": "end"},
+            ])
+            self.assertEqual(n, 3)  # cover + bullets + end
+
+    def test_auto_end_still_added(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n = self._generate(tmp, [
+                {"title": "要点", "bullets": ["1"], "layout": "bullets"},
+            ])
+            self.assertEqual(n, 3)  # cover + bullets + end
+
+    def test_explicit_cover_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n = self._generate(tmp, [
+                {"title": "自定义封面", "subtitle": "副", "layout": "cover"},
+                {"title": "要点", "bullets": ["1"], "layout": "bullets"},
+            ])
+            self.assertEqual(n, 3)  # cover + bullets + end
+
+    def test_explicit_toc_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n = self._generate(tmp, [
+                {"title": "目录", "layout": "toc", "bullets": ["一", "二", "三", "四"]},
+                *[{"title": f"S{i}", "bullets": ["1"], "layout": "bullets"} for i in range(4)],
+            ])
+            self.assertEqual(n, 7)  # cover + toc + 4 + end
+
+    def test_auto_toc_still_added(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n = self._generate(tmp, [
+                *[{"title": f"S{i}", "bullets": ["1"], "layout": "bullets"} for i in range(4)],
+            ])
+            self.assertEqual(n, 7)  # cover + toc + 4 + end
 
 
 if __name__ == "__main__":

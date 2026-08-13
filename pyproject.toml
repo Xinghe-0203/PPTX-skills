@@ -64,7 +64,12 @@ ignore = ["E501", "UP017"]
 "pptx_skill/__init__.py" = ["E402", "F401"]
 
 [tool.mypy]
-python_version = "3.10"
+# NOTE: python_version is 3.12, not 3.10, because numpy >= 2.5 stubs use
+# PEP 695 `type` statements which mypy cannot parse under a 3.10 target
+# (parse errors in site-packages stubs cannot be suppressed per-module).
+# Python 3.10 runtime compatibility is enforced by ruff (target-version
+# = "py310" + UP rules) and by the test suite.
+python_version = "3.12"
 warn_unused_ignores = true
 warn_redundant_casts = true
 ignore_missing_imports = true

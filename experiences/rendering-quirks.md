@@ -47,7 +47,7 @@ LibreOffice's layout engine is not identical to PowerPoint's. Known differences:
 - **Table borders**: border collapse rules differ between the two engines
 
 **Implications for visual QA:**
-- The `render_qa.py` module uses SSIM with a tolerance threshold (default 0.95) to account for these differences
+- The `render_qa.py` module uses SSIM with tolerance thresholds (default `min_ssim` 0.985 for same-engine regression, 0.94 for reference-clone comparison) to account for these differences
 - Pixel-perfect comparison between LibreOffice renders and PowerPoint renders will always show differences
 - Use structural QA (`semantic_qa.py`) for layout correctness; use visual QA (`render_qa.py`) only for regression detection
 
@@ -76,7 +76,7 @@ def render_with_com(pptx_path, output_dir):
     powerpoint.Quit()
 ```
 
-The `preview_renderer.py` module tries backends in order: COM (Windows) -> LibreOffice -> PyMuPDF -> Pillow fallback.
+The `preview_renderer.py` module tries backends in order: LibreOffice -> COM (Windows). The LibreOffice path converts PPTX -> PDF via headless soffice, then PDF -> PNG via PyMuPDF (or poppler); there is no Pillow fallback.
 
 ---
 
@@ -105,7 +105,7 @@ alpha_mod = etree.SubElement(blip, qn("a:alphaModFix"))
 alpha_mod.set("amt", str(int(opacity * 1000)))  # opacity 0.3 → amt="300"
 ```
 
-The `watermark.py` module handles this correctly with `set_blip_alpha()`.
+The `watermark.py` module handles this correctly (internal `_apply_image_alpha()` / `_alpha_val()`).
 
 ---
 
@@ -122,20 +122,20 @@ The OOXML specification (ISO/IEC 29500) defines what is valid XML, but PowerPoin
 
 ---
 
-## Rule 6: Animation filters — only 16 entrance/exit filters are empirically verified
+## Rule 6: Animation filters — not all catalog entries play in every PowerPoint version
 
-The `animations.py` module defines 51 animation types (20 entrance, 15 exit, 15 emphasis, 1 motion path), but not all of these play correctly in PowerPoint slideshow mode. Empirically verified filters:
+The `animations.py` module defines 51 animation types (20 entrance, 15 exit, 15 emphasis in `ANIMATION_TYPES`, plus 1 motion path via `apply_motion_path()`), but not all of these play correctly in every PowerPoint version. The full catalog:
 
-**Entrance (verified):**
-- Appear, Fade, Fly In, Float Up, Float Down, Float Left, Float Right, Wipe, Box, Split, Wheel, Random Bars, Grow & Turn, Swivel, Bounce, Zoom
+**Entrance (20):**
+- Appear, Fade In, Fly In, Float Up, Zoom, Grow & Turn, Swivel, Bounce, Wipe In, Blinds In, Box In, Checkerboard In, Split In, Diagonal In, Random Bars In, Ascend, Descend, Spin In, Stretch In, Wheel In
 
-**Exit (verified):**
-- Fade, Fly Out, Float Up, Float Down, Float Left, Float Right, Wipe, Box, Split, Shrink & Turn, Swivel, Bounce, Random Bars, Collapse, Disappear
+**Exit (15):**
+- Disappear, Fade Out, Fly Out, Float Down, Zoom Out, Shrink & Turn, Swivel Out, Bounce Out, Wipe Out, Blinds Out, Box Out, Checkerboard Out, Split Out, Diagonal Out, Random Bars Out
 
-**Emphasis (partially verified):**
-- Grow/Shrink, Spin, Transparency, Color Change, Bold Flash
+**Emphasis (15):**
+- Grow/Shrink, Spin, Pulse, Color Change, Teeter, Desaturate, Darken, Lighten, Transparency, Object Color, Font Color, Brush On Color, Brush On Underline, Wave, Fill Color
 
-The remaining emphasis animations and the motion path animation generate valid OOXML but may not play in all PowerPoint versions. Always test animations in the target PowerPoint version before relying on them.
+Core types (appear/fade/fly/wipe/zoom/float) are well-tested; the rest generate valid OOXML but may not play in all PowerPoint versions. Always test animations in the target PowerPoint version before relying on them.
 
 ---
 
@@ -155,7 +155,7 @@ When cloning or merging slides that contain SmartArt, all four parts must be cop
 
 **The `smartart.py` module provides:**
 - `detect_smartart(slide)` — find all SmartArt shapes on a slide
-- `extract_smartart_parts(shape, pptx_package)` — collect all 4 parts + relationships
-- `preserve_smartart(source_shape, target_slide, source_pkg, target_pkg)` — copy with full part preservation
+- `extract_smartart_text(shape)` / `populate_smartart_text(shape, node_texts)` — read/edit SmartArt text
+- `preserve_smartart(shape, target_slide)` — copy with full part preservation
 
 **The `merge.py` module** uses SmartArt preservation automatically when merging decks that contain SmartArt diagrams.

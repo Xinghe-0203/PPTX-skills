@@ -26,7 +26,7 @@ def measure_text_width(text: str, font_path: str, font_size: int) -> float:
     return bbox[2] - bbox[0]  # right - left
 ```
 
-The `text_metrics.py` module provides `measure_text_width()` and `bisect_font_size()` that handle CJK correctly using Pillow.
+The `text_metrics.py` module provides `measure_text()`, `measure_runs()`, and `fit_text_to_height()` (plus the `TextMeasurer` class) that handle CJK correctly using Pillow.
 
 ---
 
@@ -68,16 +68,17 @@ Font availability varies by OS. On Windows, the safest choices are:
 - macOS: PingFang SC, Hiragino Sans GB
 - Linux: Noto Sans CJK SC, WenQuanYi Micro Hei
 
-The `THEMES` dict in `pptx_helper.py` pairs Latin and CJK fonts:
+The `THEMES` dict in `pptx_helper.py` pairs Latin and CJK fonts. Latin fonts are per-theme; CJK fonts live in a separate `CJK_FONTS` dict:
 ```python
 FONTS = {
-    "default": {"latin": "Calibri", "cjk": "Microsoft YaHei"},
-    "serif":   {"latin": "Georgia", "cjk": "SimSun"},
-    ...
+    "editorial": {"heading": "Georgia", "body": "Calibri"},
+    "luxury":    {"heading": "Playfair Display", "body": "Lato"},
+    ...  # 20 theme keys
 }
+CJK_FONTS = {"heading": "Microsoft YaHei", "body": "Microsoft YaHei", "mono": "Consolas"}
 ```
 
-Always specify both `latin` and `cjk` font names when creating text runs.
+Always specify both the Latin (`FONTS[theme]`) and CJK (`CJK_FONTS`) font names when creating text runs.
 
 ---
 
@@ -113,7 +114,7 @@ def cjk_aware_break(text: str, max_width: float, font, font_size: int) -> list[s
     return lines
 ```
 
-The `text_metrics.py` module implements `cjk_line_break()` with proper CJK/Latin boundary handling.
+The `text_metrics.py` module implements this CJK/Latin boundary handling internally (private `_break_text`); callers use the public `measure_text()` / `measure_runs()` API.
 
 ---
 

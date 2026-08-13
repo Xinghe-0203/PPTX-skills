@@ -31,7 +31,7 @@ auto_generate_ppt(
 )
 ```
 
-Use `theme_key` for the legacy nine-color themes. Use `template_key` for a reusable profile that also controls layout options and deck rhythm. Use `template_profile` to pass an in-memory profile.
+Use `theme_key` for the 20 legacy themes. Use `template_key` for a reusable profile that also controls layout options and deck rhythm. Use `template_profile` to pass an in-memory profile.
 
 ## Template profiles
 
@@ -82,7 +82,7 @@ Minimum profile structure:
 }
 ```
 
-All color values must use `#RRGGBB`. Valid layout roles are `cover`, `toc`, `section`, `bullets`, `text_image`, `full_image`, `image_grid`, `dashboard`, `timeline`, `comparison`, `quote`, `process`, `table`, `end`, `matrix`, `kpi_hero`, `faq`, `testimonial`, and `logo_wall`.
+All color values must use `#RRGGBB`. Valid layout roles are `cover`, `toc`, `section`, `bullets`, `text_image`, `full_image`, `image_grid`, `dashboard`, `timeline`, `comparison`, `quote`, `process`, `table`, `end`, `matrix`, `kpi_hero`, `faq`, `testimonial`, `logo_wall`, and the five analytical framework roles `swot`, `porter`, `pest`, `bmc`, `funnel` (24 roles total).
 
 Catalog and generated profiles can use three non-card layout families: `editorial_grid`, `technical_axis`, and `poster_column`. Natural-language generation selects a family from style cues instead of only changing colors. These families use sharp grids, hairlines, whitespace, asymmetric typography, data axes, or poster columns instead of generic rounded cards, decorative circles, oversized quote marks, `VS` badges, and decorative English kickers. Set `layout_family` to `standard` only when the older card-oriented system is intentional.
 

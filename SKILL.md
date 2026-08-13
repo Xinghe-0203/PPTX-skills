@@ -2,7 +2,7 @@
 name: pptx
 version: "6.0.0"
 description: |
-  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 24 种内容版式（含 5 种分析框架）、62 种版式配方、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取、18 种转场动画、51 种入场/退出/强调动画、多文件合并与幻灯片提取、文字/图片水印、节管理、母版/版式查询与克隆、图片压缩与优化、演讲者备注与审阅批注、结构化差异比较、多格式导出（PDF/图片/HTML/文本）、SmartArt 检测与编辑、VBA 宏注入与提取、20 种内置表格样式与单元格操作、HTML 导入。
+  创建、编辑、重构和验收可编辑 PowerPoint 演示文稿。用于从主题或资料生成 PPT、自动排版、选择或生成模板、按照用户提供的 .pptx 母版或样例页高保真复刻、替换指定文字/图片/图表、制作数据可视化、渲染截图并迭代修正。支持 24 种内容版式（含 5 种分析框架）、62 种版式配方、20 套模板档案、3 套非卡片式版式家族、20 套传统主题、字体配对系统（含 CJK）、10 种图表类型、富文本渲染、表格/形状增强、页眉页脚页码、备注页与媒体节点、模板包下载与档案提取、30 种转场动画（18 标准 + 12 高级，另有 Morph）、51 种入场/退出/强调动画、多文件合并与幻灯片提取、文字/图片水印、节管理、母版/版式查询与克隆、图片压缩与优化、演讲者备注与审阅批注、结构化差异比较、多格式导出（PDF/图片/HTML/文本）、SmartArt 检测与编辑、VBA 宏注入与提取、20 种内置表格样式与单元格操作、HTML 导入。
 ---
 
 # PPTX 智能制作
@@ -53,10 +53,10 @@ description: |
 | 形状增强样式（线条/阴影/渐变/旋转/内嵌文字） | 已落地 | `pptx_skill.pptx_renderer` shape 节点 |
 | 页眉页脚与页码 | 已落地 | `pptx_skill.pptx_renderer` deck_options |
 | 备注页与媒体（video/audio） | 已落地 | `pptx_skill.pptx_renderer` notes/media 节点 |
-| 字体配对系统（含 CJK） | 已落地 | `pptx_skill.pptx_renderer.FONTS` / `CJK_FONTS` |
+| 字体配对系统（含 CJK） | 已落地 | `scripts/pptx_helper.py` 的 `FONTS` / `CJK_FONTS` |
 | 200 页 QA 标注数据集 | 已落地 | `pptx_skill.qa_dataset.generate_annotation_dataset()` |
 | Golden renders 基线 | 已落地 | `pptx_skill.golden_renders.render_golden_set()` |
-| 18 种转场动画 | 已落地 | `pptx_skill.transitions.apply_slide_transition()` / `apply_deck_transitions()` |
+| 30 种转场动画（18 标准 + 12 高级，另有 Morph） | 已落地 | `pptx_skill.transitions.apply_slide_transition()` / `pptx_skill.transitions_ext.set_advanced_transition()` / `pptx_skill.morph.set_morph_transition()` |
 | 51 种幻灯片动画（20 入场/15 退出/15 强调/1 运动路径） | 已落地 | `pptx_skill.animations.apply_animation()` / `apply_entrance_animation()` / `apply_exit_animation()` / `apply_emphasis_animation()` / `apply_motion_path()` |
 | 多文件合并与幻灯片提取 | 已落地 | `pptx_skill.merge.merge_presentations()` / `append_slides()` / `insert_slides()` / `extract_slides()` |
 | 文字/图片水印（透明度/平铺/层级/移除） | 已落地 | `pptx_skill.watermark.add_text_watermark()` / `add_image_watermark()` / `remove_watermark()` |
@@ -379,7 +379,7 @@ print(manifest.manifest_schema_version)  # 3
 | `pptx_skill.preview_renderer` | LibreOffice / PyMuPDF / Windows COM 渲染截图 |
 | `pptx_skill.visual_qa` | 渲染后视觉 QA 检查 |
 | `pptx_skill.capability` | 运行时环境能力检测与报告 |
-| `pptx_skill.transitions` | 18 种转场动画（fade/push/wipe/cover/split/dissolve/random/cut） |
+| `pptx_skill.transitions` / `transitions_ext` / `morph` | 30 种转场动画（18 标准 + 12 高级，另有 Morph） |
 | `pptx_skill.animations` | 51 种幻灯片动画（20 入场/15 退出/15 强调/1 运动路径）via OOXML timing XML |
 | `pptx_skill.merge` | 多文件合并与幻灯片提取，布局/媒体/rel-ID 去重 |
 | `pptx_skill.watermark` | 文字/图片水印，透明度/平铺/层级/移除 |
@@ -433,7 +433,7 @@ print(manifest.manifest_schema_version)  # 3
 | PR8a | 14 role 全部 recipe、role-specific paginator、table/chart 节点 | 138/138 |
 | PR8b | reference_adapter native/clone、clone drift QA sidecar | 147/147 |
 | PR8c | visual_rebuild 真实自适应重建、参考差异预算 | 164/164 |
-| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217 |
+| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217（历史基线；当前套件 250 个测试） |
 | PR10 | 12 新模块：animations、merge、watermark、sections、slide_master、image_optimize、comments、diff、export、smartart、vba、table_styles | — |
 | PR11 | 5 分析框架 role（swot/porter/pest/bmc/funnel）+ consulting 风格 recipe 变体 + html_import | — |
 

@@ -4,7 +4,7 @@
 
 - Open the generated file with `python-pptx`.
 - Run `auto_validate_ppt()` for layout diversity, adjacent layout repetition, shape counts, text density, font hierarchy, and color count.
-- Run `SemanticQA` (adaptive pipeline) for extended checks: table column overflow, ragged rows, missing headers; chart empty series, single-category, label density; slide-level safe-margin violations, low whitespace, missing title, excessive elements; deck-level font-size drift, layout repetition, missing section breaks, color-palette drift; typography hierarchy (title/body size ratio).
+- Run `SemanticQAEngine` (adaptive pipeline) for extended checks: table column overflow, ragged rows, missing headers; chart empty series, single-category, label density; slide-level safe-margin violations, low whitespace, missing title, excessive elements; deck-level font-size drift, layout repetition, missing section breaks, color-palette drift; typography hierarchy (title/body size ratio).
 - Render the deck at 150 DPI or higher.
 - Confirm the number and dimensions of rendered pages.
 
@@ -37,9 +37,9 @@
 - For adaptive output, prefer `render_layout_plans` so each derived slide becomes its own page; check `RenderTraceEntry.slide_index` maps to the right slide.
 - Pagination (PR6) splits overloaded `bullets` across derived slides with deterministic IDs; confirm split titles carry the continuation marker and that derived element IDs stay stable across re-generation.
 
-### SemanticQA checks (adaptive pipeline)
+### SemanticQAEngine checks (adaptive pipeline)
 
-Run `SemanticQA.check()` per slide and `SemanticQA.check_deck()` across slides. Issue kinds:
+Run `SemanticQAEngine.check()` per slide and `SemanticQAEngine.check_deck()` across slides. Issue kinds:
 
 - **Table QA**: column overflow, ragged rows, missing headers.
 - **Chart QA**: empty series, single category, label density.

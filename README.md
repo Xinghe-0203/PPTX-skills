@@ -4,16 +4,16 @@
 >
 > Core principle: **always ship an editable `.pptx` and run render verification** -- not just code or XML checks.
 
-![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.12+](https://img.shields.io/badge/python-3.12+-green) ![217 tests](https://img.shields.io/badge/tests-217-brightgreen) ![63 modules](https://img.shields.io/badge/modules-63-orange) ![620+ APIs](https://img.shields.io/badge/APIs-620+-purple)
+![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green) ![250 tests](https://img.shields.io/badge/tests-250-brightgreen) ![64 modules](https://img.shields.io/badge/modules-64-orange) ![600+ APIs](https://img.shields.io/badge/APIs-600+-purple)
 
-**v6.0.0** -- 63 Python modules, 620+ public APIs, 51 animations, 30 transitions, 24 layout roles, 20 themes, unified `Deck` class, unified CLI, Markdown import.
+**v6.0.0** -- 64 Python modules, 600+ public APIs, 51 animations, 30 transitions, 24 layout roles, 20 themes, unified `Deck` class, unified CLI, Markdown import.
 
 ## Capabilities at a Glance
 
 | Category | Count |
 |---|---|
-| Python modules | 63 |
-| Public APIs | 620+ |
+| Python modules | 64 |
+| Public APIs | 600+ |
 | Layout roles | 24 |
 | Recipe variants | 62 |
 | Animation types | 51 (20 entrance, 15 exit, 15 emphasis, 1 motion path) |
@@ -23,7 +23,7 @@
 | Chart types | 10 (with embedded Excel workbooks) |
 | Table styles | 20 built-in |
 | Analytical framework roles | 5 (SWOT, Porter, PEST, BMC, Funnel) |
-| Tests | 217 passing |
+| Tests | 250 collected (249 passing, 1 skipped) |
 
 ## Feature Overview
 
@@ -309,11 +309,11 @@ for slide in report["slides"]:
 | `TemplateProfileV2` | Three-layer token (design/semantic/component) template profile with V1 migration. |
 | `Manifest V3` | Per-generation record of content, layout plans, render trace, and repair attempts; embedded in pptx XML or sidecar `.manifest.json`. |
 | `Reference Modes` | `native` / `clone` / `visual-rebuild` strategies for handling reference decks. |
-| `ANIMATION_TYPES` | Catalog of 51 animation presets with OOXML preset class/ID/subtype mappings. |
+| `ANIMATION_TYPES` | Catalog of 50 animation presets (20 entrance, 15 exit, 15 emphasis) with OOXML preset class/ID/subtype mappings; the motion-path type is applied via `apply_motion_path()` (51 types total). |
 | `TRANSITION_TYPES` | Set of 18 standard transition presets; `ADVANCED_TRANSITIONS` adds 12 more. |
 | 1-based slide indexing | All public APIs use 1-based slide indices (slide 1 = first slide) across every module. |
 
-## Module List (63 modules)
+## Module List (64 modules)
 
 | Module | Description |
 |---|---|
@@ -379,6 +379,8 @@ for slide in report["slides"]:
 | `layout_sync.py` | Alignment, distribution, snap-to-grid, layout templates, z-order. |
 | `markdown_export.py` | Markdown export (text, tables, notes, chart data, metadata). |
 | `video.py` | MP4/GIF video export via ffmpeg (crossfade transitions, speaker timing). |
+| `constants.py` | Shared OOXML namespace/IRI constants. |
+| `units.py` | EMU/point/inch conversion helpers. |
 
 ## Editing Paths
 
@@ -401,7 +403,7 @@ Run the full test suite:
 python -m pytest tests/ -ra
 ```
 
-Baseline: **217 tests passing** (including animations, transitions, merge, watermark, sections, slide_master, image_optimize, comments, diff, export, smartart, vba, table_styles, chart_edit, color, layout_sync, markdown_export, video, svg_export, svg_import, ocr, batch, morph, accessibility, effects, connectors, protection, metadata, equations, multimedia, groups, zoom, html_import, deck, markdown_import, cli, and core layout/QA/pipeline coverage).
+Baseline: **250 tests collected — 249 passing, 1 skipped** (including animations, transitions, merge, watermark, sections, slide_master, image_optimize, comments, diff, export, smartart, vba, table_styles, chart_edit, color, layout_sync, markdown_export, video, svg_export, svg_import, ocr, batch, morph, accessibility, effects, connectors, protection, metadata, equations, multimedia, groups, zoom, html_import, deck, markdown_import, cli, and core layout/QA/pipeline coverage).
 
 Run a single test file:
 

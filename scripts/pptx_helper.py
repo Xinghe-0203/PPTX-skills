@@ -1405,6 +1405,11 @@ def auto_generate_ppt(
     total = len(parsed) + 2
     used_layouts = []
 
+    # 去重守卫：调用方（如 markdown_import）可能已显式提供 cover/toc/end
+    # 章节，此时跳过对应的自动页，避免生成重复页面。
+    user_has_cover = bool(parsed) and parsed[0].layout == "cover"
+    user_has_toc = any(s.layout == "toc" for s in parsed)
+
     # 为封面单独搜索背景图
     cover_image = None
     if auto_search_images:
@@ -1412,17 +1417,22 @@ def auto_generate_ppt(
     if not cover_image and parsed and parsed[0].images:
         cover_image = parsed[0].images[0]
 
-    cover_ctx = {
-        "title": title, "subtitle": subtitle,
-        "cover_image": cover_image,
-        "layout_opts": template_layout_opts,
-    }
-    resolve_layout("cover", layout_cover)(prs, theme, cover_ctx)
-    used_layouts.append("cover")
+    if user_has_cover:
+        # 用户首章节即封面：把搜索/回退到的封面图交给主循环渲染。
+        if cover_image and not parsed[0].images:
+            parsed[0].images = [cover_image]
+    else:
+        cover_ctx = {
+            "title": title, "subtitle": subtitle,
+            "cover_image": cover_image,
+            "layout_opts": template_layout_opts,
+        }
+        resolve_layout("cover", layout_cover)(prs, theme, cover_ctx)
+        used_layouts.append("cover")
 
     # 目录页：当章节数较多时（>3），在封面后单独生成目录页，
     # 使用各章节标题作为目录项，不占用用户传入的内容章节。
-    if len(parsed) > 3:
+    if len(parsed) > 3 and not user_has_toc:
         toc_ctx = {
             "title": "目录",
             "kicker": "CONTENTS",
@@ -1458,17 +1468,21 @@ def auto_generate_ppt(
                     break
 
         layout_fn = resolve_layout(layout_name, layout_bullets)
+        if layout_name == "cover" and sec.images:
+            # layout_cover 只读 cover_image；用户显式封面章节用其首图做背景。
+            ctx["cover_image"] = next((im for im in sec.images if im), None)
         _warn_unconsumed(layout_name, ctx)
         layout_fn(prs, theme, ctx)
         used_layouts.append(layout_name)
 
-    end_ctx = {
-        "title": template_profile.get("end_title", "谢谢"),
-        "subtitle": subtitle,
-        "layout_opts": template_layout_opts,
-    }
-    resolve_layout("end", layout_end)(prs, theme, end_ctx)
-    used_layouts.append("end")
+    if not used_layouts or used_layouts[-1] != "end":
+        end_ctx = {
+            "title": template_profile.get("end_title", "谢谢"),
+            "subtitle": subtitle,
+            "layout_opts": template_layout_opts,
+        }
+        resolve_layout("end", layout_end)(prs, theme, end_ctx)
+        used_layouts.append("end")
 
     abs_path = os.path.abspath(output_path)
     os.makedirs(os.path.dirname(abs_path) or ".", exist_ok=True)

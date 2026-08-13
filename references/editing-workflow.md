@@ -13,7 +13,7 @@
 
 ## Safety and indexing
 
-All editing and page-operation functions create one overwrite-style backup named `deck.bak.pptx` before saving. Slide and image indices are one-based; `0` is accepted as an alias for the first item.
+All editing and page-operation functions create one overwrite-style backup named `deck.bak.pptx` before saving. Slide and image indices are one-based. Slide index `0` raises `IndexError`; only `swap_image`'s image index accepts `0` as an alias for the first image.
 
 Render and inspect before and after every non-trivial edit. Use `reference_ppt.py analyze` to identify exact slide and shape targets.
 

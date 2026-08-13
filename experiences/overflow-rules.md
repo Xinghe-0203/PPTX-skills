@@ -15,22 +15,23 @@ If rendered text height exceeds the zone height, there are two strategies in pri
 
 **Implementation in the pipeline:**
 ```python
-# text_metrics.py: bisect_font_size finds the largest size that fits
-font_size = bisect_font_size(
+# text_metrics.py: fit_text_to_height finds the largest size that fits
+from pptx_skill.text_metrics import fit_text_to_height
+
+metrics = fit_text_to_height(
     text=content,
-    max_width=zone.width,
-    max_height=zone.height,
-    font_path=font_path,
-    min_size=10,  # body text minimum
-    max_size=original_size,
+    width_pt=zone.width,
+    height_pt=zone.height,
+    font_size_pt=original_size,
+    min_font_size_pt=10,  # body text minimum
 )
 
-if font_size < 10:
+if metrics.required_font_size_pt <= 10 and metrics.overflow:
     # Cannot fit even at minimum size → paginate
     pages = paginate_content_spec(spec, role="bullets")
 ```
 
-The `pagination.py` module handles splitting dense content into multiple `SlideSpec` objects. The `semantic_qa.py` module detects overflow after rendering via `check_text_overflow()`.
+The `pagination.py` module handles splitting dense content into multiple `SlideSpec` objects. The `semantic_qa.py` module detects overflow after rendering via `SemanticQAEngine.check()` (issue kind `IssueKind.TEXT_OVERFLOW`).
 
 ---
 
@@ -42,10 +43,10 @@ When a table has too many columns for the standard zone width, the `wide` recipe
 ```python
 # In deck_planner.py or pagination.py
 if column_count > 6 and role == "table":
-    recipe_variant = "table_wide"
-elif column_count > 8:
-    # Even wide variant can't fit → split table across slides
-    pages = paginate_table(table_spec, max_columns=8)
+    recipe_variant = "table.wide"
+elif row_count > 10:
+    # Even the wide variant can't fit → split table across slides
+    pages = paginate_table(slide_spec, max_rows=10, min_rows_per_page=3)
 ```
 
 Table pagination splits by rows (not columns) — each continuation slide repeats the header row for context.
@@ -63,18 +64,18 @@ Images must stay within their zone boundaries. Two strategies:
 
 ```python
 # image_crop.py
-def contain(image_size, zone_size):
+def crop_contain(src_width, src_height, dst_width, dst_height):
     """Scale image to fit within zone, preserving aspect ratio."""
-    scale = min(zone_size.w / image_size.w, zone_size.h / image_size.h)
-    return (image_size.w * scale, image_size.h * scale)
+    scale = min(dst_width / src_width, dst_height / src_height)
+    ...
 
-def cover(image_size, zone_size):
+def crop_cover(src_width, src_height, dst_width, dst_height):
     """Scale image to fill zone, preserving aspect ratio (may crop)."""
-    scale = max(zone_size.w / image_size.w, zone_size.h / image_size.h)
-    return (image_size.w * scale, image_size.h * scale)
+    scale = max(dst_width / src_width, dst_height / src_height)
+    ...
 ```
 
-The `image_crop.py` module also provides `smart_crop()` which uses entropy-based focus detection to choose the best crop region.
+The `image_crop.py` module also provides `crop_smart()` which uses entropy-based focus detection to choose the best crop region.
 
 ---
 
@@ -130,7 +131,7 @@ zone.top >= canvas.safe.top
 zone.bottom <= canvas.safe.bottom
 ```
 
-The `semantic_qa.py` module checks for safe margin violations via `check_margin_violation()`.
+The `semantic_qa.py` module reports safe-margin violations as `IssueKind.SAFE_MARGIN_VIOLATION` via `SemanticQAEngine.check()`.
 
 ---
 
@@ -148,7 +149,7 @@ The `semantic_qa.py` module checks for safe margin violations via `check_margin_
 - Below 14pt, titles lose their visual hierarchy
 - Below 8pt, even on-screen reading is difficult
 
-The `text_metrics.py` `bisect_font_size()` function takes `min_size` as a parameter. The `repair_engine.py` uses these thresholds to propose pagination repairs when font size would drop below minimum.
+The `text_metrics.py` `fit_text_to_height()` function takes `min_font_size_pt` as a parameter. The `repair_engine.py` uses these thresholds to propose split/repair actions when font size would drop below minimum.
 
 ---
 
@@ -157,9 +158,10 @@ The `text_metrics.py` `bisect_font_size()` function takes `min_size` as a parame
 The generation pipeline (`generation_pipeline.py`) runs a closed loop: plan -> render -> QA -> repair. Overflow is detected at the QA stage:
 
 ```
-SemanticQAEngine.check() → [OverflowIssue, OverlapIssue, ...]
+SemanticQAEngine.check() → [DetectedIssue(kind=IssueKind.TEXT_OVERFLOW), ...]
     ↓
-RepairEngine.propose_repairs() → [ReduceFontAction, PaginateAction, ...]
+repair_engine.propose_repairs() → [RepairAction(kind=RepairActionKind.REDUCE_FONT_WITHIN_LIMIT /
+                                              SWITCH_LAYOUT_CANDIDATE / ...)]
     ↓
 Apply repairs → re-plan → re-render → re-QA (max 2 passes)
 ```

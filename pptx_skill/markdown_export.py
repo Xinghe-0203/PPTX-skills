@@ -226,8 +226,11 @@ def _guess_title(shape_text: str) -> str:
     for line in shape_text.split("\n"):
         stripped = line.strip()
         if stripped:
-            # Remove markdown formatting for title
-            clean = stripped.lstrip("#").lstrip("*").strip()
+            clean = stripped.lstrip("#").strip()
+            for marker in ("***", "**", "*"):
+                if clean.startswith(marker) and clean.endswith(marker) and len(clean) > len(marker) * 2:
+                    clean = clean[len(marker):-len(marker)].strip()
+                    break
             return clean
     return ""
 

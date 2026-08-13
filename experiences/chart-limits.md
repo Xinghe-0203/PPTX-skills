@@ -8,7 +8,7 @@ python-pptx supports only 10 chart types via `XL_CHART_TYPE`. Office 2016 modern
 
 ## Rule 1: Only 10 chart types are supported
 
-python-pptx exposes chart types through the `XL_CHART_TYPE` enum. The supported types are:
+This repo supports exactly 10 chart types (`_CHART_TYPE_MAP` in `pptx_renderer.py`): `column_clustered`, `column_stacked`, `bar_clustered`, `bar_stacked`, `line`, `line_markers`, `pie`, `doughnut`, `scatter`, `area`. They map onto python-pptx's `XL_CHART_TYPE` enum:
 
 | Type | Enum Value |
 |---|---|
@@ -22,8 +22,9 @@ python-pptx exposes chart types through the `XL_CHART_TYPE` enum. The supported 
 | Pie | `XL_CHART_TYPE.PIE` (5) |
 | Scatter | `XL_CHART_TYPE.XY_SCATTER` (-4169) |
 | Area | `XL_CHART_TYPE.AREA` (1) |
+| Doughnut | `XL_CHART_TYPE.DOUGHNUT` (-4120) |
 
-Doughnut is also available (`XL_CHART_TYPE.DOUGHNUT`, -4120), bringing the practical total to 11.
+The enum has more entries than the 10 this repo supports; stick to the `_CHART_TYPE_MAP` keys.
 
 **Not supported** (Office 2016 modern charts):
 - Sunburst

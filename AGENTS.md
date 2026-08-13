@@ -13,14 +13,14 @@ Requires Python ≥ 3.10. The package adds `scripts/` to `sys.path` at import ti
 ## Testing
 
 ```powershell
-python -m pytest tests/ -x -q                 # full suite (217 tests; slow — includes rendering)
+python -m pytest tests/ -x -q                 # full suite (250 tests; slow — includes rendering)
 python -m pytest tests/test_content_model.py  # single file
 python -m pytest tests/ -k "test_layout" -x   # by keyword
 ```
 
 - Tests use `unittest.TestCase`; `pytest` is the runner (`python -m unittest discover -s tests` works without pytest installed).
 - Rendering tests (pipeline, golden renders) are slow and need LibreOffice. Run fast unit tests first when iterating.
-- Baseline: 242 passed + 2 skipped/failed (preview renderer tests require PyMuPDF or poppler for PDF→PNG conversion).
+- Baseline: 249 passed + 1 skipped (the skip is a conditional error-preservation path in `test_preview_renderer.py`).
 
 ## Architecture: dual-layer
 
@@ -47,7 +47,7 @@ This repo has **two implementation layers** that coexist:
 
 ## Templates
 
-12 built-in profiles stored in `assets/templates/catalog.json`. Generated profiles go to `assets/templates/generated/`. Three layout families: `editorial_grid`, `technical_axis`, `poster_column` — avoid `standard` unless the older card system is explicitly wanted.
+20 built-in profiles stored in `assets/templates/catalog.json`. Generated profiles go to `assets/templates/generated/`. Three layout families: `editorial_grid`, `technical_axis`, `poster_column` — avoid `standard` unless the older card system is explicitly wanted.
 
 ## Rendering
 
@@ -70,7 +70,7 @@ This repo has **two implementation layers** that coexist:
 
 ## Data model
 
-`ContentSpec` → `SlideSpec` → `ElementSpec` with stable `element_id`s. Manifest V3 is embedded in the PPTX XML and also written as a `.manifest.json` sidecar. Slide/image indices are one-based; `0` is accepted as an alias for the first item.
+`ContentSpec` → `SlideSpec` → `ElementSpec` with stable `element_id`s. Manifest V3 is embedded in the PPTX XML and also written as a `.manifest.json` sidecar. Slide and image indices are one-based; slide index `0` raises `IndexError` (only `swap_image`'s image index accepts `0` as an alias for the first image).
 
 ## Workflow docs
 
@@ -84,6 +84,7 @@ Task-specific detail lives in `references/`:
 
 ```powershell
 ruff check pptx_skill/ scripts/ tests/
+python -m mypy pptx_skill/
 ```
 
-Config in `pyproject.toml`: line-length 120, target Python 3.10, E501 ignored.
+Config in `pyproject.toml`: line-length 120, target Python 3.10, E501 ignored. mypy checks with `python_version = "3.12"` because numpy ≥ 2.5 stubs use PEP 695 syntax that cannot be parsed under a 3.10 target; 3.10 runtime compatibility is enforced by ruff's `py310` target and the test suite.
