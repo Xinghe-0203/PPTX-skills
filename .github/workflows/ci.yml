@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install quality dependencies
+        run: python -m pip install -e ".[adaptive,qa-image,test]" ruff mypy
+      - name: Ruff
+        run: python -m ruff check pptx_skill/ scripts/ tests/
+      - name: Mypy
+        run: python -m mypy pptx_skill/
+
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install test dependencies
+        run: python -m pip install -e ".[adaptive,test]"
+      - name: Run test suite
+        run: python -m pytest tests/ -q
+
+  render:
+    name: LibreOffice render integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install LibreOffice
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-impress
+      - name: Install integration dependencies
+        run: python -m pip install -e ".[adaptive,qa-image,render-pdf,test]"
+      - name: Run full integration suite
+        run: python -m pytest tests/ -q
+
+  build:
+    name: Build and install distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install build dependencies
+        run: python -m pip install ".[build]"
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Validate distribution metadata
+        run: python -m twine check dist/*
+      - name: Install and exercise wheel in isolation
+        run: |
+          python -m venv "$RUNNER_TEMP/pptx-smoke"
+          "$RUNNER_TEMP/pptx-smoke/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/pptx-smoke/bin/python" -I - <<'PY'
+          import tempfile
+          from pathlib import Path
+
+          from pptx import Presentation
+          from pptx_skill import __version__, auto_generate_ppt, list_templates
+
+          assert __version__ == "6.0.0"
+          assert len(list_templates()) >= 20
+          with tempfile.TemporaryDirectory() as tmp:
+              output = Path(tmp) / "smoke.pptx"
+              auto_generate_ppt(
+                  title="Wheel smoke test",
+                  sections=[{"title": "Content", "bullets": ["Works"]}],
+                  output_path=str(output),
+                  template_key="strategy-consulting",
+                  auto_search_images=False,
+              )
+              assert len(Presentation(output).slides) == 3
+          PY
+          "$RUNNER_TEMP/pptx-smoke/bin/pptx-skill" template
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

@@ -30,18 +30,22 @@ encrypt = ["msoffcrypto-tool>=4,<6"]
 ocr-easy = ["easyocr>=1,<2"]
 ocr-paddle = ["paddleocr>=2,<3", "paddlepaddle>=2,<3"]
 test = ["pytest>=8,<10"]
+build = ["build>=1.2,<2", "twine>=6,<7"]
 
 [project.scripts]
 pptx-skill = "pptx_skill.cli:main"
 pptx-skill-capability = "pptx_skill.capability:main"
 
 [project.urls]
-Homepage = "https://github.com/Xinghe-0203/pptx-skill"
-Issues = "https://github.com/Xinghe-0203/pptx-skill/issues"
+Homepage = "https://github.com/Xinghe-0203/PPTX-skills"
+Issues = "https://github.com/Xinghe-0203/PPTX-skills/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pptx_skill*"]
+include = ["pptx_skill*", "scripts*", "assets*"]
+
+[tool.setuptools.package-data]
+"assets.templates" = ["catalog.json", "generated/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

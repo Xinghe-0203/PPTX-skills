@@ -13,7 +13,7 @@ Prefer delegating work to subagents. Up to 20 agents may run concurrently. Use p
 python -m pip install -e .
 
 # Install with optional backends
-python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
+python -m pip install -e ".[adaptive,qa-image,render-pdf]"
 
 # Run full test suite (250 tests, ~160s)
 python -m pytest tests/ -ra

@@ -122,7 +122,7 @@ python scripts/render_slides.py --help
 可选后端按需要安装（详见 `THIRD_PARTY_NOTICES.md`）：
 
 ```powershell
-python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
+python -m pip install -e ".[adaptive,qa-image,render-pdf]"
 ```
 
 ## 按任务选择路径

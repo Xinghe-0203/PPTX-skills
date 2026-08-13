@@ -4,7 +4,7 @@
 >
 > Core principle: **always ship an editable `.pptx` and run render verification** -- not just code or XML checks.
 
-![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green) ![250 tests](https://img.shields.io/badge/tests-250-brightgreen) ![64 modules](https://img.shields.io/badge/modules-64-orange) ![600+ APIs](https://img.shields.io/badge/APIs-600+-purple)
+![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green) ![250 tests](https://img.shields.io/badge/tests-250-brightgreen) ![64 modules](https://img.shields.io/badge/modules-64-orange) ![600+ APIs](https://img.shields.io/badge/APIs-600+-purple) [![CI](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml)
 
 **v6.0.0** -- 64 Python modules, 600+ public APIs, 51 animations, 30 transitions, 24 layout roles, 20 themes, unified `Deck` class, unified CLI, Markdown import.
 
@@ -63,7 +63,7 @@ python -m pip install -e .
 Install with optional backends:
 
 ```powershell
-python -m pip install -e ".[adaptive,schema,qa-image,render-pdf]"
+python -m pip install -e ".[adaptive,qa-image,render-pdf]"
 ```
 
 Check environment capabilities:
@@ -77,16 +77,15 @@ Optional extras:
 | Extra | Provides |
 |---|---|
 | `adaptive` | Kiwi constraint solver for adaptive layout engine |
-| `schema` | Pydantic-based template schema validation |
 | `qa-image` | NumPy + scikit-image for perceptual diff / SSIM |
 | `render-pdf` | PyMuPDF for PDF export (AGPL -- see THIRD_PARTY_NOTICES.md) |
 | `render-com` | Windows COM rendering via pywin32 |
 | `chart-editable` | openpyxl for editable chart Excel workbooks |
-| `html-import` | BeautifulSoup4 for HTML-to-PPTX import |
 | `encrypt` | msoffcrypto-tool for password encryption |
 | `ocr-easy` | EasyOCR backend for OCR |
 | `ocr-paddle` | PaddleOCR backend for OCR |
-| `test` | pytest + hypothesis for running the test suite |
+| `test` | pytest for running the test suite |
+| `build` | build + Twine for validating release distributions |
 
 > The core path requires only `python-pptx` and `Pillow`; all other backends are optional. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
@@ -417,6 +416,11 @@ Lint and type check:
 ruff check .
 mypy pptx_skill/
 ```
+
+GitHub Actions runs Ruff, mypy, the full suite on Python 3.10/3.12/3.14,
+LibreOffice render integration, and isolated wheel installation. Pushing a
+version tag such as `v6.0.0` reruns validation and publishes the wheel and
+source distribution to a GitHub Release. The tag must match `[project].version`.
 
 ## Pre-Delivery Checklist
 
