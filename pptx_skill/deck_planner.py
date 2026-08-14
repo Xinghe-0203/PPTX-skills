@@ -23,6 +23,7 @@ from pptx_skill.content_model import (
     SlideSpec,
 )
 from pptx_skill.layout_engine import (
+    _builtin_tokens,
     builtin_recipes,
     plan_slide_candidates,
     solve_recipe,
@@ -299,6 +300,8 @@ def plan_deck(
     """Plan layouts for an entire deck using beam search over per-slide candidates."""
     config = config or LayoutScoringConfig()
     tokens = profile_state.get("tokens", {})
+    if not tokens:
+        tokens = _builtin_tokens()
     preferred_sequence = profile_state.get("preferred_sequence")
     rhythm_rules = profile_state.get("rhythm", {}).get("rules") if isinstance(profile_state.get("rhythm"), dict) else None
     qa_engine = SemanticQAEngine()

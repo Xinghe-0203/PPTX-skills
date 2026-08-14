@@ -25,6 +25,7 @@ from pptx_skill._io import is_presentation as _is_presentation
 from pptx_skill._io import open_prs as _open_prs
 from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.constants import A_NS as _NS_A
+from pptx_skill.constants import P_NS as _NS_P
 
 __all__ = [
     "ColorInfo",
@@ -517,7 +518,7 @@ def apply_gradient(
         if shape is None:
             return False
 
-        spPr = shape._element.find(f".//{{{_NS_A}}}spPr")
+        spPr = _shape_sp_pr(shape)
         if spPr is None:
             return False
 
@@ -603,7 +604,7 @@ def remove_gradient(prs_or_path, slide_index: int, shape_name: str) -> bool:
         if shape is None:
             return False
 
-        spPr = shape._element.find(f".//{{{_NS_A}}}spPr")
+        spPr = _shape_sp_pr(shape)
         if spPr is None:
             return False
 
@@ -640,7 +641,7 @@ def list_gradients(prs_or_path, slide_index: int | None = None) -> list[Gradient
         for slide in slides:
             for shape in slide.shapes:
                 try:
-                    spPr = shape._element.find(f".//{{{_NS_A}}}spPr")
+                    spPr = _shape_sp_pr(shape)
                     if spPr is None:
                         continue
 
@@ -877,3 +878,16 @@ def _find_shape(slide, shape_name: str):
         if shape.name == shape_name:
             return shape
     return None
+
+
+def _shape_sp_pr(shape):
+    """Return the shape's ``spPr`` element or ``None``.
+
+    Slide shapes carry ``<p:spPr>`` in the presentationml namespace; fall
+    back to the drawingml namespace for inline-built elements.
+    """
+    element = shape._element
+    sp_pr = element.find(f"{{{_NS_P}}}spPr")
+    if sp_pr is None:
+        sp_pr = element.find(f".//{{{_NS_A}}}spPr")
+    return sp_pr

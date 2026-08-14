@@ -17,6 +17,7 @@ from pptx_skill._io import is_presentation as _is_presentation
 from pptx_skill._io import open_prs as _open_prs
 from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.constants import A_NS as _NS_A
+from pptx_skill.constants import P_NS as _NS_P
 
 __all__ = [
     "EffectInfo",
@@ -241,6 +242,20 @@ def _find_shape(slide, shape_name: str):
     return None
 
 
+def _find_sp_pr(shape) -> Any:
+    """Return the shape's ``spPr`` element or ``None``.
+
+    Slide shapes carry ``<p:spPr>`` in the presentationml namespace, while
+    shapes built inline by some tooling use the drawingml namespace
+    (``<a:spPr>``).  Try both so effects apply to any well-formed shape.
+    """
+    element = shape._element
+    sp_pr = element.find(f"{{{_NS_P}}}spPr")
+    if sp_pr is None:
+        sp_pr = element.find(f"{{{_NS_A}}}spPr")
+    return sp_pr
+
+
 def _get_or_create_effect_lst(sp_pr) -> Any:
     """Get or create ``<a:effectLst>`` under ``<a:spPr>``."""
     from lxml import etree
@@ -363,7 +378,7 @@ def apply_shadow(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -463,7 +478,7 @@ def apply_perspective_shadow(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -523,7 +538,7 @@ def remove_shadow(prs_or_path, slide_index: int, shape_name: str) -> bool:
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -575,7 +590,7 @@ def apply_glow(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -618,7 +633,7 @@ def remove_glow(prs_or_path, slide_index: int, shape_name: str) -> bool:
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
         effect_lst = sp_pr.find(f"{{{_NS_A}}}effectLst")
@@ -681,7 +696,7 @@ def apply_reflection(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -739,7 +754,7 @@ def remove_reflection(prs_or_path, slide_index: int, shape_name: str) -> bool:
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
         effect_lst = sp_pr.find(f"{{{_NS_A}}}effectLst")
@@ -779,7 +794,7 @@ def apply_soft_edges(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -815,7 +830,7 @@ def remove_soft_edges(prs_or_path, slide_index: int, shape_name: str) -> bool:
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
         effect_lst = sp_pr.find(f"{{{_NS_A}}}effectLst")
@@ -873,7 +888,7 @@ def apply_3d_format(prs_or_path, slide_index: int, shape_name: str, *,
         if shape is None:
             return False
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
 
@@ -960,7 +975,7 @@ def remove_3d_format(prs_or_path, slide_index: int, shape_name: str) -> bool:
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return False
         sp3d = sp_pr.find(f"{{{_NS_A}}}sp3d")
@@ -1109,7 +1124,7 @@ def list_effects(prs_or_path, slide_index: int, shape_name: str) -> EffectInfo:
         if shape is None:
             return info
 
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _find_sp_pr(shape)
         if sp_pr is None:
             return info
 

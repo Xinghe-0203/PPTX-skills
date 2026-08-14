@@ -136,6 +136,15 @@ def _find_shape(slide, shape_name: str):
             return shape
     return None
 
+
+def _shape_sp_pr(shape):
+    """Return the shape's ``spPr`` element or ``None`` (either namespace)."""
+    element = shape._element
+    sp_pr = element.find(f"{{{_NS_P}}}spPr")
+    if sp_pr is None:
+        sp_pr = element.find(f"{{{_NS_A}}}spPr")
+    return sp_pr
+
 def _get_shape_bounds(shape):
     """Get shape bounding box in EMU."""
     return shape.left, shape.top, shape.width, shape.height
@@ -267,7 +276,7 @@ def add_line(prs_or_path, slide_index: int, *,
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}cNvSpPr")
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(sp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(sp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(off_x))
@@ -356,7 +365,7 @@ def add_connector(prs_or_path, slide_index: int, *,
         endCxn.set("id", str(shape2.shape_id))
         etree.SubElement(nvCxnSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(cxnSp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(cxnSp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(min(sx, ex)))
@@ -427,7 +436,7 @@ def add_elbow_connector(prs_or_path, slide_index: int, *,
         endCxn.set("id", str(shape2.shape_id))
         etree.SubElement(nvCxnSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(cxnSp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(cxnSp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(min(sx, ex)))
@@ -501,7 +510,7 @@ def add_curved_connector(prs_or_path, slide_index: int, *,
         endCxn.set("id", str(shape2.shape_id))
         etree.SubElement(nvCxnSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(cxnSp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(cxnSp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(min(sx, ex)))
@@ -577,7 +586,7 @@ def add_curve(prs_or_path, slide_index: int, *,
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}cNvSpPr")
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(sp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(sp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(min_x))
@@ -670,7 +679,7 @@ def add_freeform(prs_or_path, slide_index: int, *,
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}cNvSpPr")
         etree.SubElement(nvSpPr, f"{{{_NS_P}}}nvPr")
 
-        spPr = etree.SubElement(sp, f"{{{_NS_A}}}spPr")
+        spPr = etree.SubElement(sp, f"{{{_NS_P}}}spPr")
         xfrm = etree.SubElement(spPr, f"{{{_NS_A}}}xfrm")
         off = etree.SubElement(xfrm, f"{{{_NS_A}}}off")
         off.set("x", str(min_x))
@@ -748,7 +757,7 @@ def set_line_style(prs_or_path, slide_index: int, shape_name: str, *,
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _shape_sp_pr(shape)
         if sp_pr is None:
             return False
         _apply_line_props_to_sp_pr(sp_pr, line_color, line_width,
@@ -783,7 +792,7 @@ def set_arrow_style(prs_or_path, slide_index: int, shape_name: str, *,
         shape = _find_shape(slide, shape_name)
         if shape is None:
             return False
-        sp_pr = shape._element.find(f"{{{_NS_A}}}spPr")
+        sp_pr = _shape_sp_pr(shape)
         if sp_pr is None:
             return False
         ln = sp_pr.find(f"{{{_NS_A}}}ln")
@@ -869,7 +878,9 @@ def reroute_connector(prs_or_path, slide_index: int, shape_name: str) -> bool:
             return False
 
         # Update xfrm
-        sp_pr = elem.find(f"{{{_NS_A}}}spPr")
+        sp_pr = elem.find(f"{{{_NS_P}}}spPr")
+        if sp_pr is None:
+            sp_pr = elem.find(f"{{{_NS_A}}}spPr")
         if sp_pr is None:
             return False
 
@@ -962,7 +973,9 @@ def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineI
                             info.end_shape = endCxn.get("id", "")
 
                 # Check geometry type
-                sp_pr = elem.find(f"{{{_NS_A}}}spPr")
+                sp_pr = elem.find(f"{{{_NS_P}}}spPr")
+                if sp_pr is None:
+                    sp_pr = elem.find(f"{{{_NS_A}}}spPr")
                 if sp_pr is not None:
                     prstGeom = sp_pr.find(f"{{{_NS_A}}}prstGeom")
                     if prstGeom is not None:
@@ -992,7 +1005,9 @@ def list_connectors(prs_or_path, slide_index: int) -> list[ConnectorInfo | LineI
 
             # Check if it's a line shape
             elif tag == f"{{{_NS_P}}}sp":
-                sp_pr = elem.find(f"{{{_NS_A}}}spPr")
+                sp_pr = elem.find(f"{{{_NS_P}}}spPr")
+                if sp_pr is None:
+                    sp_pr = elem.find(f"{{{_NS_A}}}spPr")
                 if sp_pr is not None:
                     prstGeom = sp_pr.find(f"{{{_NS_A}}}prstGeom")
                     if prstGeom is not None and prstGeom.get("prst") == "line":
