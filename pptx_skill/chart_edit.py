@@ -177,7 +177,7 @@ def list_charts(prs_or_path, slide_index: int | None = None) -> list[dict]:
                     if shape.has_chart:
                         chart = shape.chart
                         results.append({
-                            "slide_index": idx if slide_index is None else slide_index,
+                            "slide_index": idx + 1 if slide_index is None else slide_index,
                             "name": shape.name,
                             "chart_type": str(chart.chart_type),
                             "series_count": len(chart.series),
@@ -1305,6 +1305,15 @@ def set_chart_type(
         new_chart = etree.SubElement(plot_area, f"{{{_NS_C}}}{new_tag}")
         for attr, val in extra_attrs.items():
             new_chart.set(attr, val)
+
+        # Mandatory style child elements; python-pptx's PlotTypeInspector
+        # requires c:radarStyle / c:scatterStyle to read the chart type back.
+        if new_tag == "radarChart":
+            radar_style = etree.SubElement(new_chart, f"{{{_NS_C}}}radarStyle")
+            radar_style.set("val", "standard")
+        elif new_tag == "scatterChart":
+            scatter_style = etree.SubElement(new_chart, f"{{{_NS_C}}}scatterStyle")
+            scatter_style.set("val", "marker")
 
         # Rebuild series
         categories = series_data[0].get("categories", []) if series_data else []

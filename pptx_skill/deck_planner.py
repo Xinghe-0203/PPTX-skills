@@ -21,6 +21,7 @@ from pptx_skill.content_model import (
     SlidePlanCandidate,
     SlidePlanResult,
     SlideSpec,
+    normalize_content_binding,
 )
 from pptx_skill.layout_engine import (
     _builtin_tokens,
@@ -402,7 +403,7 @@ def _fallback_plan(slide: SlideSpec, canvas: CanvasSpec, font_family: str | None
                 role=element.role,
                 geometry=GeometrySpec(BBox(48, 48 + idx * 60, max(canvas.width_pt - 96, 24), 50)),
                 resolved_style={"font_family": _default_font, "size": 16.0},
-                content_binding=element.content or {},
+                content_binding=normalize_content_binding(element.content),
                 z_order=idx,
             )
         )

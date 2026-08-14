@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pptx_skill._io import is_presentation as _is_presentation
 from pptx_skill._io import open_prs as _open_prs
 from pptx_skill._io import save_prs as _save_prs_impl
+from pptx_skill.constants import A_NS as _NS_A
 from pptx_skill.constants import P14_NS as _NS_P14
 from pptx_skill.constants import P_NS as _NS_P
 
@@ -129,21 +130,18 @@ def add_video(prs_or_path, slide_index: int, *,
         slide = prs.slides[slide_index - 1]
         _name = name or f"Video {len(slide.shapes)}"
 
-        # Add video as a picture shape with media relationship
-        # python-pptx doesn't have native video support, so we use OOXML
-        video_shape = slide.shapes.add_picture(
-            poster_path or _create_blank_poster(),
-            left, top, width, height
+        from pptx.util import Inches
+
+        # python-pptx native movie pic: p:pic + a:videoFile + p14:media
+        # (shape_type == MSO_SHAPE_TYPE.MEDIA, media part embedded in package)
+        movie = slide.shapes.add_movie(
+            video_path,
+            Inches(left), Inches(top), Inches(width), Inches(height),
+            poster_frame_image=poster_path or _create_blank_poster(),
         )
-        video_shape.name = _name
+        movie.name = _name
 
-        # Now we need to add the media relationship and modify the shape XML
-        # to be a video element
-        # For now, store video path in shape tag for later reference
-        video_shape._element.set("videoPath", video_path)
-
-        # Add media playback settings via extension elements
-        _apply_media_playback(video_shape._element, "video", {
+        _apply_media_playback(movie._element, "video", {
             "autoPlay": str(auto_play).lower(),
             "loop": str(loop).lower(),
             "fullscreen": str(fullscreen).lower(),
@@ -199,15 +197,12 @@ def add_audio(prs_or_path, slide_index: int, *,
         slide = prs.slides[slide_index - 1]
         _name = name or f"Audio {len(slide.shapes)}"
 
-        # Add a small picture as placeholder for the audio icon
-        audio_shape = slide.shapes.add_picture(
-            _create_blank_poster(),
-            left, top, width, height
-        )
-        audio_shape.name = _name
-        audio_shape._element.set("audioPath", audio_path)
+        # Build a genuine <p:audio> shape with the file embedded as a media
+        # part, so list_media / extract_audio / remove_media can see it.
+        audio_elem = _build_audio_element(slide, audio_path, _name)
+        slide.shapes._spTree.append(audio_elem)
 
-        _apply_media_playback(audio_shape._element, "audio", {
+        _apply_media_playback(audio_elem, "audio", {
             "autoPlay": str(auto_play).lower(),
             "loop": str(loop).lower(),
             "hideDuringShow": str(hide_during_show).lower(),
@@ -220,16 +215,155 @@ def add_audio(prs_or_path, slide_index: int, *,
         _save_prs(prs, path)
 
 
+def _find_nvpr(shape_elem):
+    """Return the ``<p:nvPr>`` element of a shape element, or None.
+
+    Handles ``p:pic`` (nvPicPr), ``p:sp``/``p:cxnSp`` (nvSpPr) and bare
+    media elements like ``p:audio``/``p:video`` (direct nvPr child).
+    """
+    nvPr = shape_elem.find(f"{{{_NS_P}}}nvPr")
+    if nvPr is not None:
+        return nvPr
+    for wrapper in ("nvPicPr", "nvSpPr"):
+        container = shape_elem.find(f"{{{_NS_P}}}{wrapper}")
+        if container is not None:
+            nvPr = container.find(f"{{{_NS_P}}}nvPr")
+            if nvPr is not None:
+                return nvPr
+    return None
+
+
+def _next_shape_id(slide) -> int:
+    """Return the next available shape id for a slide."""
+    from pptx.oxml.ns import qn
+
+    max_id = 0
+    for nv_pr in slide.shapes._spTree.iter(qn("p:nvPr")):
+        sid = nv_pr.get("id")
+        if sid and sid.isdigit():
+            max_id = max(max_id, int(sid))
+    return max_id + 1
+
+
+_AUDIO_MIME = {
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "wma": "audio/x-ms-wma",
+    "m4a": "audio/mp4",
+    "aac": "audio/aac",
+    "ogg": "audio/ogg",
+    "flac": "audio/flac",
+}
+
+# python-pptx only registers image/video content types with MediaPart; without
+# this, an embedded audio part reloads as a plain Part and breaks the package's
+# media dedup (sha1 lookup) on later add_movie() calls.
+def _register_audio_part_types() -> None:
+    from pptx.opc.package import PartFactory
+    from pptx.package import MediaPart
+
+    for _mime in set(_AUDIO_MIME.values()):
+        PartFactory.part_type_for.setdefault(_mime, MediaPart)
+
+
+_register_audio_part_types()
+
+
+def _build_audio_element(slide, audio_path: str, name: str):
+    """Build a genuine ``<p:audio>`` element with an embedded media part."""
+    from pathlib import Path
+
+    from lxml import etree
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+    from pptx.oxml.ns import qn
+    from pptx.package import MediaPart
+
+    suffix = Path(audio_path).suffix.lower() or ".bin"
+    mime = _AUDIO_MIME.get(suffix.lstrip("."), "application/octet-stream")
+
+    with open(audio_path, "rb") as fh:
+        blob = fh.read()
+
+    package = slide.part.package
+    partname = package.next_partname(f"/ppt/media/media%d{suffix}")
+    part = MediaPart(partname, mime, package, blob)
+    r_id = slide.part.relate_to(part, RT.MEDIA)
+
+    audio = etree.Element(qn("p:audio"))
+    audio.set(qn("r:embed"), r_id)
+    nv_pr = etree.SubElement(audio, qn("p:nvPr"))
+    nv_pr.set("id", str(_next_shape_id(slide)))
+    nv_pr.set("name", name)
+    media_node = etree.SubElement(audio, qn("p:cMediaNode"))
+    audio_file = etree.SubElement(media_node, qn("a:audioFile"))
+    audio_file.set(qn("r:embed"), r_id)
+    audio_file.set(qn("r:link"), "")
+    etree.SubElement(media_node, qn("a:cMediaNode"))
+    return audio
+
+
+def _iter_slide_children(slide):
+    """Yield every spTree child element of a slide.
+
+    Unlike ``slide.shapes`` (which only iterates well-known shape tags),
+    this also includes ``p:audio`` / ``p:video`` / ``p:media`` elements.
+    """
+    return list(slide.shapes._spTree)
+
+
+def _shape_nvpr_name(shape_elem):
+    """Return the shape name (from ``p:nvPr@name`` or ``p:cNvPr@name``)."""
+    nv_pr = _find_nvpr(shape_elem)
+    if nv_pr is not None and nv_pr.get("name"):
+        return nv_pr.get("name")
+    c_nv_pr = shape_elem.find(f"{{{_NS_P}}}cNvPr")
+    if c_nv_pr is None:
+        for wrapper in ("nvPicPr", "nvSpPr"):
+            container = shape_elem.find(f"{{{_NS_P}}}{wrapper}")
+            if container is not None:
+                c_nv_pr = container.find(f"{{{_NS_P}}}cNvPr")
+                if c_nv_pr is not None:
+                    break
+    if c_nv_pr is not None:
+        return c_nv_pr.get("name")
+    return None
+
+
+def _xfrm_geometry(shape_elem) -> tuple[float, float, float, float]:
+    """Return (left, top, width, height) in inches from ``a:xfrm`` if present."""
+    xfrm = shape_elem.find(f".//{{{_NS_A}}}xfrm")
+    if xfrm is None:
+        return 0.0, 0.0, 0.0, 0.0
+
+    def _num(el, attr) -> float:
+        try:
+            return int(el.get(attr)) / 914400
+        except Exception:
+            return 0.0
+
+    off = xfrm.find(f"{{{_NS_A}}}off")
+    ext = xfrm.find(f"{{{_NS_A}}}ext")
+    left = _num(off, "x") if off is not None else 0.0
+    top = _num(off, "y") if off is not None else 0.0
+    width = _num(ext, "cx") if ext is not None else 0.0
+    height = _num(ext, "cy") if ext is not None else 0.0
+    return left, top, width, height
+
+
+def _find_media_elem(slide, shape_name: str):
+    """Return the shape element on *slide* whose nvPr name matches, or None."""
+    for elem in _iter_slide_children(slide):
+        if _shape_nvpr_name(elem) == shape_name:
+            return elem
+    return None
+
+
 def _apply_media_playback(shape_elem, media_type: str, settings: dict):
     """Apply media playback settings to a shape element."""
     from lxml import etree
 
     # Find or create nvPr
-    nvSpPr = shape_elem.find(f"{{{_NS_P}}}nvSpPr")
-    if nvSpPr is None:
-        return
-
-    nvPr = nvSpPr.find(f"{{{_NS_P}}}nvPr")
+    nvPr = _find_nvpr(shape_elem)
     if nvPr is None:
         return
 
@@ -242,7 +376,7 @@ def _apply_media_playback(shape_elem, media_type: str, settings: dict):
     ext.set("uri", f"http://schemas.microsoft.com/office/powerpoint/2010/main/{media_type}")
 
     # Create p14:media element
-    media = etree.SubElement(ext, f"{{{{{_NS_P14}}}}}{media_type}")
+    media = etree.SubElement(ext, f"{{{_NS_P14}}}{media_type}")
     for key, value in settings.items():
         media.set(key, value)
 
@@ -286,12 +420,8 @@ def set_video_playback(prs_or_path, slide_index: int, shape_name: str, *,
 
     try:
         slide = prs.slides[slide_index - 1]
-        shape = None
-        for s in slide.shapes:
-            if s.name == shape_name:
-                shape = s
-                break
-        if shape is None:
+        shape_elem = _find_media_elem(slide, shape_name)
+        if shape_elem is None:
             return False
 
         settings = {}
@@ -308,7 +438,7 @@ def set_video_playback(prs_or_path, slide_index: int, shape_name: str, *,
         if volume is not None:
             settings["volume"] = str(max(0, min(100, volume)))
 
-        _update_media_playback(shape._element, "video", settings)
+        _update_media_playback(shape_elem, "video", settings)
         return True
     finally:
         _save_prs(prs, path)
@@ -339,12 +469,8 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
 
     try:
         slide = prs.slides[slide_index - 1]
-        shape = None
-        for s in slide.shapes:
-            if s.name == shape_name:
-                shape = s
-                break
-        if shape is None:
+        shape_elem = _find_media_elem(slide, shape_name)
+        if shape_elem is None:
             return False
 
         settings = {}
@@ -359,7 +485,7 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
         if volume is not None:
             settings["volume"] = str(max(0, min(100, volume)))
 
-        _update_media_playback(shape._element, "audio", settings)
+        _update_media_playback(shape_elem, "audio", settings)
         return True
     finally:
         _save_prs(prs, path)
@@ -368,11 +494,7 @@ def set_audio_playback(prs_or_path, slide_index: int, shape_name: str, *,
 def _update_media_playback(shape_elem, media_type: str, settings: dict):
     """Update existing media playback settings."""
 
-    nvSpPr = shape_elem.find(f"{{{_NS_P}}}nvSpPr")
-    if nvSpPr is None:
-        return
-
-    nvPr = nvSpPr.find(f"{{{_NS_P}}}nvPr")
+    nvPr = _find_nvpr(shape_elem)
     if nvPr is None:
         return
 
@@ -385,7 +507,7 @@ def _update_media_playback(shape_elem, media_type: str, settings: dict):
 
     # Find existing media element
     for ext in extLst.findall(f"{{{_NS_P}}}ext"):
-        media = ext.find(f"{{{{{_NS_P14}}}}}{media_type}")
+        media = ext.find(f"{{{_NS_P14}}}{media_type}")
         if media is not None:
             for key, value in settings.items():
                 media.set(key, value)
@@ -482,27 +604,37 @@ def list_media(prs_or_path, slide_index: int | None = None) -> list[dict]:
             slides = list(prs.slides)
 
         for idx, slide in enumerate(slides):
-            for shape in slide.shapes:
+            from pptx.oxml.ns import qn
+
+            for elem in _iter_slide_children(slide):
                 try:
-                    from pptx.enum.shapes import MSO_SHAPE_TYPE
-                    if shape.shape_type == MSO_SHAPE_TYPE.MEDIA:
-                        info = {
-                            "slide_index": (slide_index if slide_index is not None else idx + 1),
-                            "name": shape.name,
-                            "left": shape.left / 914400,  # EMU to inches
-                            "top": shape.top / 914400,
-                            "width": shape.width / 914400,
-                            "height": shape.height / 914400,
-                        }
-                        # Check if video or audio
-                        elem = shape._element
-                        if elem.get("videoPath"):
-                            info["type"] = "video"
-                        elif elem.get("audioPath"):
-                            info["type"] = "audio"
-                        else:
-                            info["type"] = "media"
-                        results.append(info)
+                    tag = elem.tag
+                    if tag == qn("p:audio"):
+                        media_type = "audio"
+                    elif tag == qn("p:video"):
+                        media_type = "video"
+                    elif tag == qn("p:media"):
+                        media_type = "media"
+                    elif elem.get("videoPath"):
+                        media_type = "video"
+                    elif elem.get("audioPath"):
+                        media_type = "audio"
+                    elif elem.find(f".//{{{_NS_A}}}videoFile") is not None:
+                        media_type = "video"
+                    else:
+                        continue
+
+                    left_v, top_v, width_v, height_v = _xfrm_geometry(elem)
+                    info = {
+                        "slide_index": (slide_index if slide_index is not None else idx + 1),
+                        "name": _shape_nvpr_name(elem) or elem.get("name") or "?",
+                        "left": left_v,
+                        "top": top_v,
+                        "width": width_v,
+                        "height": height_v,
+                        "type": media_type,
+                    }
+                    results.append(info)
                 except Exception:
                     pass
 
@@ -531,16 +663,12 @@ def remove_media(prs_or_path, slide_index: int, shape_name: str) -> bool:
 
     try:
         slide = prs.slides[slide_index - 1]
-        shape = None
-        for s in slide.shapes:
-            if s.name == shape_name:
-                shape = s
-                break
-        if shape is None:
+        shape_elem = _find_media_elem(slide, shape_name)
+        if shape_elem is None:
             return False
 
         sp_tree = slide.shapes._spTree
-        sp_tree.remove(shape._element)
+        sp_tree.remove(shape_elem)
         return True
     finally:
         _save_prs(prs, path)

@@ -269,6 +269,21 @@ class ContentSpec:
 # Layout planning model
 # ---------------------------------------------------------------------------
 
+def normalize_content_binding(content: Any) -> dict[str, Any]:
+    """Normalize an element's ``content`` into a renderer-ready binding dict.
+
+    ``content_binding`` is declared as ``dict[str, Any]`` (e.g. keys
+    ``text``/``path``/``paragraphs``). When callers pass a plain string it is
+    wrapped as ``{"text": ...}`` so renderers and QA engines can rely on
+    ``.get()`` semantics.
+    """
+    if isinstance(content, dict):
+        return content
+    if isinstance(content, str):
+        return {"text": content}
+    return {}
+
+
 @dataclass
 class PlannedNode:
     """A resolved render node inside a LayoutPlan."""

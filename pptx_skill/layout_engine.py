@@ -10,7 +10,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pptx_skill._compat import StrEnum
-from pptx_skill.content_model import BBox, CanvasSpec, GeometrySpec, LayoutPlan, PlannedNode, SlideSpec
+from pptx_skill.content_model import (
+    BBox,
+    CanvasSpec,
+    GeometrySpec,
+    LayoutPlan,
+    PlannedNode,
+    SlideSpec,
+    normalize_content_binding,
+)
 from pptx_skill.semantic_qa import SemanticQAEngine
 from pptx_skill.text_metrics import ParagraphStyle, TextRun, measure_runs
 
@@ -383,7 +391,7 @@ def _score_candidate(
                 role=zone_name,
                 geometry=GeometrySpec(bbox),
                 resolved_style=resolved_style,
-                content_binding=content,
+                content_binding=normalize_content_binding(content),
                 z_order=0,
             )
         )
@@ -489,7 +497,7 @@ def solved_geometry_to_layout_plan(
                 role=zone_name,
                 geometry=GeometrySpec(bbox),
                 resolved_style=style,
-                content_binding=(element.content if element else {}) or {},
+                content_binding=normalize_content_binding(element.content) if element else {},
                 z_order=idx,
             )
         )
