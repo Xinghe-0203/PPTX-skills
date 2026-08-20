@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import sys
+
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Pt
 from pptx_helper import (
@@ -53,6 +56,19 @@ def _header(slide, theme, ctx, compact=False):
     _folio(slide, theme, ctx)
 
 
+_TOC_MAX_ITEMS = 12
+
+
+def _toc_items(ctx):
+    items = list(ctx.get("toc_items") or ctx.get("bullets") or [])
+    if len(items) > _TOC_MAX_ITEMS:
+        print(
+            f"  [警告] 目录版式最多支持{_TOC_MAX_ITEMS}项，当前{len(items)}项，超出的条目被截断",
+            file=sys.stderr,
+        )
+    return items[:_TOC_MAX_ITEMS]
+
+
 def layout_cover_grid(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     image = ctx.get("cover_image")
@@ -90,15 +106,29 @@ def layout_toc_grid(prs, theme, ctx):
     if kicker:
         small = _textbox(slide, 0.92, 0.45, 2.5, 0.24)
         _add_para(small, kicker, first=True, size=Pt(9), color=theme["accent"], bold=True, name=FONT_EN)
-    bullets = ctx.get("toc_items") or ctx.get("bullets") or []
-    top = 1.0
-    for index, item in enumerate(bullets[:6]):
-        y = top + index * 0.82
-        number = _textbox(slide, 5.35, y, 0.6, 0.34)
-        _add_para(number, f"{index + 1:02d}", first=True, size=Pt(13), color=theme["accent"], bold=True, name=FONT_EN)
-        text = _textbox(slide, 6.15, y - 0.02, 5.25, 0.42)
-        _add_para(text, str(item), first=True, size=Pt(18), color=theme["text"], name=FONT_CN)
-        _rect(slide, 5.35, y + 0.52, 6.0, 0.01, fill=theme["text_muted"])
+    items = _toc_items(ctx)
+    if len(items) <= 6:
+        for index, item in enumerate(items):
+            y = 1.0 + index * 0.82
+            number = _textbox(slide, 5.35, y, 0.6, 0.34)
+            _add_para(number, f"{index + 1:02d}", first=True, size=Pt(13), color=theme["accent"], bold=True, name=FONT_EN)
+            text = _textbox(slide, 6.15, y - 0.02, 5.25, 0.42)
+            _add_para(text, str(item), first=True, size=Pt(18), color=theme["text"], name=FONT_CN)
+            _rect(slide, 5.35, y + 0.52, 6.0, 0.01, fill=theme["text_muted"])
+    else:
+        rows = math.ceil(len(items) / 2)
+        col_w = 3.55
+        row_h = min(0.9, 5.55 / rows)
+        for index, item in enumerate(items):
+            col = index // rows
+            row = index % rows
+            x = 5.15 + col * col_w
+            y = 1.08 + row * row_h
+            number = _textbox(slide, x, y, 0.45, 0.3)
+            _add_para(number, f"{index + 1:02d}", first=True, size=Pt(11), color=theme["accent"], bold=True, name=FONT_EN)
+            text = _textbox(slide, x + 0.52, y - 0.02, col_w - 0.65, 0.4)
+            _add_para(text, str(item), first=True, size=Pt(14), color=theme["text"], name=FONT_CN)
+            _rect(slide, x + 0.52, y + row_h - 0.2, col_w - 0.7, 0.01, fill=theme["text_muted"])
     _folio(slide, theme, ctx)
     return slide
 
@@ -377,17 +407,22 @@ def layout_cover_technical(prs, theme, ctx):
 def layout_toc_technical(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     _technical_header(slide, theme, ctx)
-    bullets = (ctx.get("toc_items") or ctx.get("bullets") or [])[:6]
-    for index, item in enumerate(bullets):
-        row = index // 3
-        col = index % 3
-        x = 0.85 + col * 4.0
-        y = 2.0 + row * 2.15
-        number = _textbox(slide, x, y, 0.7, 0.35)
-        _add_para(number, f"{index + 1:02d}", first=True, size=Pt(12), color=theme["accent"], bold=True, name=FONT_EN)
-        _rect(slide, x, y + 0.48, 3.45, 0.018, fill=theme["text_muted"])
-        text = _textbox(slide, x, y + 0.78, 3.35, 0.75)
-        _add_para(text, str(item), first=True, size=Pt(20), color=theme["text"], name=FONT_CN)
+    items = _toc_items(ctx)
+    cols = 3 if len(items) <= 9 else 4
+    rows = max(1, math.ceil(len(items) / cols))
+    col_w = 11.65 / cols
+    row_h = 4.75 / rows
+    font_size = 20 if len(items) <= 6 else 16 if len(items) <= 9 else 14
+    for index, item in enumerate(items):
+        row = index // cols
+        col = index % cols
+        x = 0.85 + col * col_w
+        y = 1.75 + row * row_h
+        number = _textbox(slide, x, y, 0.7, 0.32)
+        _add_para(number, f"{index + 1:02d}", first=True, size=Pt(11), color=theme["accent"], bold=True, name=FONT_EN)
+        _rect(slide, x, y + 0.42, col_w - 0.45, 0.018, fill=theme["text_muted"])
+        text = _textbox(slide, x, y + 0.62, col_w - 0.55, min(0.72, row_h - 0.68))
+        _add_para(text, str(item), first=True, size=Pt(font_size), color=theme["text"], name=FONT_CN)
     return slide
 
 
@@ -500,17 +535,23 @@ def layout_toc_poster(prs, theme, ctx):
     slide = _new_slide(prs, theme)
     title = _textbox(slide, 0.85, 0.55, 5.8, 0.85)
     _add_para(title, ctx.get("title", "目录"), first=True, size=Pt(36), color=theme["text"], bold=True, name=FONT_CN)
-    bullets = (ctx.get("toc_items") or ctx.get("bullets") or [])[:6]
-    for index, item in enumerate(bullets):
-        col = index % 2
-        row = index // 2
-        x = 0.85 + col * 6.1
-        y = 1.7 + row * 1.62
-        number = _textbox(slide, x, y, 1.3, 0.72)
-        _add_para(number, f"{index + 1:02d}", first=True, size=Pt(30), color=theme["accent"], bold=True, name=FONT_EN)
-        text = _textbox(slide, x + 1.45, y + 0.13, 4.25, 0.48)
-        _add_para(text, str(item), first=True, size=Pt(18), color=theme["text"], name=FONT_CN)
-        _rect(slide, x, y + 0.95, 5.65, 0.012, fill=theme["text_muted"])
+    items = _toc_items(ctx)
+    cols = 2 if len(items) <= 6 else 3
+    rows = max(1, math.ceil(len(items) / cols))
+    col_w = 11.65 / cols
+    row_h = 5.15 / rows
+    number_size = 30 if cols == 2 else 23
+    text_size = 18 if cols == 2 else 15
+    for index, item in enumerate(items):
+        col = index % cols
+        row = index // cols
+        x = 0.85 + col * col_w
+        y = 1.55 + row * row_h
+        number = _textbox(slide, x, y, 0.9, 0.62)
+        _add_para(number, f"{index + 1:02d}", first=True, size=Pt(number_size), color=theme["accent"], bold=True, name=FONT_EN)
+        text = _textbox(slide, x + 1.0, y + 0.1, col_w - 1.25, 0.55)
+        _add_para(text, str(item), first=True, size=Pt(text_size), color=theme["text"], name=FONT_CN)
+        _rect(slide, x, y + row_h - 0.28, col_w - 0.35, 0.012, fill=theme["text_muted"])
     return slide
 
 
@@ -577,7 +618,7 @@ def layout_timeline_poster(prs, theme, ctx):
         row = index // 2
         x = 0.9 + col * 6.0
         y = 1.78 + row * 2.25
-        date = _textbox(slide, x, y, 1.5, 0.5)
+        date = _textbox(slide, x, y, 2.6, 0.5)
         _add_para(date, event.get("date", ""), first=True, size=Pt(20), color=theme["accent"], bold=True, name=FONT_EN)
         _rect(slide, x, y + 0.68, 5.55, 0.025, fill=theme["accent"])
         title = _textbox(slide, x, y + 1.02, 5.15, 0.72)

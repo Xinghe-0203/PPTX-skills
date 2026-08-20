@@ -14,6 +14,12 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
+
+try:
+    from .cli_utils import configure_utf8_console
+except ImportError:
+    from cli_utils import configure_utf8_console
 
 
 def _load_dotenv(path: str | None = None) -> None:
@@ -52,6 +58,8 @@ _load_dotenv()
 DEFAULT_API_KEY = os.environ.get("PIXABAY_API_KEY")
 
 API_ENDPOINT = "https://pixabay.com/api/"
+ASSET_MANIFEST_FILENAME = "pixabay_assets.json"
+PIXABAY_LICENSE_URL = "https://pixabay.com/service/license-summary/"
 
 # 合法的参数取值（用于校验）
 VALID_IMAGE_TYPES = {"all", "photo", "illustration", "vector"}
@@ -193,7 +201,82 @@ def search_images(
     return hits
 
 
-def download_images(hits, output_dir="./images", size="webformat", timeout=30):
+def _asset_manifest_record(hit, filepath, img_url, size, query=None):
+    return {
+        "provider_id": hit.get("id"),
+        "local_file": os.path.basename(filepath),
+        "queries": [query] if query else [],
+        "tags": hit.get("tags", ""),
+        "creator": hit.get("user", ""),
+        "creator_id": hit.get("user_id"),
+        "page_url": hit.get("pageURL", ""),
+        "download_url": img_url,
+        "image_width": hit.get("imageWidth"),
+        "image_height": hit.get("imageHeight"),
+        "selected_size": size,
+    }
+
+
+def _write_asset_manifest(output_dir, records, filename=ASSET_MANIFEST_FILENAME):
+    """Merge download metadata into an atomic, credential-free sidecar."""
+
+    manifest_path = os.path.join(output_dir, filename)
+    payload = {
+        "schema_version": 1,
+        "provider": "Pixabay",
+        "license_url": PIXABAY_LICENSE_URL,
+        "assets": [],
+    }
+    if os.path.isfile(manifest_path):
+        try:
+            with open(manifest_path, encoding="utf-8") as fh:
+                existing = json.load(fh)
+            if isinstance(existing, dict) and isinstance(existing.get("assets"), list):
+                payload.update(existing)
+        except (OSError, ValueError, TypeError):
+            pass
+
+    merged = {
+        (str(item.get("provider_id")), item.get("local_file", "")): dict(item)
+        for item in payload.get("assets", [])
+        if isinstance(item, dict)
+    }
+    for record in records:
+        key = (str(record.get("provider_id")), record.get("local_file", ""))
+        previous = merged.get(key, {})
+        queries = list(previous.get("queries") or [])
+        for query in record.get("queries") or []:
+            if query not in queries:
+                queries.append(query)
+        previous.update(record)
+        previous["queries"] = queries
+        merged[key] = previous
+
+    payload["assets"] = sorted(
+        merged.values(),
+        key=lambda item: (str(item.get("provider_id")), item.get("local_file", "")),
+    )
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    temp_path = f"{manifest_path}.{os.getpid()}.tmp"
+    try:
+        with open(temp_path, "w", encoding="utf-8", newline="\n") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+        os.replace(temp_path, manifest_path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+    return manifest_path
+
+
+def download_images(
+    hits,
+    output_dir="./images",
+    size="webformat",
+    timeout=30,
+    query=None,
+    write_manifest=True,
+):
     """
     下载搜索结果中的图片到本地。
 
@@ -206,6 +289,8 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
             - "large"      : 大图（原始尺寸，文件较大）
             - "fullHD"     : 全高清（部分图片提供）
         timeout: 下载超时秒数
+        query: 产生这些候选图片的搜索词（写入素材清单）
+        write_manifest: 是否写入 ``pixabay_assets.json`` 素材溯源清单
 
     返回:
         list[str]: 成功下载的本地文件路径列表（顺序与 hits 对应，失败项跳过）
@@ -219,6 +304,7 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
 
     os.makedirs(output_dir, exist_ok=True)
     downloaded = []
+    manifest_records = []
 
     for hit in hits:
         img_url = hit.get(size_field) or hit.get("webformatURL")
@@ -238,6 +324,7 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
         # 已存在则跳过下载
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             downloaded.append(filepath)
+            manifest_records.append(_asset_manifest_record(hit, filepath, img_url, size, query))
             continue
 
         try:
@@ -246,6 +333,7 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
                 with open(filepath, "wb") as f:
                     f.write(resp.read())
             downloaded.append(filepath)
+            manifest_records.append(_asset_manifest_record(hit, filepath, img_url, size, query))
         except Exception as e:
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -257,12 +345,18 @@ def download_images(hits, output_dir="./images", size="webformat", timeout=30):
                     with open(filepath, "wb") as f:
                         f.write(resp.read())
                 downloaded.append(filepath)
+                manifest_records.append(_asset_manifest_record(hit, filepath, img_url, size, query))
             except Exception as e2:
                 if os.path.exists(filepath):
                     os.remove(filepath)
                 print(f"  [警告] 下载失败 id={img_id}: {e} (重试也失败: {e2})", file=sys.stderr)
                 continue
 
+    if write_manifest and manifest_records:
+        try:
+            _write_asset_manifest(output_dir, manifest_records)
+        except Exception as exc:
+            print(f"  [警告] 无法写入 Pixabay 素材清单: {exc}", file=sys.stderr)
     return downloaded
 
 
@@ -271,6 +365,7 @@ def search_and_download(
     count=3,
     output_dir="./images",
     size="webformat",
+    write_manifest=True,
     **search_kwargs,
 ):
     """
@@ -284,8 +379,16 @@ def search_and_download(
         print(f"  [提示] 未找到与 '{query}' 相关的图片", file=sys.stderr)
         return []
     print(f"  [信息] 找到 {len(hits)} 张图片，开始下载...")
-    paths = download_images(hits, output_dir=output_dir, size=size)
+    paths = download_images(
+        hits,
+        output_dir=output_dir,
+        size=size,
+        query=query,
+        write_manifest=write_manifest,
+    )
     print(f"  [信息] 成功下载 {len(paths)} 张图片到 {os.path.abspath(output_dir)}")
+    if paths and write_manifest:
+        print(f"  [信息] 素材清单: {os.path.abspath(os.path.join(output_dir, ASSET_MANIFEST_FILENAME))}")
     return paths
 
 
@@ -345,12 +448,15 @@ def _build_arg_parser():
                         help="下载图片尺寸（默认 webformat，适合 PPT）")
     parser.add_argument("--json", action="store_true",
                         help="仅输出搜索结果 JSON，不下载图片")
+    parser.add_argument("--no-manifest", action="store_true",
+                        help="不写入 Pixabay 素材溯源清单")
     parser.add_argument("--timeout", type=int, default=15,
                         help="请求超时秒数（默认 15）")
     return parser
 
 
 def main():
+    configure_utf8_console()
     parser = _build_arg_parser()
     args = parser.parse_args()
 
@@ -393,10 +499,19 @@ def main():
         return
 
     print(f"找到 {len(hits)} 张图片，开始下载到 {args.output} ...")
-    paths = download_images(hits, output_dir=args.output, size=args.size, timeout=args.timeout)
+    paths = download_images(
+        hits,
+        output_dir=args.output,
+        size=args.size,
+        timeout=args.timeout,
+        query=args.query,
+        write_manifest=not args.no_manifest,
+    )
     print(f"\n下载完成，成功 {len(paths)}/{len(hits)} 张：")
     for p in paths:
         print(f"  {os.path.abspath(p)}")
+    if paths and not args.no_manifest:
+        print(f"素材清单: {os.path.abspath(os.path.join(args.output, ASSET_MANIFEST_FILENAME))}")
 
 
 if __name__ == "__main__":

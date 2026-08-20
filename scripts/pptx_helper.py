@@ -54,12 +54,12 @@ CONTENT_W = SLIDE_W - 2 * MARGIN_X            # 11.533
 CONTENT_H = SLIDE_H - MARGIN_TOP - MARGIN_BOTTOM  # 6.4
 
 LAYOUT_CONSUMED_FIELDS = {
-    "cover": {"title", "subtitle", "kicker", "cover_image"},
+    "cover": {"title", "subtitle", "kicker", "cover_image", "images"},
     "toc": {"title", "kicker", "toc_items", "bullets"},
     "section": {"title", "subtitle", "kicker", "section_number"},
     "bullets": {"title", "subtitle", "kicker", "bullets"},
     "text_image": {"title", "subtitle", "kicker", "bullets", "images"},
-    "full_image": {"title", "kicker", "cover_image"},
+    "full_image": {"title", "subtitle", "kicker", "images"},
     "image_grid": {"title", "kicker", "images"},
     "dashboard": {"title", "kicker", "metrics"},
     "timeline": {"title", "kicker", "events", "bullets"},
@@ -1411,18 +1411,48 @@ def auto_generate_ppt(
     # 章节，此时跳过对应的自动页，避免生成重复页面。
     user_has_cover = bool(parsed) and parsed[0].layout == "cover"
     user_has_toc = any(s.layout == "toc" for s in parsed)
+    toc_sections = [
+        section
+        for section in parsed
+        if section.title and section.layout not in {"cover", "toc", "end"}
+    ]
 
-    # 为封面单独搜索背景图
+    def section_context(sec):
+        return {
+            "title": sec.title, "subtitle": sec.subtitle,
+            "bullets": sec.bullets, "images": sec.images,
+            "kicker": sec.kicker, "section_number": sec.section_number,
+            "page_number": sec.page_number, "metrics": sec.metrics,
+            "events": sec.events, "steps": sec.steps,
+            "table_headers": sec.table_headers, "table_rows": sec.table_rows,
+            "left": sec.left, "right": sec.right,
+            "quote": sec.quote, "source": sec.source,
+            "layout_opts": _merge_layout_opts(template_layout_opts, sec.layout_opts),
+        }
+
+    # 为封面单独搜索背景图。显式封面已有图片时直接复用，避免一次
+    # 注定不会被消费的远程搜索。
     cover_image = None
-    if auto_search_images:
+    if user_has_cover and parsed[0].images:
+        cover_image = next((im for im in parsed[0].images if im), None)
+    elif auto_search_images:
         cover_image = _search_cover_image(title, image_dir, lang)
     if not cover_image and parsed and parsed[0].images:
         cover_image = parsed[0].images[0]
 
+    content_start = 0
     if user_has_cover:
-        # 用户首章节即封面：把搜索/回退到的封面图交给主循环渲染。
-        if cover_image and not parsed[0].images:
-            parsed[0].images = [cover_image]
+        # 显式封面必须先于自动目录渲染；否则目录会成为实际第一页。
+        cover_section = parsed[0]
+        if cover_image and not cover_section.images:
+            cover_section.images = [cover_image]
+        cover_ctx = section_context(cover_section)
+        if cover_image:
+            cover_ctx["cover_image"] = cover_image
+        _warn_unconsumed("cover", cover_ctx)
+        resolve_layout("cover", layout_cover)(prs, theme, cover_ctx)
+        used_layouts.append("cover")
+        content_start = 1
     else:
         cover_ctx = {
             "title": title, "subtitle": subtitle,
@@ -1434,28 +1464,18 @@ def auto_generate_ppt(
 
     # 目录页：当章节数较多时（>3），在封面后单独生成目录页，
     # 使用各章节标题作为目录项，不占用用户传入的内容章节。
-    if len(parsed) > 3 and not user_has_toc:
+    if len(toc_sections) > 3 and not user_has_toc:
         toc_ctx = {
             "title": "目录",
             "kicker": "CONTENTS",
-            "toc_items": [s.title for s in parsed if s.title],
+            "toc_items": [section.title for section in toc_sections],
             "layout_opts": template_layout_opts,
         }
         resolve_layout("toc", layout_toc)(prs, theme, toc_ctx)
         used_layouts.append("toc")
 
-    for i, sec in enumerate(parsed):
-        ctx = {
-            "title": sec.title, "subtitle": sec.subtitle,
-            "bullets": sec.bullets, "images": sec.images,
-            "kicker": sec.kicker, "section_number": sec.section_number,
-            "page_number": sec.page_number, "metrics": sec.metrics,
-            "events": sec.events, "steps": sec.steps,
-            "table_headers": sec.table_headers, "table_rows": sec.table_rows,
-            "left": sec.left, "right": sec.right,
-            "quote": sec.quote, "source": sec.source,
-            "layout_opts": _merge_layout_opts(template_layout_opts, sec.layout_opts),
-        }
+    for i, sec in enumerate(parsed[content_start:], start=content_start):
+        ctx = section_context(sec)
         if sec.layout and sec.layout in LAYOUT_REGISTRY:
             layout_name = sec.layout
         else:
@@ -1540,6 +1560,37 @@ def _auto_search_images(sections, image_dir, lang):
     os.makedirs(image_dir, exist_ok=True)
     for sec in sections:
         if sec.images:
+            continue
+        # Structured and explicitly non-image layouts cannot consume images.
+        # Searching for them wastes API quota, download time and disk space.
+        # An explicit image query is also ignored when it conflicts with an
+        # explicit non-image layout, because the generator would otherwise
+        # download assets and then discard them during rendering.
+        explicit_non_image_layout = (
+            bool(sec.layout)
+            and sec.layout in LAYOUT_REGISTRY
+            and sec.layout not in {"cover", "text_image", "full_image", "image_grid"}
+        )
+        inferred_non_image_content = (
+            not sec.layout
+            and not sec.image_query
+            and any((
+                sec.metrics,
+                sec.events,
+                sec.steps,
+                sec.table_headers,
+                sec.table_rows,
+                sec.left,
+                sec.right,
+                sec.quote,
+            ))
+        )
+        if explicit_non_image_layout or inferred_non_image_content:
+            if sec.image_query:
+                print(
+                    f"  [警告] 版式 '{sec.layout}' 不消费图片，已忽略 image_query='{sec.image_query}'",
+                    file=__import__('sys').stderr,
+                )
             continue
         query = sec.image_query or sec.title
         if not query:

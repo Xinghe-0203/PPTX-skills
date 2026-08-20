@@ -109,6 +109,23 @@ Catalog and generated profiles can use three non-card layout families: `editoria
 | `quote`, `source` | string | Quotation page |
 | `layout_opts` | object | Per-slide layout overrides |
 
+### Image search and provenance
+
+Set `auto_search_images=True` to let image-capable sections search Pixabay. Explicit
+non-image layouts such as `dashboard`, `timeline`, `process`, `quote`, and `table`
+are skipped so they do not consume API quota or download assets that cannot be
+rendered. If an `image_query` conflicts with one of those layouts, generation emits
+a warning and ignores the query.
+
+Every successful Pixabay download directory contains `pixabay_assets.json`. The
+sidecar records the search query, tags, creator, source page, selected download URL,
+dimensions, and the Pixabay license-summary URL. Repeated searches that return the
+same asset merge their query trail instead of losing provenance.
+
+Location-specific proper nouns still require visual review: a successful API result
+does not prove geographic relevance. Render a contact sheet, reject mismatched
+candidates, and use a verified local image when place accuracy matters.
+
 ## Template catalog
 
 The catalog contains these built-in profiles:

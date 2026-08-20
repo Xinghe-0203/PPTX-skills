@@ -224,6 +224,11 @@ auto_generate_ppt(
 )
 ```
 
+启用 `auto_search_images=True` 时，生成器只为可消费图片的版式检索；
+`dashboard`、`timeline`、`process`、`quote`、`table` 等非图片版式会跳过。
+Pixabay 下载目录会生成 `pixabay_assets.json`，记录查询词、作者、来源页和许可链接。
+地名与专名搜索必须做候选图视觉筛选，下载成功不代表地点匹配。
+
 版式选择规则：
 
 - 指标 → `dashboard` / `kpi_hero` / `dashboard.metric_hero`

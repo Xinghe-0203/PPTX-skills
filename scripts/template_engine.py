@@ -13,6 +13,11 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
+try:
+    from .cli_utils import configure_utf8_console
+except ImportError:
+    from cli_utils import configure_utf8_console
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CATALOG = SKILL_ROOT / "assets" / "templates" / "catalog.json"
 PACKAGED_GENERATED_TEMPLATE_DIR = SKILL_ROOT / "assets" / "templates" / "generated"
@@ -436,6 +441,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    configure_utf8_console()
     args = _build_parser().parse_args()
     if args.command == "list":
         print(json.dumps(list_templates(), ensure_ascii=False, indent=2))

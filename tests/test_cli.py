@@ -12,8 +12,9 @@ import os
 import tempfile
 import unittest
 from argparse import ArgumentParser
+from unittest.mock import patch
 
-from pptx_skill.cli import build_parser, main
+from pptx_skill.cli import _ensure_utf8, build_parser, main
 
 
 def _run_cli(argv: list[str]) -> int:
@@ -33,6 +34,11 @@ class CliParserTests(unittest.TestCase):
     def test_no_args_returns_zero(self):
         rc = _run_cli([])
         self.assertEqual(rc, 0)
+
+    def test_utf8_setup_reconfigures_existing_streams(self):
+        with patch("pptx_skill.cli.configure_utf8_console") as configure:
+            _ensure_utf8()
+        configure.assert_called_once_with()
 
 
 class CliSubcommandTests(unittest.TestCase):

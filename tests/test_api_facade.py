@@ -156,6 +156,86 @@ class AutoPageDedupTests(unittest.TestCase):
             ])
             self.assertEqual(n, 7)  # cover + toc + 4 + end
 
+    def test_poster_toc_keeps_nine_section_titles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            titles = [f"章节{i}" for i in range(1, 10)]
+            auto_generate_ppt(
+                title="长目录",
+                sections=[
+                    {"title": title, "bullets": ["1"], "layout": "bullets"}
+                    for title in titles
+                ],
+                output_path=str(path),
+                template_key="creative-editorial",
+                auto_search_images=False,
+            )
+            presentation = Presentation(str(path))
+            toc_text = "\n".join(
+                shape.text
+                for shape in presentation.slides[1].shapes
+                if getattr(shape, "has_text_frame", False)
+            )
+            for title in titles:
+                self.assertIn(title, toc_text)
+
+    def test_auto_toc_excludes_explicit_cover(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            auto_generate_ppt(
+                title="封面标题",
+                sections=[
+                    {"title": "封面标题", "layout": "cover"},
+                    *[
+                        {"title": f"内容{i}", "bullets": ["1"], "layout": "bullets"}
+                        for i in range(1, 5)
+                    ],
+                ],
+                output_path=str(path),
+                template_key="creative-editorial",
+                auto_search_images=False,
+            )
+            presentation = Presentation(str(path))
+            cover_text = "\n".join(
+                shape.text
+                for shape in presentation.slides[0].shapes
+                if getattr(shape, "has_text_frame", False)
+            )
+            self.assertIn("封面标题", cover_text)
+            toc_text = "\n".join(
+                shape.text
+                for shape in presentation.slides[1].shapes
+                if getattr(shape, "has_text_frame", False)
+            )
+            self.assertNotIn("封面标题", toc_text)
+            for index in range(1, 5):
+                self.assertIn(f"内容{index}", toc_text)
+
+    def test_poster_timeline_has_room_for_daypart_label(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            auto_generate_ppt(
+                title="路线",
+                sections=[
+                    {
+                        "title": "48 小时路线",
+                        "layout": "timeline",
+                        "events": [{"date": "DAY 1 · AM", "title": "出发"}],
+                    }
+                ],
+                output_path=str(path),
+                template_key="creative-editorial",
+                auto_search_images=False,
+            )
+            presentation = Presentation(str(path))
+            labels = [
+                shape
+                for shape in presentation.slides[1].shapes
+                if getattr(shape, "has_text_frame", False) and shape.text == "DAY 1 · AM"
+            ]
+            self.assertEqual(len(labels), 1)
+            self.assertGreaterEqual(labels[0].width, 2.5 * 914400)
+
 
 if __name__ == "__main__":
     unittest.main()

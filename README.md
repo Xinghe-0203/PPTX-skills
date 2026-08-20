@@ -434,6 +434,7 @@ source distribution to a GitHub Release. The tag must match `[project].version`.
 - Complex animations, macros, OLE objects, and embedded workbooks may not be fully preserved.
 - Flat screenshots cannot recover original vector data, animations, or invisible elements; visual rebuild produces editable approximations.
 - When Pixabay search fails, generation falls back to local images or text-only layouts.
+- Pixabay downloads write a `pixabay_assets.json` provenance sidecar; visually review location-specific results before using them.
 
 ## Documentation Index
 

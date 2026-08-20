@@ -31,11 +31,16 @@ import os
 import sys
 from collections.abc import Sequence
 
+from cli_utils import configure_utf8_console
+
 
 def _ensure_utf8() -> None:
     """Ensure UTF-8 output on Windows to avoid GBK encoding errors."""
     if sys.platform == "win32":
         os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    # Setting PYTHONIOENCODING after interpreter startup does not alter the
+    # already-created streams. Reconfigure them directly when supported.
+    configure_utf8_console()
 
 
 # ---------------------------------------------------------------------------
