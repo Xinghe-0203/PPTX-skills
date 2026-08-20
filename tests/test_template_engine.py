@@ -1,7 +1,9 @@
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -9,8 +11,10 @@ sys.path.insert(0, str(SCRIPTS))
 from template_engine import (  # noqa: E402
     generate_template_preview,
     generate_template_profile,
+    get_generated_template_dir,
     list_templates,
     load_template_profile,
+    register_template_profile,
     validate_template_profile,
 )
 
@@ -50,6 +54,18 @@ class TemplateEngineTests(unittest.TestCase):
             generate_template_preview(profile, output)
             self.assertTrue(output.exists())
             self.assertGreater(output.stat().st_size, 10_000)
+
+    def test_registered_profiles_use_dynamic_user_data_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = generate_template_profile("User Scoped", "克制的编辑网格")
+            with patch.dict(os.environ, {"PPTX_SKILL_TEMPLATE_DIR": tmp}):
+                target = register_template_profile(profile)
+                self.assertEqual(target.parent, Path(tmp))
+                self.assertEqual(get_generated_template_dir(), Path(tmp))
+                self.assertEqual(load_template_profile(profile["id"])["name"], "User Scoped")
+                matching = [item for item in list_templates() if item["key"] == profile["id"]]
+                self.assertEqual(len(matching), 1)
+                self.assertTrue(matching[0]["generated"])
 
 
 if __name__ == "__main__":

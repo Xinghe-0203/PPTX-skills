@@ -127,7 +127,7 @@ result = download_template_pack("github", "output/templates", repo="user/repo")
 profile = import_template("output/templates/report.pptx", name="Client Brand")
 ```
 
-Imported profiles are saved to `assets/templates/generated/` and can be used by their profile ID as a `template_key`.
+Imported profiles are saved to the per-user template directory and can be used by their profile ID as a `template_key`. Set `PPTX_SKILL_TEMPLATE_DIR` to override the platform default; packaged profiles under `assets/templates/generated/` remain readable for backwards compatibility.
 
 ## Restore and verify
 

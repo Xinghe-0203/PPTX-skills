@@ -126,7 +126,7 @@ The catalog contains these built-in profiles:
 - `creative-editorial`
 - `sustainability`
 
-Generated profiles are stored in `assets/templates/generated/` and become available by their profile ID.
+Generated profiles are stored in the per-user data directory and become available by their profile ID. The defaults are `%LOCALAPPDATA%\pptx-skill\templates` on Windows, `$XDG_DATA_HOME/pptx-skill/templates` (or `~/.local/share/pptx-skill/templates`) on Linux, and `~/Library/Application Support/pptx-skill/templates` on macOS. Set `PPTX_SKILL_TEMPLATE_DIR` to override the location. Packaged profiles in `assets/templates/generated/` remain readable for backwards compatibility but runtime registration does not write into the installed package.
 
 ## Template download and import
 
@@ -149,7 +149,7 @@ Import a downloaded `.pptx` as a reusable V2 template profile:
 
 ```python
 profile = import_template("output/templates/report.pptx", name="Client Brand")
-# Profile is saved to assets/templates/generated/ and usable by template_key
+# Profile is saved to the user template directory and usable by template_key
 ```
 
 List curated remote template sources:

@@ -7,13 +7,54 @@ import colorsys
 import copy
 import hashlib
 import json
+import os
 import re
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CATALOG = SKILL_ROOT / "assets" / "templates" / "catalog.json"
-GENERATED_TEMPLATE_DIR = SKILL_ROOT / "assets" / "templates" / "generated"
+PACKAGED_GENERATED_TEMPLATE_DIR = SKILL_ROOT / "assets" / "templates" / "generated"
+TEMPLATE_DIR_ENV = "PPTX_SKILL_TEMPLATE_DIR"
+
+
+def get_generated_template_dir() -> Path:
+    """Return the writable directory for user-generated template profiles.
+
+    ``PPTX_SKILL_TEMPLATE_DIR`` takes precedence.  Otherwise the path follows
+    the platform's conventional per-user data location, keeping runtime writes
+    out of the installed package and source checkout.
+    """
+    override = os.environ.get(TEMPLATE_DIR_ENV, "").strip()
+    if override:
+        return Path(override).expanduser()
+    if os.name == "nt":
+        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+        if local_app_data:
+            return Path(local_app_data) / "pptx-skill" / "templates"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "pptx-skill" / "templates"
+    xdg_data_home = os.environ.get("XDG_DATA_HOME", "").strip()
+    data_home = Path(xdg_data_home).expanduser() if xdg_data_home else Path.home() / ".local" / "share"
+    return data_home / "pptx-skill" / "templates"
+
+
+# Backwards-compatible public constant.  Internal callers use the function so
+# an environment override set after import still takes effect.
+GENERATED_TEMPLATE_DIR = get_generated_template_dir()
+
+
+def _generated_template_dirs() -> list[Path]:
+    """Return writable then packaged/legacy profile directories, deduplicated."""
+    result: list[Path] = []
+    seen: set[str] = set()
+    for directory in (get_generated_template_dir(), PACKAGED_GENERATED_TEMPLATE_DIR):
+        normalized = os.path.normcase(str(directory.expanduser().resolve(strict=False)))
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(directory)
+    return result
 
 VALID_LAYOUTS = {
     "cover", "toc", "section", "bullets", "text_image", "full_image",
@@ -88,20 +129,28 @@ def list_templates(catalog_path: str | Path | None = None) -> list[dict]:
             "use_cases": profile.get("use_cases", []),
             "layout_family": profile.get("layout_family", "editorial_grid"),
         })
-    if GENERATED_TEMPLATE_DIR.exists():
-        for path in sorted(GENERATED_TEMPLATE_DIR.glob("*.json")):
+    generated_profiles: dict[str, dict] = {}
+    # Packaged/legacy profiles load first; user profiles with the same id win.
+    for directory in reversed(_generated_template_dirs()):
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.json")):
             try:
                 profile = _read_json(path)
             except (json.JSONDecodeError, TypeError, ValueError):
                 continue
-            result.append({
-                "key": profile.get("id", path.stem),
+            key = profile.get("id", path.stem)
+            if not isinstance(key, str) or not key:
+                key = path.stem
+            generated_profiles[key] = {
+                "key": key,
                 "name": profile.get("name", path.stem),
                 "description": profile.get("description", ""),
                 "use_cases": profile.get("use_cases", []),
                 "layout_family": profile.get("layout_family", "editorial_grid"),
                 "generated": True,
-            })
+            }
+    result.extend(generated_profiles[key] for key in sorted(generated_profiles))
     return result
 
 
@@ -125,14 +174,20 @@ def load_template_profile(
         validate_template_profile(profile)
         return profile
 
-    generated = GENERATED_TEMPLATE_DIR / f"{key}.json"
-    if generated.exists():
-        profile = _read_json(generated)
-        profile.setdefault("layout_family", "editorial_grid")
-        validate_template_profile(profile)
-        return profile
+    for directory in _generated_template_dirs():
+        generated = directory / f"{key}.json"
+        if generated.exists():
+            profile = _read_json(generated)
+            profile.setdefault("layout_family", "editorial_grid")
+            validate_template_profile(profile)
+            return profile
     builtin = sorted(catalog["templates"])
-    generated_keys = sorted(path.stem for path in GENERATED_TEMPLATE_DIR.glob("*.json")) if GENERATED_TEMPLATE_DIR.exists() else []
+    generated_keys = sorted({
+        path.stem
+        for directory in _generated_template_dirs()
+        if directory.exists()
+        for path in directory.glob("*.json")
+    })
     choices = ", ".join(sorted(set(builtin + generated_keys)))
     raise KeyError(f"Unknown template '{key}'. Available: {choices}")
 
@@ -309,7 +364,7 @@ def register_template_profile(
     overwrite: bool = False,
 ) -> Path:
     validate_template_profile(profile)
-    target_dir = Path(output_dir) if output_dir else GENERATED_TEMPLATE_DIR
+    target_dir = Path(output_dir) if output_dir else get_generated_template_dir()
     template_id = profile.get("id") or _slugify(profile.get("name", "custom-template"))
     target = target_dir / f"{template_id}.json"
     if target.exists() and not overwrite:

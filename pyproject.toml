@@ -45,7 +45,9 @@ where = ["."]
 include = ["pptx_skill*", "scripts*", "assets*"]
 
 [tool.setuptools.package-data]
-"assets.templates" = ["catalog.json", "generated/*.json"]
+# Keep generated profiles explicit: a wildcard would package user-local files
+# from editable/source checkouts and make release artifacts non-reproducible.
+"assets.templates" = ["catalog.json", "generated/deepseek.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

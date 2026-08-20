@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 _SKILL_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _SKILL_ROOT / "scripts"
-_DEFAULT_CATALOG_DIR = _SKILL_ROOT / "assets" / "templates" / "generated"
 
 _GITHUB_API_BASE = "https://api.github.com"
 _GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
@@ -520,7 +519,12 @@ def import_template(
     }
 
     # Step 4: save to catalog
-    target_dir = Path(catalog_dir) if catalog_dir else _DEFAULT_CATALOG_DIR
+    if catalog_dir:
+        target_dir = Path(catalog_dir)
+    else:
+        from template_engine import get_generated_template_dir
+
+        target_dir = get_generated_template_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
     target_file = target_dir / f"{profile_id}.json"
     with target_file.open("w", encoding="utf-8", newline="\n") as handle:

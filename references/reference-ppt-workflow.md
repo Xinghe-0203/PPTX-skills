@@ -93,8 +93,10 @@ Import the profile as a V2 template for reuse in future decks:
 ```python
 from pptx_skill import import_template
 profile = import_template("reference.pptx", name="Client Brand")
-# Saved to assets/templates/generated/; usable as template_key="client-brand"
+# Saved to the per-user template directory; usable as template_key="client-brand"
 ```
+
+The directory follows the platform user-data convention and can be overridden with `PPTX_SKILL_TEMPLATE_DIR`; packaged profiles under `assets/templates/generated/` remain readable for backwards compatibility.
 
 ## Shape-level plan schema
 

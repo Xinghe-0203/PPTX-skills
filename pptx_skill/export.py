@@ -23,6 +23,7 @@ import tempfile
 from typing import Literal
 
 from pptx import Presentation as _open_presentation
+from pptx.oxml.ns import qn
 from pptx.presentation import Presentation as _PresentationCls
 
 from pptx_skill.preview_renderer import find_soffice, render_preview
@@ -63,7 +64,11 @@ def _save_to_temp(prs: _PresentationCls) -> tuple[str, str]:
     """
     tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_export_")
     tmp_path = os.path.join(tmp_dir, "presentation.pptx")
-    prs.save(tmp_path)
+    try:
+        prs.save(tmp_path)
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
     return tmp_path, tmp_dir
 
 
@@ -166,35 +171,29 @@ def _save_to_temp_trimmed(prs: _PresentationCls, indices: list[int]) -> tuple[st
     """Save only the slides at *indices* to a temporary PPTX and return ``(path, tmp_dir)``."""
     tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_export_")
     tmp_path = os.path.join(tmp_dir, "trimmed.pptx")
-    prs.save(tmp_path)
+    try:
+        prs.save(tmp_path)
 
-    # Re-open and prune slides we do not want
-    trimmed = _open_presentation(tmp_path)
-    index_set = set(indices)
-    # Collect slides to remove (iterate in reverse to keep indices stable)
-    rmlist = [
-        i for i in range(len(trimmed.slides)) if i not in index_set
-    ]
-    for i in sorted(rmlist, reverse=True):
-        sldIdLst = trimmed.slides._sldIdLst
-        sldId = sldIdLst[i]
-        # Find the relationship id for this slide
-        rid = None
-        for attr_name in sldId.attrib:
-            if attr_name.endswith("}id") or attr_name == "id":
-                rid = sldId.get(attr_name)
-                break
-        if rid is None:
-            for k, v in sldId.attrib.items():
-                if "id" in k.lower():
-                    rid = v
-                    break
+        # Re-open and prune slides we do not want.
+        trimmed = _open_presentation(tmp_path)
+        index_set = set(indices)
+        # Collect slides to remove (iterate in reverse to keep indices stable).
+        rmlist = [i for i in range(len(trimmed.slides)) if i not in index_set]
+        for i in sorted(rmlist, reverse=True):
+            sld_id_list = trimmed.slides._sldIdLst
+            sld_id = sld_id_list[i]
+            # ``id`` is the numeric slide id; only ``r:id`` identifies the
+            # presentation relationship that must be dropped.
+            relationship_id = sld_id.get(qn("r:id"))
+            if relationship_id is None:
+                raise RuntimeError(f"Slide {i + 1} is missing its relationship id")
+            trimmed.part.drop_rel(relationship_id)
+            sld_id_list.remove(sld_id)
 
-        if rid:
-            trimmed.part.drop_rel(rid)
-        sldIdLst.remove(sldId)
-
-    trimmed.save(tmp_path)
+        trimmed.save(tmp_path)
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
     return tmp_path, tmp_dir
 
 
@@ -373,45 +372,46 @@ def export_to_images(
 
     try:
         render_dir = tempfile.mkdtemp(prefix="pptx_skill_img_")
-        render_result = render_preview(pptx_path, render_dir, dpi=dpi)
-        if not render_result.slide_pngs:
-            raise RuntimeError(
-                "No rendering backend available for image export. "
-                "Install LibreOffice, PyMuPDF, or use Windows COM."
-            )
+        try:
+            render_result = render_preview(pptx_path, render_dir, dpi=dpi)
+            if not render_result.slide_pngs:
+                raise RuntimeError(
+                    "No rendering backend available for image export. "
+                    "Install LibreOffice, PyMuPDF, or use Windows COM."
+                )
 
-        output_paths: list[str] = []
-        for i, idx in enumerate(slide_indices):
-            if idx >= len(render_result.slide_pngs):
-                break
-            src = render_result.slide_pngs[idx]
-            dst = os.path.join(output_dir, f"slide_{i + 1:03d}.{ext}")
+            output_paths: list[str] = []
+            for i, idx in enumerate(slide_indices):
+                if idx >= len(render_result.slide_pngs):
+                    break
+                src = render_result.slide_pngs[idx]
+                dst = os.path.join(output_dir, f"slide_{i + 1:03d}.{ext}")
 
-            if format == "PNG" and src.lower().endswith(".png"):
-                # Just copy / rename
-                shutil.copy2(src, dst)
-            else:
-                # Convert via Pillow
-                from PIL import Image as PILImage
+                if format == "PNG" and src.lower().endswith(".png"):
+                    # Just copy / rename
+                    shutil.copy2(src, dst)
+                else:
+                    # Convert via Pillow
+                    from PIL import Image as PILImage
 
-                img: PILImage.Image = PILImage.open(src)
-                with img:
-                    if format == "JPEG" and img.mode == "RGBA":
-                        bg = PILImage.new("RGB", img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    elif format == "BMP" and img.mode == "RGBA":
-                        bg = PILImage.new("RGB", img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    elif format in ("JPEG", "BMP") and img.mode != "RGB":
-                        img = img.convert("RGB")
-                    img.save(dst, format=format)
-            output_paths.append(dst)
+                    img: PILImage.Image = PILImage.open(src)
+                    with img:
+                        if format == "JPEG" and img.mode == "RGBA":
+                            bg = PILImage.new("RGB", img.size, (255, 255, 255))
+                            bg.paste(img, mask=img.split()[3])
+                            img = bg
+                        elif format == "BMP" and img.mode == "RGBA":
+                            bg = PILImage.new("RGB", img.size, (255, 255, 255))
+                            bg.paste(img, mask=img.split()[3])
+                            img = bg
+                        elif format in ("JPEG", "BMP") and img.mode != "RGB":
+                            img = img.convert("RGB")
+                        img.save(dst, format=format)
+                output_paths.append(dst)
 
-        # Cleanup render dir
-        shutil.rmtree(render_dir, ignore_errors=True)
-        return output_paths
+            return output_paths
+        finally:
+            shutil.rmtree(render_dir, ignore_errors=True)
 
     finally:
         if tmp_dir:
@@ -1332,37 +1332,39 @@ def export_thumbnails(
 
     try:
         render_dir = tempfile.mkdtemp(prefix="pptx_skill_thumb_")
-        render_result = render_preview(pptx_path, render_dir, dpi=150)
-        if not render_result.slide_pngs:
-            raise RuntimeError(
-                "No rendering backend available for thumbnail export. "
-                "Install LibreOffice, PyMuPDF, or use Windows COM."
-            )
+        try:
+            render_result = render_preview(pptx_path, render_dir, dpi=150)
+            if not render_result.slide_pngs:
+                raise RuntimeError(
+                    "No rendering backend available for thumbnail export. "
+                    "Install LibreOffice, PyMuPDF, or use Windows COM."
+                )
 
-        from PIL import Image as PILImage
+            from PIL import Image as PILImage
 
-        ext = format.lower()
-        if ext == "jpeg":
-            ext = "jpg"
+            ext = format.lower()
+            if ext == "jpeg":
+                ext = "jpg"
 
-        output_paths: list[str] = []
-        for i, src in enumerate(render_result.slide_pngs):
-            dst = os.path.join(output_dir, f"thumb_{i + 1:03d}.{ext}")
-            img: PILImage.Image = PILImage.open(src)
-            with img:
-                # Use high-quality downsampling
-                img = img.resize(size, PILImage.Resampling.LANCZOS)
-                if format == "JPEG" and img.mode == "RGBA":
-                    bg = PILImage.new("RGB", img.size, (255, 255, 255))
-                    bg.paste(img, mask=img.split()[3])
-                    img = bg
-                elif format in ("JPEG", "BMP") and img.mode not in ("RGB", "L"):
-                    img = img.convert("RGB")
-                img.save(dst, format=format)
-            output_paths.append(dst)
+            output_paths: list[str] = []
+            for i, src in enumerate(render_result.slide_pngs):
+                dst = os.path.join(output_dir, f"thumb_{i + 1:03d}.{ext}")
+                img: PILImage.Image = PILImage.open(src)
+                with img:
+                    # Use high-quality downsampling
+                    img = img.resize(size, PILImage.Resampling.LANCZOS)
+                    if format == "JPEG" and img.mode == "RGBA":
+                        bg = PILImage.new("RGB", img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    elif format in ("JPEG", "BMP") and img.mode not in ("RGB", "L"):
+                        img = img.convert("RGB")
+                    img.save(dst, format=format)
+                output_paths.append(dst)
 
-        shutil.rmtree(render_dir, ignore_errors=True)
-        return output_paths
+            return output_paths
+        finally:
+            shutil.rmtree(render_dir, ignore_errors=True)
 
     finally:
         if tmp_dir:

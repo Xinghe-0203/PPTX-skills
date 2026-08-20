@@ -181,6 +181,8 @@ python scripts/template_engine.py generate `
   --preview output/template-preview.pptx
 ```
 
+注册后的自定义模板保存在用户数据目录中：Windows 为 `%LOCALAPPDATA%\pptx-skill\templates`，Linux 为 `$XDG_DATA_HOME/pptx-skill/templates`（未设置时使用 `~/.local/share/pptx-skill/templates`），macOS 为 `~/Library/Application Support/pptx-skill/templates`。可通过 `PPTX_SKILL_TEMPLATE_DIR` 覆盖；随包发布的 `assets/templates/generated/` 仅作为兼容读取位置。
+
 渲染预览并检查后再正式生成。模板档案必须控制色彩、版式参数和推荐页面节奏，不能只是换一组颜色。
 
 新模板优先从 `editorial_grid`、`technical_axis`、`poster_column` 三种几何语言中选择。除非用户明确要求，不要默认使用圆角卡片、装饰圆、渐变光斑、悬浮阴影、`VS` 徽章、巨大引号或无意义英文眉题。
@@ -433,7 +435,7 @@ print(manifest.manifest_schema_version)  # 3
 | PR8a | 14 role 全部 recipe、role-specific paginator、table/chart 节点 | 138/138 |
 | PR8b | reference_adapter native/clone、clone drift QA sidecar | 147/147 |
 | PR8c | visual_rebuild 真实自适应重建、参考差异预算 | 164/164 |
-| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217（历史基线；当前套件 250 个测试） |
+| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217（历史基线；当前套件 261 个测试） |
 | PR10 | 12 新模块：animations、merge、watermark、sections、slide_master、image_optimize、comments、diff、export、smartart、vba、table_styles | — |
 | PR11 | 5 分析框架 role（swot/porter/pest/bmc/funnel）+ consulting 风格 recipe 变体 + html_import | — |
 

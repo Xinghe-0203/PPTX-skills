@@ -82,24 +82,54 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install build dependencies
         run: python -m pip install ".[build]"
+      - name: Add a local-only template sentinel
+        run: |
+          mkdir -p assets/templates/generated
+          printf '%s\n' '{"id":"local-private"}' > assets/templates/generated/local-private.json
       - name: Build wheel and source distribution
         run: python -m build
       - name: Validate distribution metadata
         run: python -m twine check dist/*
+      - name: Verify local templates are excluded
+        run: |
+          python - <<'PY'
+          import glob
+          import tarfile
+          import zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          with zipfile.ZipFile(wheel) as archive:
+              assert not any(name.endswith("local-private.json") for name in archive.namelist())
+          sdist = glob.glob("dist/*.tar.gz")[0]
+          with tarfile.open(sdist) as archive:
+              assert not any(name.endswith("local-private.json") for name in archive.getnames())
+          PY
       - name: Install and exercise wheel in isolation
         run: |
           python -m venv "$RUNNER_TEMP/pptx-smoke"
           "$RUNNER_TEMP/pptx-smoke/bin/python" -m pip install dist/*.whl
           "$RUNNER_TEMP/pptx-smoke/bin/python" -I - <<'PY'
+          import os
           import tempfile
           from pathlib import Path
 
           from pptx import Presentation
-          from pptx_skill import __version__, auto_generate_ppt, list_templates
+          from pptx_skill import (
+              __version__,
+              auto_generate_ppt,
+              generate_template_profile,
+              list_templates,
+              register_template_profile,
+          )
 
           assert __version__ == "6.0.0"
           assert len(list_templates()) >= 20
           with tempfile.TemporaryDirectory() as tmp:
+              template_dir = Path(tmp) / "templates"
+              os.environ["PPTX_SKILL_TEMPLATE_DIR"] = str(template_dir)
+              profile = generate_template_profile("Wheel Profile", "clean editorial grid")
+              registered = register_template_profile(profile)
+              assert registered.parent == template_dir
               output = Path(tmp) / "smoke.pptx"
               auto_generate_ppt(
                   title="Wheel smoke test",

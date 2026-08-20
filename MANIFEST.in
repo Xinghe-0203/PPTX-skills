@@ -1,0 +1,7 @@
+include AGENTS.md
+include README.md
+include SKILL.md
+include THIRD_PARTY_NOTICES.md
+recursive-include references *.md
+prune assets/templates/generated
+include assets/templates/generated/deepseek.json

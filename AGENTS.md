@@ -13,14 +13,14 @@ Requires Python ≥ 3.10. The package adds `scripts/` to `sys.path` at import ti
 ## Testing
 
 ```powershell
-python -m pytest tests/ -x -q                 # full suite (250 tests; slow — includes rendering)
+python -m pytest tests/ -x -q                 # full suite (261 tests; slow — includes rendering)
 python -m pytest tests/test_content_model.py  # single file
 python -m pytest tests/ -k "test_layout" -x   # by keyword
 ```
 
 - Tests use `unittest.TestCase`; `pytest` is the runner (`python -m unittest discover -s tests` works without pytest installed).
 - Rendering tests (pipeline, golden renders) are slow and need LibreOffice. Run fast unit tests first when iterating.
-- Baseline: 249 passed + 1 skipped (the skip is a conditional error-preservation path in `test_preview_renderer.py`).
+- Baseline: 260 passed + 1 skipped (the skip is a conditional error-preservation path in `test_preview_renderer.py`).
 
 ## Architecture: dual-layer
 
@@ -47,7 +47,7 @@ This repo has **two implementation layers** that coexist:
 
 ## Templates
 
-20 built-in profiles stored in `assets/templates/catalog.json`. Generated profiles go to `assets/templates/generated/`. Three layout families: `editorial_grid`, `technical_axis`, `poster_column` — avoid `standard` unless the older card system is explicitly wanted.
+20 built-in profiles are stored in `assets/templates/catalog.json`. Generated profiles go to the per-user data directory (`%LOCALAPPDATA%\pptx-skill\templates` on Windows, `$XDG_DATA_HOME/pptx-skill/templates` or `~/.local/share/pptx-skill/templates` on Linux, and `~/Library/Application Support/pptx-skill/templates` on macOS). Set `PPTX_SKILL_TEMPLATE_DIR` to override it. The legacy `assets/templates/generated/` directory remains a read-only lookup location for packaged profiles. Three layout families: `editorial_grid`, `technical_axis`, `poster_column` — avoid `standard` unless the older card system is explicitly wanted.
 
 ## Rendering
 
