@@ -4,7 +4,7 @@
 >
 > Core principle: **always ship an editable `.pptx` and run render verification** -- not just code or XML checks.
 
-![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green) ![261 tests](https://img.shields.io/badge/tests-261-brightgreen) ![64 modules](https://img.shields.io/badge/modules-64-orange) ![600+ APIs](https://img.shields.io/badge/APIs-600+-purple) [![CI](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml)
+![v6.0.0](https://img.shields.io/badge/version-6.0.0-blue) ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green) ![267 tests](https://img.shields.io/badge/tests-267-brightgreen) ![64 modules](https://img.shields.io/badge/modules-64-orange) ![600+ APIs](https://img.shields.io/badge/APIs-600+-purple) [![CI](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/Xinghe-0203/PPTX-skills/actions/workflows/ci.yml)
 
 **v6.0.0** -- 64 Python modules, 600+ public APIs, 51 animations, 30 transitions, 24 layout roles, 20 themes, unified `Deck` class, unified CLI, Markdown import.
 
@@ -23,7 +23,7 @@
 | Chart types | 10 (with embedded Excel workbooks) |
 | Table styles | 20 built-in |
 | Analytical framework roles | 5 (SWOT, Porter, PEST, BMC, Funnel) |
-| Tests | 261 collected (260 passing, 1 skipped; 6 subtests passing) |
+| Tests | 267 collected (266 passing, 1 skipped; 6 subtests passing) |
 
 ## Feature Overview
 
@@ -402,7 +402,7 @@ Run the full test suite:
 python -m pytest tests/ -ra
 ```
 
-Baseline: **261 tests collected — 260 passing, 1 skipped, plus 6 passing subtests** (including animations, transitions, merge, watermark, sections, slide_master, image_optimize, comments, diff, export, smartart, vba, table_styles, chart_edit, color, layout_sync, markdown_export, video, svg_export, svg_import, ocr, batch, morph, accessibility, effects, connectors, protection, metadata, equations, multimedia, groups, zoom, html_import, deck, markdown_import, cli, and core layout/QA/pipeline coverage).
+Baseline: **267 tests collected — 266 passing, 1 skipped, plus 6 passing subtests** (including shared atomic I/O, animations, transitions, merge, watermark, sections, slide_master, image_optimize, comments, diff, export, smartart, vba, table_styles, chart_edit, color, layout_sync, markdown_export, video, svg_export, svg_import, ocr, batch, morph, accessibility, effects, connectors, protection, metadata, equations, multimedia, groups, zoom, html_import, deck, markdown_import, cli, and core layout/QA/pipeline coverage).
 
 Run a single test file:
 

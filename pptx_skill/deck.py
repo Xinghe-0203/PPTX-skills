@@ -34,6 +34,8 @@ from __future__ import annotations
 import os
 from typing import Any, cast
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 __all__ = [
     "Deck",
     "open_deck",
@@ -177,7 +179,7 @@ class Deck:
         out_dir = os.path.dirname(out)
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
-        self._prs.save(out)
+        _save_prs_impl(self._prs, out)
         self._path = out
         self._dirty = False
         return out
@@ -197,8 +199,7 @@ class Deck:
         """
         from pptx_skill import inspect_ppt
         # inspect_ppt reads from the file — save first if dirty.
-        if self._dirty and self._path:
-            self._prs.save(self._path)
+        self._save_if_dirty()
         return inspect_ppt(self._path or "")
 
     def info(self) -> dict[str, Any]:
@@ -412,7 +413,7 @@ class Deck:
     def _save_if_dirty(self) -> None:
         """Persist to self._path if there are unsaved changes."""
         if self._dirty and self._path:
-            self._prs.save(self._path)
+            _save_prs_impl(self._prs, self._path)
             self._dirty = False
 
     def insert_slide(self, index: int, section: dict, layout: str | None = None) -> Deck:
@@ -511,8 +512,7 @@ class Deck:
         """Run the structural validation checks. Returns a dict."""
         from pptx_skill import auto_validate_ppt
         # auto_validate_ppt takes a path — save first if dirty.
-        if self._dirty and self._path:
-            self._prs.save(self._path)
+        self._save_if_dirty()
         return cast(dict[str, Any], auto_validate_ppt(self._path or ""))
 
     # ------------------------------------------------------------------
@@ -522,8 +522,7 @@ class Deck:
     def export_pdf(self, output_path: str, *, dpi: int = 150) -> str:
         """Export to PDF. Returns the output path."""
         from pptx_skill import export_to_pdf
-        if self._dirty and self._path:
-            self._prs.save(self._path)
+        self._save_if_dirty()
         return export_to_pdf(self._path or "", output_path, dpi=dpi)
 
     def export_images(self, output_dir: str, *, dpi: int = 150, fmt: str = "PNG") -> list[str]:
@@ -549,8 +548,7 @@ class Deck:
         """Compress all images in the deck. Returns stats."""
         from pptx_skill import compress_images
         # compress_images takes a path — save first.
-        if self._dirty and self._path:
-            self._prs.save(self._path)
+        self._save_if_dirty()
         result = compress_images(self._path or "", quality=quality, max_dimension=max_dim)
         # Re-open the compressed file.
         from pptx import Presentation

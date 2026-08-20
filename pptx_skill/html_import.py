@@ -34,6 +34,7 @@ import urllib.request
 from html.parser import HTMLParser
 from typing import Any
 
+from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.content_model import (
     ContentSpec,
     ElementSpec,
@@ -1490,7 +1491,7 @@ def import_from_html(
     os.makedirs(out_dir, exist_ok=True)
 
     # Save
-    prs.save(output_path)
+    _save_prs_impl(prs, output_path, backup=False)
     log.info("Imported %d slides from HTML -> %s", len(slide_chunks), output_path)
 
     return output_path

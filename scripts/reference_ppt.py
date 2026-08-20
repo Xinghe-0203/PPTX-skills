@@ -17,6 +17,8 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 REL_ATTRS = {qn("r:embed"), qn("r:id"), qn("r:link")}
 CONTENT_PLACEHOLDERS = {
     PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE, PP_PLACEHOLDER.SUBTITLE,
@@ -592,7 +594,7 @@ def compose_from_reference(
             _remove_slide(prs, slide)
     target = Path(output_path).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
-    prs.save(str(target))
+    _save_prs_impl(prs, target, backup=False)
     return str(target)
 
 
@@ -707,7 +709,7 @@ def generate_native_from_reference(
         _fill_native_slide(slide, content)
     target = Path(output_path).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
-    prs.save(str(target))
+    _save_prs_impl(prs, target, backup=False)
     return str(target)
 
 

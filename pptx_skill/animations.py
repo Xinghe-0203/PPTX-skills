@@ -38,6 +38,7 @@ from typing import Any
 
 from lxml import etree
 
+from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.constants import A_NS as _A_NS
 from pptx_skill.constants import P_NS as _P_NS
 
@@ -1706,7 +1707,7 @@ def add_animation(
         return True
     finally:
         if is_path:
-            prs.save(str(prs_or_path))
+            _save_prs_impl(prs, prs_or_path, backup=False)
 
 
 def add_entrance_animation(
@@ -1744,7 +1745,7 @@ def add_entrance_animation(
         return True
     finally:
         if is_path:
-            prs.save(str(prs_or_path))
+            _save_prs_impl(prs, prs_or_path, backup=False)
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,8 @@ from reference_ppt import (
     extract_template_profile,
 )
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 
 def _position(index: int, length: int, allow_end: bool = False) -> int:
     """Convert a 1-based *index* to a 0-based position for internal use."""
@@ -135,7 +137,7 @@ def insert_slide(
         image_dir, auto_search_images,
     )
     create_backup(path)
-    prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
     return len(prs.slides)
 
 
@@ -145,7 +147,7 @@ def delete_slide(pptx_path: str | Path, index: int) -> int:
     position = _position(index, len(prs.slides))
     _remove_slide(prs, prs.slides[position])
     create_backup(path)
-    prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
     return len(prs.slides)
 
 
@@ -156,7 +158,7 @@ def move_slide(pptx_path: str | Path, from_index: int, to_index: int) -> None:
     new = _position(to_index, len(prs.slides))
     _move_id(prs, old, new)
     create_backup(path)
-    prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
 
 
 def duplicate_slide(pptx_path: str | Path, source_index: int, target_index: int) -> int:
@@ -167,7 +169,7 @@ def duplicate_slide(pptx_path: str | Path, source_index: int, target_index: int)
     clone_slide(prs, prs.slides[source_position])
     _move_id(prs, len(prs.slides) - 1, target_position)
     create_backup(path)
-    prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
     return len(prs.slides)
 
 
@@ -204,7 +206,7 @@ def replace_layout(
     )
     _remove_slide(prs, old_slide)
     create_backup(path)
-    prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
 
 
 def main() -> int:

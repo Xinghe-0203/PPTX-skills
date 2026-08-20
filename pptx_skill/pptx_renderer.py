@@ -14,6 +14,7 @@ from typing import Any
 
 from pptx.dml.color import RGBColor
 
+from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.content_model import GeometrySpec, LayoutPlan, PlannedNode
 
 
@@ -1497,7 +1498,7 @@ def render_layout_plans(
                 apply_slide_transition(slide, t_type, t_duration, t_advance)
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    prs.save(output_path)
+    _save_prs_impl(prs, output_path, backup=False)
 
     return RenderResult(
         pptx_path=output_path,

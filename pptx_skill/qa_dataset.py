@@ -34,6 +34,8 @@ from typing import Any
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 # Issue codes mirror the semantic_qa / visual_qa modules.
 ISSUE_TEXT_OVERFLOW = "TEXT_OVERFLOW_CONFIRMED"
 ISSUE_OVERLAP = "UNINTENDED_OVERLAP"
@@ -87,7 +89,7 @@ def _save_slide_pptx(slide_builder, out_path: Path, *, width_in: float = 13.333,
     slide = prs.slides.add_slide(blank)
     ppt_shape_id = slide_builder(prs, slide)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    prs.save(str(out_path))
+    _save_prs_impl(prs, out_path, backup=False)
     return ppt_shape_id if ppt_shape_id is not None else 0
 
 

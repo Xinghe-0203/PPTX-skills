@@ -435,7 +435,7 @@ print(manifest.manifest_schema_version)  # 3
 | PR8a | 14 role 全部 recipe、role-specific paginator、table/chart 节点 | 138/138 |
 | PR8b | reference_adapter native/clone、clone drift QA sidecar | 147/147 |
 | PR8c | visual_rebuild 真实自适应重建、参考差异预算 | 164/164 |
-| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217（历史基线；当前套件 261 个测试） |
+| PR9 | 200 页 QA 数据集、golden renders、E2E/压力/性能、第三方许可说明 | 217/217（历史基线；当前套件 267 个测试） |
 | PR10 | 12 新模块：animations、merge、watermark、sections、slide_master、image_optimize、comments、diff、export、smartart、vba、table_styles | — |
 | PR11 | 5 分析框架 role（swot/porter/pest/bmc/funnel）+ consulting 风格 recipe 变体 + html_import | — |
 

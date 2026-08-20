@@ -55,7 +55,10 @@ def save_prs(prs: Any, path: str | Path | None, *, backup: bool = True) -> None:
     """Save *prs* back to *path*.
 
     When *backup* is ``True`` (the default), a ``.bak.pptx`` copy is created
-    before overwriting.  When *path* is ``None`` the call is a no-op.
+    before overwriting.  The new package is first written to a temporary file
+    in the destination directory and then atomically replaces the target, so
+    a failed save cannot leave the original presentation partially written.
+    When *path* is ``None`` the call is a no-op.
     """
     if path is None:
         return
@@ -65,7 +68,21 @@ def save_prs(prs: Any, path: str | Path | None, *, backup: bool = True) -> None:
         bak = p.with_suffix(".bak.pptx")
         if p.exists():
             shutil.copy2(str(p), str(bak))
-    prs.save(str(p))
+
+    suffix = p.suffix or ".pptx"
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{p.stem}.",
+        suffix=suffix,
+        dir=str(p.parent),
+        delete=False,
+    ) as tmp_file:
+        tmp_path = Path(tmp_file.name)
+
+    try:
+        prs.save(str(tmp_path))
+        os.replace(str(tmp_path), str(p))
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def resolve_path(prs_or_path: Any) -> str | None:
@@ -90,5 +107,9 @@ def ensure_path_on_disk(prs_or_path: Any) -> tuple[str, str | None]:
     prs = open_prs(prs_or_path)
     tmp_dir = tempfile.mkdtemp(prefix="pptx_skill_tmp_")
     tmp_path = os.path.join(tmp_dir, "work.pptx")
-    prs.save(tmp_path)
+    try:
+        prs.save(tmp_path)
+    except BaseException:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
     return tmp_path, tmp_dir

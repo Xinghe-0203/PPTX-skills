@@ -23,6 +23,8 @@ from reference_ppt import (
     replace_text,
 )
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 
 def _slide_at(prs: Presentation, slide_index: int) -> Any:
     """Return the slide at 1-based *slide_index* (1 = first slide)."""
@@ -35,7 +37,7 @@ def _slide_at(prs: Presentation, slide_index: int) -> Any:
 def _save(prs: Presentation, path: str | Path) -> None:
     target = Path(path).resolve()
     create_backup(target)
-    prs.save(str(target))
+    _save_prs_impl(prs, target, backup=False)
 
 
 def _replace_cross_run(paragraph: Any, find: str, replacement: str) -> int:

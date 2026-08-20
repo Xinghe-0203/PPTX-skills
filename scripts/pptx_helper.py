@@ -31,6 +31,8 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 try:
     from PIL import Image  # noqa: F401  用于图片比例适配
 except ImportError:  # Pillow 缺失时降级
@@ -1486,7 +1488,7 @@ def auto_generate_ppt(
 
     abs_path = os.path.abspath(output_path)
     os.makedirs(os.path.dirname(abs_path) or ".", exist_ok=True)
-    prs.save(abs_path)
+    _save_prs_impl(prs, abs_path, backup=False)
     try:
         json.dumps(template_profile)
         serializable_profile = template_profile or None

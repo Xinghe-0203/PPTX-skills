@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 __all__ = [
     "BatchResult",
     "BatchStats",
@@ -371,7 +373,7 @@ def _recolor_operation(
     prs = Presentation(str(output_path))
     replaced = _recolor_prs(prs, {old_hex: new_hex})
     if replaced:
-        prs.save(str(output_path))
+        _save_prs_impl(prs, output_path, backup=False)
     return True
 
 

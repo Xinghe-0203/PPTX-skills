@@ -2268,6 +2268,7 @@ def import_svg_as_image(
         tmp_path = tmp.name
 
     try:
+        path = prs_or_path if not _is_presentation(prs_or_path) else None
         prs = _open_prs(prs_or_path)
 
         n_slides = len(prs.slides)
@@ -2292,8 +2293,7 @@ def import_svg_as_image(
 
             return _name
         finally:
-            if isinstance(prs_or_path, str):
-                prs.save(prs_or_path)
+            _save_prs(prs, path)
     finally:
         try:
             os.unlink(tmp_path)

@@ -21,6 +21,7 @@ from typing import Any
 
 from lxml import etree
 
+from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.constants import P_NS as _P_NS
 
 log = logging.getLogger(__name__)
@@ -295,7 +296,7 @@ def add_transition(
         apply_slide_transition(slide, transition_type, duration_ms, advance_ms)
     finally:
         if is_path:
-            prs.save(str(prs_or_path))
+            _save_prs_impl(prs, prs_or_path, backup=False)
 
 
 def add_deck_transitions(
@@ -326,4 +327,4 @@ def add_deck_transitions(
             apply_slide_transition(slide, transition_type, duration_ms)
     finally:
         if is_path:
-            prs.save(str(prs_or_path))
+            _save_prs_impl(prs, prs_or_path, backup=False)

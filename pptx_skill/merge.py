@@ -27,6 +27,8 @@ from typing import Any, Literal
 from pptx import Presentation
 from pptx.oxml.ns import qn
 
+from pptx_skill._io import save_prs as _save_prs_impl
+
 log = logging.getLogger(__name__)
 
 __all__ = [
@@ -872,7 +874,7 @@ def merge_presentations(
         _reorder_slides(prs_target, positions, len(resolved_sources))
 
     # Save the merged presentation
-    prs_target.save(str(output_path))
+    _save_prs_impl(prs_target, output_path, backup=False)
 
     # Reload to get accurate slide count
     prs_final = Presentation(str(output_path))
@@ -1103,7 +1105,7 @@ def extract_slides(
             slide = prs_output.slides[i]
             _remove_slide_by_element(prs_output, slide)
 
-    prs_output.save(str(output_path))
+    _save_prs_impl(prs_output, output_path, backup=False)
 
     # Reload for accurate count
     prs_final = Presentation(str(output_path))

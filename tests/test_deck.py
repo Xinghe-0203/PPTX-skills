@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from pptx import Presentation
 
@@ -37,6 +38,21 @@ class DeckLifecycleTests(unittest.TestCase):
             self.assertGreater(deck.slide_count, 0)
             saved = deck.save()
             self.assertEqual(saved, path)
+
+    def test_save_preserves_pre_edit_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "deck.pptx"
+            prs = Presentation()
+            prs.slides.add_slide(prs.slide_layouts[6])
+            prs.save(path)
+            original = path.read_bytes()
+
+            deck = Deck.open(str(path))
+            deck.add_notes(1, "changed")
+            deck.save()
+
+            self.assertEqual(path.with_suffix(".bak.pptx").read_bytes(), original)
+            self.assertNotEqual(path.read_bytes(), original)
 
     # 2. Chained calls return Deck ---------------------------------------
     def test_chained_calls_return_deck(self):

@@ -22,6 +22,7 @@ import hashlib
 import os
 from dataclasses import dataclass
 
+from pptx_skill._io import save_prs as _save_prs_impl
 from pptx_skill.constants import P_NS as _NS_P
 
 __all__ = [
@@ -453,5 +454,4 @@ def _open_prs(prs_or_path):
 
 def _save_prs(prs, path):
     """Save *prs* back to *path* if *path* is not None."""
-    if path is not None:
-        prs.save(str(path))
+    _save_prs_impl(prs, path, backup=False)
